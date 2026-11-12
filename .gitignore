@@ -1,0 +1,28 @@
+.env
+.env.*
+!.env.example
+!.env.*.example
+node_modules/
+.local/
+*.key
+*.pem
+
+# Private research and local operations
+research/
+.deploy-local/
+deliverables/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.log
+
+# Generated application/native output
+.next/
+dist/
+target/
+.turbo/
+coverage/
+
+# Superseded visual exploration stays local
+design/proofbill-ui-v1/

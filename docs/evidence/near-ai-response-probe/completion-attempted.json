@@ -1,0 +1,6 @@
+{
+  "attemptedAt": "2026-11-12T18:07:43.977394+00:00",
+  "model": "Qwen/Qwen3.8-27B",
+  "maximumOutputTokens": 64,
+  "automaticRetries": 0
+}

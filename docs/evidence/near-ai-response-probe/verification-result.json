@@ -1,0 +1,41 @@
+{
+  "verifiedAt": "2026-11-12T18:07:55.320621+00:00",
+  "passed": true,
+  "chatId": "e92c83eabdef40c69a9119812f0bc5e9",
+  "requestedModel": "Qwen/Qwen3.8-27B",
+  "responseModel": "Qwen/Qwen3.8-27B",
+  "signatureKind": "provider_tee",
+  "requestHash": "176cad13c22a0982b15bced14f8c5468c5fbfac814df12fe0bcb1e4ee6961ed8",
+  "responseHash": "9473244b660d1ecd2d4287128e1427423bbb47edea2b23b9ce73a14bedf547f3",
+  "recoveredSigner": "0x835AB53d20294Ef795906DFf21aE4C045336aa26",
+  "checks": {
+    "supportedSignatureKind": true,
+    "exactPayloadMatches": true,
+    "uniqueVerifiedPreflightSignerMatches": true,
+    "declaredSignerMatches": true,
+    "tamperedResponseRejected": true
+  },
+  "usage": {
+    "prompt_tokens": 60,
+    "total_tokens": 97,
+    "completion_tokens": 37,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "reasoning_tokens": 33,
+    "completion_tokens_details": {
+      "reasoning_tokens": 33
+    }
+  },
+  "output": {
+    "role": "assistant",
+    "content": "\n\nProofBill",
+    "reasoning_content": "We need to reply with exactly the word ProofBill. User: \"Reply with exactly the word ProofBill.\" Need final only ProofBill. No extra.\n"
+  },
+  "limits": [
+    "This verifies byte integrity and matching attested signer, not semantic correctness.",
+    "No TLS peer-SPKI binding or image/source provenance allowlist was checked.",
+    "NRAS evidence verified through authenticated HTTPS; JWT chain not independently validated.",
+    "No onchain verifier or payment was implemented."
+  ]
+}

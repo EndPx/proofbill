@@ -1,0 +1,19 @@
+# ProofBill logo prompts
+
+Tool: built-in image_gen / ChatGPT Image.
+
+## Primary horizontal logo
+
+Use case: logo-brand. Create the actual primary logo artwork for ProofBill, an app where an NFT Purchase Pass controls one AI service purchase and a verifiable receipt links the result to payment. Transparent background, a single horizontal logo lockup only, centered with generous clear space. No presentation board, no variations on the same canvas, no mockup, no background rectangle, no caption, no tagline, no watermark. Brand direction: exceptionally clean contemporary fintech/developer product, precise black-and-white UI with charcoal frame and small mint accents. Make a distinctive compact original icon on the left, and exact wordmark 'ProofBill' on the right. Icon: bold flat mint #51E79C receipt silhouette, modestly rounded top corners, one clean folded corner cutout, two very shallow bottom receipt notches; a bold near-black #171717 angular verification check inset in the receipt, strong negative space, balanced optical weight. It should be a memorable coherent stamp shape, not a bundle of floating clipart, not an enclosing circle or app tile. The check and folded corner must remain legible at small size. Do not use a currency symbol, blockchain hexagon, robot, shield, AI sparkle or NEAR logo. Wordmark exactly 'ProofBill' with capital P and B, one word, near-black #171717, confident medium-bold modern geometric sans, subtle custom letter spacing, clean readable lowercase shapes, no outlined text. Wordmark around same visual height as icon's central body, icon a little taller. Use meticulous proportions and crisp flat vector-like edges, no texture, no shadows, no gradient, no 3D. Output high-resolution landscape transparent PNG artwork suitable for a website header. Transparency must be genuine alpha, not a drawn checkerboard. All visible design should consist only of the mint/black icon and dark wordmark.
+
+## Selected dark-panel logo
+
+Reference: primary logo.
+
+Create a clean finished horizontal ProofBill brand logo on a perfectly uniform solid charcoal background #252525, matching the application's dark sidebar. Use the attached image ONLY as a reference for the receipt/check icon and the wordmark design. Re-render the artwork cleanly rather than reproducing any alpha artifacts. A mint #51E79C receipt icon with black #171717 verification check at left, wordmark exactly 'ProofBill' in solid pure white at right. Smooth crisp letterforms with clean open counters, modern geometric bold sans. Receipt has rounded upper left, folded upper-right corner with clean solid charcoal triangular opening, two shallow bottom receipt notches. All fills flat, no gradients or texture. Carefully spaced and balanced. Landscape 3:1 composition, centered lockup, moderate clear margins. No shadows, no glow, no outlines, no mottled edges, no speckles, no presentation board, no explanatory text. The entire background must be solid charcoal including inside every letter counter and the receipt corner. This is opaque brand artwork for direct use on the dark app header.
+
+## Standalone icon
+
+Reference: primary logo.
+
+Extract the receipt-and-check icon from the provided ProofBill logo as its own brand icon. Preserve the icon's design exactly: mint receipt silhouette, upper-right folded cutout, two shallow bottom notches, strong near-black verification check, same shapes and proportions. Remove the entire wordmark. Place the one icon centered on a square canvas with about 12 percent clear padding on every side. Genuine transparent alpha background, not white, not black, not a drawn checkerboard. No enclosing app tile, no circle, no text, no extra marks, no gradients or texture, no shadow. Clean sharp flat vector-like high-resolution PNG suitable for favicon/app avatar source. Preserve the near-black check as opaque color, not a transparent cutout.

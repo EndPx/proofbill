@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+
+# Exact-byte provider and attestation evidence must survive checkout unchanged.
+docs/evidence/near-ai-response-probe/*.json -text whitespace=cr-at-eol

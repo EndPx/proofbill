@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": {
+    "originalAccepted": true,
+    "changedResponseRejected": true,
+    "changedRequestRejected": true,
+    "preflightVerifiedBeforeCompletion": true,
+    "supportedAlgorithm": true
+  },
+  "scope": "Offline signature replay using retained dated QVL results; no new inference or fresh hardware verification."
+}

@@ -1,0 +1,52 @@
+{
+  "verifiedAt": "2026-11-12T18:07:40.937693+00:00",
+  "status": "UpToDate",
+  "advisoryIds": [],
+  "checks": {
+    "tdxQuoteUpToDate": true,
+    "debugDisabled": true,
+    "signerBound": true,
+    "nonceBound": true,
+    "echoedReportDataMatches": true,
+    "configurationMeasurementMatches": true,
+    "eventDigestsMatch": true,
+    "rtmr3Matches": true
+  },
+  "result": {
+    "status": "UpToDate",
+    "advisory_ids": [],
+    "report": {
+      "TD10": {
+        "tee_tcb_svn": "09030800000000000000000000000000",
+        "mr_seam": "2d2de102461684f14c8d0984a09d895e3e9e15944ce020a03b977e1f114d5e1ed32ef666a47fd19a5851b3800eda3afa",
+        "mr_signer_seam": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "seam_attributes": "0000000000000000",
+        "td_attributes": "0000001000000000",
+        "xfam": "e702060000000000",
+        "mr_td": "7fe60787222bd394cb516abca2435f22f035ab2cc9c0a4b4b3b148e46297f3d931a237b72f359052c6e657d8c1409173",
+        "mr_config_id": "01877959253d2406f05fa718840fd157b8e647547827e9524cb33081a2a8fcb78b000000000000000000000000000000",
+        "mr_owner": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "mr_owner_config": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "rt_mr0": "d090162bff4b1d1dc74dc59dc548838efc4b811b173da8536efa8e2a9c045da70ee092301293ad90afebee448bcd0211",
+        "rt_mr1": "4ae609807c765916a31d724786ed74bcb97e168a9d937b04936aeef2015c907eba5ac352c6bcd749c246fd62ffb659ec",
+        "rt_mr2": "764489f277a8540189761e72b4238ba36d4d647e11bd958d8ab5522af2a4867b0ff63e06b0c4967f1857236244040a5d",
+        "rt_mr3": "de54cfe5803a8263e86372b613636440395f9567b03c3f1870909254f8b2737617d7020acbb84bc01ff73226b76299d3",
+        "report_data": "b98a789cdc4817275f5155593ba73ef2a957e77900000000000000000000000064e238c8960dde6b2e959853c79383479f78abf7a4ef48743a2a2fcdfbf00491"
+      }
+    },
+    "ppid": "cc5f0814e7dfd37962c0d5d0022bfeeb",
+    "qe_status": {
+      "status": "UpToDate",
+      "advisory_ids": []
+    },
+    "platform_status": {
+      "status": "UpToDate",
+      "advisory_ids": []
+    }
+  },
+  "limits": [
+    "No completion or response signature was checked.",
+    "No TLS SPKI binding or source provenance allowlist was checked.",
+    "This evidence is a dated preflight observation, not a proof for a future completion."
+  ]
+}
