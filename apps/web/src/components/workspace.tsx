@@ -1216,60 +1216,67 @@ export function Workspace() {
         </div>
       </aside>
       <div className="content-sheet">
-        <div className="topbar">
-          <span className="badge neutral">
-            <span className="network-dot" />
-            NEAR testnet
-          </span>
-          <div>
-            {wallet.account && !wallet.authenticated && (
+        <div
+          className="content-scroll"
+          role="region"
+          aria-label="Purchase workspace content"
+          tabIndex={0}
+        >
+          <div className="topbar">
+            <span className="badge neutral">
+              <span className="network-dot" />
+              NEAR testnet
+            </span>
+            <div>
+              {wallet.account && !wallet.authenticated && (
+                <button
+                  className="text-button"
+                  onClick={() => void run("Unlocking", wallet.authenticate)}
+                >
+                  <KeyRound size={14} /> Unlock private session
+                </button>
+              )}
               <button
-                className="text-button"
-                onClick={() => void run("Unlocking", wallet.authenticate)}
+                aria-label="Refresh confirmed state"
+                className="icon-button"
+                onClick={() => void refresh()}
               >
-                <KeyRound size={14} /> Unlock private session
+                <RefreshCw size={16} />
               </button>
-            )}
-            <button
-              aria-label="Refresh confirmed state"
-              className="icon-button"
-              onClick={() => void refresh()}
-            >
-              <RefreshCw size={16} />
-            </button>
+            </div>
           </div>
+          <main className="workspace-main">
+            {wallet.config.loaded && !wallet.config.configured && (
+              <div className="banner">
+                <TriangleAlert size={18} />
+                <span>
+                  Testnet contract setup is in progress. Live purchase actions
+                  become available after deployment.
+                </span>
+              </div>
+            )}
+            {error && (
+              <div className="banner error-banner" role="alert">
+                <TriangleAlert size={18} />
+                <span>{error}</span>
+                <button aria-label="Dismiss error" onClick={() => setError("")}>
+                  ×
+                </button>
+              </div>
+            )}
+            {notice && (
+              <div className="banner success-banner" role="status">
+                <CheckCircle2 size={18} />
+                {notice}
+              </div>
+            )}
+            {content}
+          </main>
+          <footer className="app-footer">
+            <span>ProofBill · Know what your agent bought.</span>
+            <span>NEAR testnet · Test funds only</span>
+          </footer>
         </div>
-        <main className="workspace-main">
-          {wallet.config.loaded && !wallet.config.configured && (
-            <div className="banner">
-              <TriangleAlert size={18} />
-              <span>
-                Testnet contract setup is in progress. Live purchase actions
-                become available after deployment.
-              </span>
-            </div>
-          )}
-          {error && (
-            <div className="banner error-banner" role="alert">
-              <TriangleAlert size={18} />
-              <span>{error}</span>
-              <button aria-label="Dismiss error" onClick={() => setError("")}>
-                ×
-              </button>
-            </div>
-          )}
-          {notice && (
-            <div className="banner success-banner" role="status">
-              <CheckCircle2 size={18} />
-              {notice}
-            </div>
-          )}
-          {content}
-        </main>
-        <footer className="app-footer">
-          <span>ProofBill · Know what your agent bought.</span>
-          <span>NEAR testnet · Test funds only</span>
-        </footer>
       </div>
       {busy && (
         <div className="progress-toast" role="status">

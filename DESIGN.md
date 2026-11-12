@@ -18,7 +18,7 @@ Inter or system sans; weights 400/500/600/700. Page title 32–36px, section 21p
 
 ## 4. Spacing and layout
 
-8px outer rim, 264px desktop sidebar, 24px white-sheet radius, 40–48px desktop content inset. One white-sheet vertical scroll owner inside 100dvh; sidebar remains fixed in the grid. Below 900px sidebar becomes compact navigation; below 640px content is one column, 20px inset. Main children use min-width:0; no horizontal page overflow.
+8px outer rim, 264px desktop sidebar, 24px white-sheet radius, 40–48px desktop content inset. The white sheet clips its contents and keeps a 6px inset around one keyboard-accessible `.content-scroll` region. That region owns vertical scrolling inside the bounded 100dvh shell; the sidebar, rounded sheet and outer rim stay stationary. Use a thin neutral scrollbar, contain overscroll, and keep the header, page content and footer in the same scroll flow. The landing page retains normal document scrolling. Below 900px sidebar becomes compact navigation; below 640px content is one column, 20px inset. Main children use min-width:0; no horizontal page overflow.
 
 ## 5. Primitives and states
 
