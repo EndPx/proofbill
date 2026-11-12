@@ -1,6 +1,6 @@
 # ProofBill delivery plan
 
-State at 13 November 2026: **M0–M4 implemented and locally integrated against actual NEAR testnet/NEAR AI; focused M5 checks passed, including Wasm/Sandbox callbacks. M6 hosting validation is in progress.** These stages do not imply a production audit or organic adoption. The earlier standalone probe remains separate dated evidence.
+State at 13 November 2026: **M0–M5 implemented/validated; M6 hosting and hosted end-to-end purchase validation passed.** See [hosted release](../evidence/hosted-release.md). Human demo-post recording and hackathon submission remain separate user actions, not implied by hosting completion. These results do not imply a production audit or organic adoption.
 
 Product decisions: [PRODUCT-SPEC.md](PRODUCT-SPEC.md). Architecture/interfaces: [TECHNICAL-DESIGN.md](TECHNICAL-DESIGN.md). Do not duplicate or quietly change their ownership/payment rules inside task notes.
 

@@ -6,7 +6,9 @@
 
 ProofBill is a NEAR testnet application for controlled AI service purchases. A funded **NFT Purchase Pass** carries the right to one fixed-price purchase. Its holder assigns an agent, receives a private result with inspectable evidence, approves the exact seller payment, and keeps a reconciled receipt.
 
-**Status: MVP implemented. One actual private-inference purchase has passed end to end on NEAR testnet. Hosted release validation is in progress.** Project-owned scripted accounts are test evidence, not traction. This is not audited or mainnet-ready.
+**Status: live testnet MVP. A complete purchase passed through the Vercel API, Neon, the hosted worker, actual NEAR AI and the NEAR testnet contract.** Project-owned scripted accounts are test evidence, not traction. This is not audited or mainnet-ready.
+
+**[Open ProofBill](https://proofbill-two.vercel.app)** · **[Open the workspace](https://proofbill-two.vercel.app/app/purchases)** · **[Inspect a confirmed receipt](https://proofbill-two.vercel.app/app/receipts/pass-2-order)**
 
 ## The problem
 
@@ -35,7 +37,7 @@ Use a NEAR **testnet** wallet with message-signing support. The inspected connec
 - Open the resulting order. Review its actual output and scoped checks, then approve payment or request a refund.
 - Follow the confirmed receipt and linked NFT state. Public receipts exclude private prompts and results.
 
-The web production URL is recorded after hosted validation. No seed phrase or private key is required by the web app.
+No seed phrase or private key is required by the web app.
 
 ## Four track contributions
 
@@ -51,6 +53,7 @@ The [official rules](https://nearhackathon.com/HACKATHON.md) govern final submis
 ## Inspect the evidence
 
 - [Completed real purchase: pass-1-order](docs/evidence/integration/pass-1-order.json)
+- [Hosted release and second complete purchase](docs/evidence/hosted-release.md)
 - [Deploy/init transaction](https://testnet.nearblocks.io/txns/Awp98RaHMsffcfz9HqrLCaPR6WeCaWig3suGq816pyHY)
 - [Seller payout transaction](https://testnet.nearblocks.io/txns/9s1TrL3tjWUFn4kuLY2JLfSkztN2MC8LAssPrebcp1vJ)
 - [Rejected duplicate payment](https://testnet.nearblocks.io/txns/EEVzKgstU98jiwA4UbWL6U27REW3vXX13XRuc5kv94KU)

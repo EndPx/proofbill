@@ -10,7 +10,7 @@ export function db() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_NOT_CONFIGURED");
   return (pool ??= postgres(process.env.DATABASE_URL, {
     max: 3,
-    ssl: "require",
+    ssl: { rejectUnauthorized: true },
     prepare: false,
     idle_timeout: 20,
   }));
