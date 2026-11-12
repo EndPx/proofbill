@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible application, worker or contract problem.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: "For sensitive payment, ownership or privacy vulnerabilities, use the repository's private security report instead. Never paste credentials or private buyer data."
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Hosted testnet app
+        - Local web app
+        - Contract or Sandbox
+        - Agent or inference worker
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Revision or deployment
+      description: Commit SHA or public deployment URL, if known.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic input and the smallest sequence that shows the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Public evidence
+      description: Screenshot, sanitized error, or an existing public testnet receipt. Do not include keys or session data.
