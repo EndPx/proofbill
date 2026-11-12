@@ -32,6 +32,8 @@ interface Config {
 }
 interface WalletState {
   account: string;
+  ready: boolean;
+  connectionError: string;
   authenticated: boolean;
   config: Config;
   connect: () => Promise<void>;
@@ -47,6 +49,8 @@ const Context = createContext<WalletState | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const connector = useRef<NearConnector | null>(null),
     [account, setAccount] = useState(""),
+    [ready, setReady] = useState(false),
+    [connectionError, setConnectionError] = useState(""),
     [authenticated, setAuthenticated] = useState(false),
     [config, setConfig] = useState<Config>({
       contractId: "",
@@ -60,29 +64,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     void api<Config>("config").then((c) => {
       if (active) setConfig({ ...c, loaded: true });
     });
-    void import("@hot-labs/near-connect").then(async ({ NearConnector }) => {
-      if (!active) return;
-      const c = new NearConnector({
-        network: "testnet",
-        features: { signMessage: true, signAndSendTransaction: true },
-      });
-      connector.current = c;
-      c.on("wallet:signIn", (p) => {
-        if (active) setAccount(p.accounts[0]?.accountId ?? "");
-      });
-      c.on("wallet:signOut", () => {
-        if (active) {
-          setAccount("");
-          setAuthenticated(false);
+    void import("@hot-labs/near-connect")
+      .then(async ({ NearConnector }) => {
+        if (!active) return;
+        const c = new NearConnector({
+          network: "testnet",
+          features: { signMessage: true, signAndSendTransaction: true },
+        });
+        connector.current = c;
+        c.on("wallet:signIn", (p) => {
+          if (active) setAccount(p.accounts[0]?.accountId ?? "");
+        });
+        c.on("wallet:signOut", () => {
+          if (active) {
+            setAccount("");
+            setAuthenticated(false);
+          }
+        });
+        try {
+          const connected = await c.getConnectedWallet();
+          if (active) setAccount(connected.accounts[0]?.accountId ?? "");
+        } catch {
+          /* Disconnected is the normal initial state. */
         }
+      })
+      .catch(() => {
+        if (active)
+          setConnectionError(
+            "The wallet connector could not load. Please reload to try again.",
+          );
+      })
+      .finally(() => {
+        if (active) setReady(true);
       });
-      try {
-        const connected = await c.getConnectedWallet();
-        if (active) setAccount(connected.accounts[0]?.accountId ?? "");
-      } catch {
-        /* Disconnected is the normal initial state. */
-      }
-    });
     return () => {
       active = false;
     };
@@ -126,7 +140,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const id = accounts[0]?.accountId;
     if (!id) throw new Error("NO_WALLET_ACCOUNT");
     setAccount(id);
-    await authenticateFor(id);
   }
   async function disconnect() {
     await connector.current?.disconnect();
@@ -159,6 +172,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     <Context.Provider
       value={{
         account,
+        ready,
+        connectionError,
         authenticated,
         config,
         connect,

@@ -23,6 +23,8 @@ dist/
 target/
 .turbo/
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 .runtime/
 .vercel/

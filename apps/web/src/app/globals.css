@@ -1106,6 +1106,55 @@ textarea {
   padding: 0 8px 8px;
   min-height: 100dvh;
 }
+.wallet-entry-sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 60px;
+  min-height: calc(100dvh - 104px);
+  padding: 60px 7%;
+}
+.wallet-entry-intro h1 {
+  margin: 26px 0 20px;
+}
+.wallet-entry-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 32px;
+}
+.wallet-entry-note p {
+  font-size: 13px;
+}
+.wallet-entry-card {
+  padding: 32px;
+}
+.wallet-entry-icon {
+  display: inline-flex;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--success-surface);
+  color: var(--success-ink);
+  margin-bottom: 24px;
+}
+.wallet-entry-card h2 {
+  margin-bottom: 12px;
+}
+.wallet-entry-card > .button {
+  width: 100%;
+  margin: 24px 0 14px;
+}
+.wallet-entry-error {
+  color: var(--error-ink);
+  margin-top: 16px;
+}
+@media (max-width: 900px) {
+  .wallet-entry-sheet {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    align-content: center;
+  }
+}
 .landing-nav {
   max-width: 1370px;
   margin: 0 auto;

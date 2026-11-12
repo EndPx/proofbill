@@ -1,4 +1,9 @@
 import { Workspace } from "@/components/workspace";
+import { WalletGate } from "@/components/wallet-gate";
 export default function Page() {
-  return <Workspace />;
+  return (
+    <WalletGate>
+      <Workspace />
+    </WalletGate>
+  );
 }
