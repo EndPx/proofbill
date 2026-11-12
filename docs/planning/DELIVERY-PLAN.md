@@ -1,6 +1,6 @@
 # ProofBill delivery plan
 
-State at 13 November 2026: **planning complete; M0–M6 not started**. The earlier AI response probe is completed feasibility evidence only. This plan prioritizes a working four-track product and a reproducible demo over continuous repair/refactoring.
+State at 13 November 2026: **M0–M4 implemented and locally integrated against actual NEAR testnet/NEAR AI; focused M5 checks passed, including Wasm/Sandbox callbacks. M6 hosting validation is in progress.** These stages do not imply a production audit or organic adoption. The earlier standalone probe remains separate dated evidence.
 
 Product decisions: [PRODUCT-SPEC.md](PRODUCT-SPEC.md). Architecture/interfaces: [TECHNICAL-DESIGN.md](TECHNICAL-DESIGN.md). Do not duplicate or quietly change their ownership/payment rules inside task notes.
 

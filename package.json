@@ -1,0 +1,15 @@
+{
+  "name": "proofbill",
+  "private": true,
+  "packageManager": "pnpm@10.21.0",
+  "scripts": {
+    "dev": "pnpm --filter @proofbill/web dev",
+    "build": "pnpm --filter @proofbill/web build",
+    "check": "pnpm -r typecheck",
+    "worker": "node --env-file=.env.local --import tsx workers/agent/src/index.ts",
+    "db:migrate": "node --env-file=.env.local --import tsx packages/server/src/migrate.ts",
+    "env:web": "node tools/write-web-env.mjs",
+    "test": "node --import tsx --test packages/shared/src/*.test.ts packages/server/src/*.test.ts"
+  },
+  "devDependencies": { "tsx": "4.21.0", "typescript": "5.9.3", "@types/node": "24.10.1" }
+}

@@ -1,0 +1,12 @@
+{
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "seller_id": "seller.proofbill-endpx-2026.testnet",
+  "publisher_id": "publisher.proofbill-endpx-2026.testnet",
+  "agent_id": "agent.proofbill-endpx-2026.testnet",
+  "deploy_transaction": "Awp98RaHMsffcfz9HqrLCaPR6WeCaWig3suGq816pyHY",
+  "deployed_wasm_bytes": 267996,
+  "deployed_wasm_sha256": "9b747cd9b6351e8c7dbdb9f66d87418afb4b9a995f79c5d04fea6f4abde02008",
+  "agent_restricted_key_transaction": "3tTeSZ42kq3ffdMyyyVsLSK1Ej875pexFPTzdvj722iZ",
+  "publisher_restricted_key_transaction": "yMjwEqHJGQrJLrwEUAj36F6KJzPXdyhjWV6yRnRH9qC"
+}

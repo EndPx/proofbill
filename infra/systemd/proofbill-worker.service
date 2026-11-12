@@ -1,0 +1,25 @@
+[Unit]
+Description=ProofBill testnet purchasing agent and inference verifier
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=proofbill
+Group=proofbill
+WorkingDirectory=/opt/proofbill/workers/agent
+EnvironmentFile=/opt/proofbill/.env.local
+Environment=XDG_CACHE_HOME=/opt/proofbill/.runtime/cache
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/node --import tsx src/index.ts
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/proofbill/.runtime
+
+[Install]
+WantedBy=multi-user.target

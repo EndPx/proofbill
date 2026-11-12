@@ -1,6 +1,6 @@
 # ProofBill build plan
 
-Date: 13 November 2026, Asia/Jakarta. State: **planning complete; implementation not started**.
+Date: 13 November 2026, Asia/Jakarta. State: **MVP implemented; a real testnet purchase has passed end to end. Deployment validation is in progress.** See `docs/evidence/integration/pass-1-order.json` for the first completed purchase. This folder retains the design intent; source and execution evidence describe what actually runs.
 
 The user selected four build targets: **Agent Economy (`agents`), AI Security & Defense (`security`), Privacy & Private AI (`privacy`), and NFTs That Do Something (`nfts`)**. NFT Purchase Pass is part of the required product scope. Earlier research that calls NFT optional is superseded by this decision.
 

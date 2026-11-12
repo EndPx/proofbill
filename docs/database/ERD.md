@@ -1,0 +1,237 @@
+# ProofBill data model and ERD
+
+Design review: 13 November 2026. The initial review below preceded implementation. **The user subsequently authorized continuation; `relations.sql` has now been applied and Neon inspection confirmed five application tables with five foreign keys.**
+
+The user asked to make the ERD and ownership/PK/FK relationships clear before continuing implementation. This document records the observed initial schema separately from the recommended target. Source code and deployed database must not be described as already matching the target.
+
+## 1. Initial Neon schema: historical snapshot before the migration
+
+The first `information_schema` inspection found four tables:
+
+| Existing table | Actual primary key | Other actual constraint | Actual foreign keys |
+| --- | --- | --- | --- |
+| `pb_challenges` | `id` | — | None |
+| `pb_sessions` | `token_hash` | — | None |
+| `pb_jobs` | `order_id` | `UNIQUE(token_id)` | None |
+| `pb_chain_observations` | `id` | — | None |
+
+At that initial point the identifier columns were not enforced foreign keys. The applied relational upgrade now implements the target below; its source is `packages/server/src/relations.sql`.
+
+## 2. Recommended target: five Neon tables
+
+Keep five application tables. Add a common public account identity table, give jobs a stable internal primary key, and distinguish a linked local job from an external chain reference. Do not add SQL replicas of contract balances just to draw more relationships.
+
+The first application operates on NEAR testnet only. Account IDs are NEAR public identities, never secrets. `pb_accounts.network` is constrained to `testnet` for this release; the same table must not silently mix mainnet accounts later. Supporting both networks requires explicitly scoping account identity and its foreign keys.
+
+```mermaid
+erDiagram
+    PB_ACCOUNTS ||--o{ PB_CHALLENGES : requests
+    PB_ACCOUNTS ||--o{ PB_SESSIONS : authenticates
+    PB_ACCOUNTS ||--o{ PB_JOBS : owns_private_purchase
+    PB_ACCOUNTS ||--o{ PB_CHAIN_OBSERVATIONS : signs_transaction
+    PB_JOBS o|--o{ PB_CHAIN_OBSERVATIONS : linked_job
+
+    PB_ACCOUNTS {
+        text account_id PK
+        text network "testnet only"
+        timestamptz created_at
+        timestamptz last_verified_at "nullable"
+    }
+    PB_CHALLENGES {
+        text id PK
+        text account_id FK
+        text nonce UK
+        text message
+        text recipient
+        timestamptz expires_at
+        timestamptz used_at "nullable"
+    }
+    PB_SESSIONS {
+        text token_hash PK
+        text account_id FK
+        timestamptz created_at
+        timestamptz expires_at
+    }
+    PB_JOBS {
+        uuid job_id PK
+        text network
+        text contract_id
+        text order_id "unique with network and contract_id"
+        text token_id "unique with network and contract_id"
+        text buyer_id FK
+        integer revision
+        text state
+        text input_cipher "nullable after erasure"
+        text result_cipher "nullable"
+        text request_commitment "nullable"
+        timestamptz provider_attempted_at "nullable"
+        timestamptz lease_until "nullable"
+        text error_code "nullable"
+        timestamptz erased_at "nullable"
+        timestamptz terminal_at "nullable observed terminal time"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    PB_CHAIN_OBSERVATIONS {
+        bigint id PK
+        uuid job_id FK "nullable"
+        text network
+        text contract_id
+        text order_id "nullable chain reference"
+        text token_id "nullable chain reference"
+        text signer_id FK
+        text action
+        text tx_hash "unique with network"
+        jsonb outcome
+        timestamptz created_at
+    }
+```
+
+`UK` means a unique constraint. The three-column job uniqueness rules and two-column transaction uniqueness rule are specified below; individual `order_id`, `token_id` or `tx_hash` columns are not globally unique by themselves.
+
+## 3. What each table owns
+
+### `pb_accounts`: common public identity
+
+Primary key: `account_id`, for example a named testnet account or an implicit account. Account records include both users and known operational signers. `last_verified_at` is nullable because seeing a public account in a transaction is not proof that the current browser controls it.
+
+An account row does not grant access. A private session still requires a valid wallet message signature. It contains no seed phrase, private key, wallet balance or authoritative NFT ownership.
+
+### `pb_challenges`: one-time login requests
+
+Primary key: random challenge `id`. Foreign key: `account_id -> pb_accounts.account_id`. `nonce` is unique. Store the exact message and recipient being signed, expiry and whether it was consumed.
+
+One account can request multiple challenges. A challenge can succeed at most once. Expired/used challenges can be cleaned up independently from valid sessions.
+
+### `pb_sessions`: authenticated application access
+
+Primary key: `token_hash`, the SHA-256 hash of an opaque random session token. Foreign key: `account_id -> pb_accounts.account_id`. The raw token is carried in a secure HTTP-only cookie, not stored in the database.
+
+One account can have multiple sessions. Session identity is fixed; switching browser wallets does not rewrite an existing session's account. A successful challenge creates a session through application logic; there is intentionally no persistent session-to-challenge FK because challenges are short-lived disposable authentication material.
+
+### `pb_jobs`: one private purchase execution
+
+Primary key: new internal `job_id` UUID. Foreign key: immutable `buyer_id -> pb_accounts.account_id`. This is the buyer at reservation, not a mutable current-NFT-owner field.
+
+External order identity is `(network, contract_id, order_id)` with a unique constraint. One Purchase Pass allows one job through `UNIQUE(network, contract_id, token_id)`. This avoids colliding `pass-1` or `pass-1-order` identifiers after deploying a different contract. The internal UUID stays stable for leases and DB relations.
+
+The row owns the worker lifecycle, encrypted input/result/evidence bundle, one provider-attempt marker and private retention. A queued row may exist before an onchain reservation, so a SQL row alone never proves an order was created onchain. `revision` snapshots authorization when the task is accepted.
+
+For this single-execution service, output and verification artifacts are one encrypted payload in `result_cipher`. Separate request, artifact and verification-history tables are not needed until the product actually supports multiple deliveries/versions. The exact-byte evidence remains lossless inside that encrypted bundle.
+
+After permitted erasure, clear ciphertext and record `erased_at`; retain the job's non-secret identity and payment references. Do not delete the relational history just to erase a private prompt. Default payload retention is seven days after a terminal outcome, as defined in the product specification; this policy still requires implementation.
+
+### `pb_chain_observations`: observed transaction evidence
+
+Primary key: bigint `id`. Foreign keys: optional `job_id -> pb_jobs.job_id`, and `signer_id -> pb_accounts.account_id`. `UNIQUE(network, tx_hash)` stores one transaction envelope once for this one-call-per-transaction MVP. The receipt/callback tree remains in `outcome` rather than being counted as several payments.
+
+`job_id` can be null for minting a pass, transferring it before an order, or observing a transaction that did not originate from a local job. The separate `order_id`/`token_id` fields preserve public chain references even when no local job exists. A matching local job is linked only after network/contract/order identity agrees.
+
+Many transactions can belong to one job: reservation, delivery publication, payment approval, and an explicit failed-payment retry. One observation links to at most one local job in the MVP. If future batches can affect multiple independent jobs, introduce a transaction-job junction at that time rather than overloading this relation.
+
+This table is a record of RPC evidence. Editing it cannot authorize a seller payout or change a pass owner. Actual receiver outcomes and contract state remain authoritative.
+
+## 4. Keys and cardinality
+
+| Child column | Parent key | Cardinality | Optional? | Meaning |
+| --- | --- | --- | --- | --- |
+| `pb_challenges.account_id` | `pb_accounts.account_id` | Account 1 -> 0..N challenges | No | Account for the login challenge |
+| `pb_sessions.account_id` | `pb_accounts.account_id` | Account 1 -> 0..N sessions | No | Verified principal of a session |
+| `pb_jobs.buyer_id` | `pb_accounts.account_id` | Account 1 -> 0..N jobs | No | Historical buyer allowed to read private data |
+| `pb_chain_observations.signer_id` | `pb_accounts.account_id` | Account 1 -> 0..N observations | No | Actual transaction signer |
+| `pb_chain_observations.job_id` | `pb_jobs.job_id` | Job 0..1 per observation; 0..N observations per job | Yes | Local job associated with the observed transaction |
+
+An account can be buyer in one context and signer/agent in another; do not encode a single global role that silently grants contract permissions.
+
+## 5. Constraints and indexes
+
+- Account network is explicitly testnet in this first release; validate public account ID format.
+- `UNIQUE(pb_challenges.nonce)` and challenge consume update guarded by `used_at IS NULL` and server expiry.
+- `UNIQUE(pb_jobs.network, contract_id, order_id)` for external order identity.
+- `UNIQUE(pb_jobs.network, contract_id, token_id)` for one job per single-use pass.
+- `UNIQUE(pb_chain_observations.network, tx_hash)` for one saved envelope per transaction.
+- If an observation has `job_id`, its network/contract/order association must match that job. Enforce the identity check in the writer; a simple UUID FK alone does not prove this equality. Use a composite FK including scope fields if a second independent writer is introduced.
+- Job revision is nonnegative; allowed worker states are explicit rather than arbitrary caller strings. Unknown provider execution is not automatically retried.
+- An erased job has null ciphertext and a non-null erasure timestamp. It must not be selected for another inference attempt.
+- FK deletion behavior is RESTRICT for accounts and job-linked financial history. Expired auth rows are removed directly; private erasure clears payload columns without cascading away history. Operator-level account/job deletion is outside the product flow.
+- Index challenge/session expiry for cleanup, session account ID for logout/review, buyer+created time for purchase history, job state+created time for queue leasing, observation job ID, and observation contract+token ID for pass history.
+
+The applied migration backfills identities/job UUIDs before adding constraints. API and worker writers now use the same scope and keys. A future migration must preserve that ordering and existing data.
+
+## 6. Contract state: separate from Neon tables
+
+These are logical entities persisted in the Rust contract, not SQL tables or cross-database FK targets:
+
+```mermaid
+erDiagram
+    NEAR_ACCOUNT ||--o{ PURCHASE_PASS : current_holder
+    SERVICE_SNAPSHOT ||--o{ PURCHASE_PASS : fixes_terms
+    PURCHASE_PASS ||--o| PURCHASE_ORDER : allows_one
+    PURCHASE_ORDER ||--o{ NATIVE_ATTEMPT : payment_or_refund
+    NEAR_ACCOUNT ||--o{ PURCHASE_ORDER : historical_buyer
+    NEAR_ACCOUNT ||--o{ NATIVE_ATTEMPT : beneficiary
+
+    PURCHASE_PASS {
+        string token_id PK
+        string current_owner_id
+        string seller_id
+        string model_id
+        u128 price_yocto
+        u32 authorization_revision
+        string assigned_agent_id
+        string phase
+    }
+    PURCHASE_ORDER {
+        string order_id PK
+        string token_id UK
+        string buyer_id
+        string seller_id
+        string request_commitment
+        string evidence_commitment
+        string phase
+    }
+    NATIVE_ATTEMPT {
+        string order_or_pass_id "identity part"
+        string kind "seller or refund"
+        u32 attempt_nonce "identity part"
+        string beneficiary
+        u128 amount_yocto
+        string outcome
+    }
+```
+
+The attempt entity describes the financial identity/invariant. The initial implementation may persist its nonce and state within pass/order records rather than as a separate iterable collection. A diagram entity does not imply a separate implemented map.
+
+One pass has zero orders before reservation and one order after reservation. That order may have several explicit attempts after proven failure, but at most one successful seller payment. A refund is an alternative exit, not an additional service purchase. The current holder/refund entitlement can change before use; the historical buyer on an existing order cannot.
+
+## 7. Joining the two layers
+
+| Reference | Type of relationship | Authority |
+| --- | --- | --- |
+| Job `network/contract_id/token_id` -> onchain pass | Logical chain reference, not SQL FK | Fresh contract read |
+| Job `network/contract_id/order_id` -> onchain order | Logical chain reference, not SQL FK | Confirmed reservation/order state |
+| Account `account_id` -> public NEAR identity | Public identifier; control proved by signature | Signature + account key verification |
+| Observation `tx_hash` -> transaction/receipt tree | Public chain reference | RPC evidence/final receiver outcome |
+| NFT's current owner -> private result access | Not an access relationship | Historical order buyer/session controls private read |
+
+Neon cannot enforce a foreign key against a blockchain map. The app reads the correct network and contract, verifies identifiers and commitments, and stores an observational link. A SQL `state='delivered'` or a recorded transaction hash cannot make a contract payment succeed.
+
+## 8. Concrete example
+
+1. Alice requests a challenge and establishes a session. Both rows point to Alice's account record.
+2. Alice mints `pass-1`; mint observation has no `job_id` because no order exists yet.
+3. Alice transfers the unused pass to Bob. The contract changes ownership and invalidates the prior agent assignment; the transfer observation still has no local job.
+4. Bob authenticates, assigns an agent, and submits a private brief. A job with its own UUID points to Bob as immutable buyer and to the scoped pass/order IDs.
+5. The agent's reservation and publisher's delivery transactions link to that job; their respective signer account IDs are retained.
+6. Bob approves payment. Its observation links to the job. Paid/Completed is displayed only after the contract's final transfer result agrees.
+7. A future transfer of the Completed NFT does not rewrite `pb_jobs.buyer_id`; private results remain Bob's until exported/erased under the retention policy.
+
+## 9. Changes required after this design review
+
+1. Add/backfill `pb_accounts` from public account identifier columns without treating those rows as authenticated sessions.
+2. Add job UUID and explicit network/contract scope; preserve existing order IDs and data.
+3. Add optional job linkage, scope and transaction deduplication to observations.
+4. Add the FKs, uniqueness and lifecycle constraints after checking existing rows.
+5. Adapt auth/API/worker queries and atomic leases to the new keys in the same implementation slice.
+
+The review itself did not change the database. After authorization, the implementation applied the relational migration without a data reset or DROP TABLE. Worker retention records the first confirmed terminal observation in `terminal_at`, then erases active private payloads after seven days.

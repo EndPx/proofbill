@@ -158,7 +158,7 @@ Encrypt private artifact bytes with authenticated encryption and server-only key
 
 Use explicit network/contract configuration and explorer references. No deployment address or agent/seller account is assumed. Verify account ownership, funding, allowed methods and final ABI during setup before signatures. User wallet/private keys remain with the user. Separate operational agent and publisher credentials, restricting each to its actual methods.
 
-Deployment target: one Linux server running the Node web app, Node worker and local Python helper, with HTTPS and PostgreSQL. This matches the native verifier dependency and keeps its endpoint private. Check the actual available host/runtime/database before deployment; this document neither provisions nor authorizes paid resources. Local reproduction remains a supported path.
+Deployment selection updated by the user: frontend/private API on Vercel through the GitHub repository; PostgreSQL on Neon; the Node worker and its local Python helper on an isolated Linux service. This keeps native verification off the web request path. Vercel holds only the API's server-side secrets; worker signing/provider credentials stay with the worker. Local reproduction remains supported.
 
 Track source, pinned locks, schemas, migrations, setup templates, tests and curated public evidence. Keep real env files, keys, DB dumps, private payloads, worker logs, generated build files and working media exports local/ignored. Review existing `research/` content before any public commit; do not upload an indiscriminate workspace snapshot.
 
