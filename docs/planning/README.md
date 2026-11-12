@@ -14,7 +14,7 @@ The user selected four build targets: **Agent Economy (`agents`), AI Security & 
 
 **A holder funds an NFT Purchase Pass, assigns a purchasing agent, receives a private AI result with inspectable evidence, approves the exact payment, and obtains a confirmed NEAR testnet receipt.** A separate pass transfer demonstrates that purchase/refund authority follows current ownership before use.
 
-Working pitch: **Give your agent a budget. Know what it bought. Pay once.**
+Working pitch: **Your agent orders. You stay in control.**
 
 ## Baseline already available
 
@@ -28,7 +28,7 @@ These are inputs to the build. They do not establish NFT deployment, a working a
 
 Build visible, complete product slices. Add the necessary checks inside the slice, then move to the next feature. Fix defects that prevent the user journey, violate money/ownership/privacy rights, or break reproduction. Defer cosmetic refinements and speculative hardening once the stated checks pass. Do not start repeated audit/refactor loops.
 
-This task creates planning documents only. No source scaffold, account, deployment, transaction, repository publication or submission is authorized by the planning request.
+These documents preserve the original planning context. The implementation and [hosted release record](../evidence/hosted-release.md) describe the delivered behavior; planning text is not execution evidence.
 
 ## Official references
 

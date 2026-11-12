@@ -1,147 +1,212 @@
-<p align="center"><img src="design/proofbill-brand-v1/proofbill-logo-on-dark.png" alt="ProofBill" width="650" /></p>
+<p align="center">
+  <img src=".github/assets/proofbill-banner.svg" alt="ProofBill. Your agent orders. You stay in control." width="1280" />
+</p>
 
-# ProofBill
+<h1 align="center">ProofBill</h1>
 
-**Give your agent a budget. Know what it bought. Pay once.**
+<p align="center">
+  A funded NFT Purchase Pass for an AI service.<br />
+  A private result to inspect. Your wallet's approval to pay.
+</p>
 
-ProofBill is a NEAR testnet application for controlled AI service purchases. A funded **NFT Purchase Pass** carries the right to one fixed-price purchase. Its holder assigns an agent, receives a private result with inspectable evidence, approves the exact seller payment, and keeps a reconciled receipt.
+<p align="center">
+  <a href="https://github.com/EndPx/proofbill/actions/workflows/check.yml"><img src="https://github.com/EndPx/proofbill/actions/workflows/check.yml/badge.svg?branch=main" alt="App checks" /></a>
+  <a href="https://testnet.nearblocks.io/address/proofbill-endpx-2026.testnet"><img src="https://img.shields.io/badge/NEAR-testnet-51e79c?labelColor=252525" alt="NEAR testnet" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-ffffff?labelColor=252525" alt="MIT license" /></a>
+</p>
 
-**Status: live testnet MVP. A complete purchase passed through the Vercel API, Neon, the hosted worker, actual NEAR AI and the NEAR testnet contract.** Project-owned scripted accounts are test evidence, not traction. This is not audited or mainnet-ready.
+<p align="center">
+  <a href="https://proofbill-two.vercel.app"><strong>Live app</strong></a> ·
+  <a href="#review-in-five-minutes"><strong>Reviewer walkthrough</strong></a> ·
+  <a href="docs/evidence/hosted-release.md"><strong>Execution evidence</strong></a> ·
+  <a href="#local-development"><strong>Run locally</strong></a>
+</p>
 
-**[Open ProofBill](https://proofbill-two.vercel.app)** · **[Open the workspace](https://proofbill-two.vercel.app/app/purchases)** · **[Inspect a confirmed receipt](https://proofbill-two.vercel.app/app/receipts/pass-2-order)**
+## Why ProofBill
 
-## The problem
+When an agent uses a paid AI service, its owner needs to connect three things: **what was permitted, what came back, and what was actually paid**. Separate spending rules, response logs and transaction records make that review harder.
 
-An agent's owner needs a clear connection between what was permitted, what arrived, and what was paid. Separate spending rules, response logs and transaction records make purchases harder to review and retries harder to reconcile.
+ProofBill puts that purchase into one lifecycle:
 
-ProofBill connects **Purchase Pass → exact order → response evidence → holder approval → final payment outcome → receipt**. The initial customer hypothesis is a developer or small team operating paid-API agents; demand and willingness to pay still need validation.
+**Purchase Pass → agent order → private result and evidence → holder approval → confirmed seller payment → receipt.**
 
-## The purchase flow
+The initial user is a developer or small team operating paid-API agents. The current service turns a short purchase brief into an item, quantity and requester. The agent has a bounded purchasing role; the holder keeps the payment decision.
 
-1. **Mint and fund a pass.** It binds one service, seller, model, fixed price and expiry. The first service extracts item, quantity and requester from a private purchase brief.
-2. **Keep or transfer it.** An unused NFT transfers its purchase/refund entitlement to the new holder. Prior agent assignment is invalidated.
-3. **Assign Research assistant.** A restricted operational agent key reserves the bound order. It does not receive the holder's wallet key or permission to approve payment.
-4. **Inspect the private result.** NEAR AI Cloud supplies an actual response. The verifier checks exact bytes, model signature and required preflight evidence.
-5. **Approve the exact payment.** The holder's wallet approves the stored order, seller, amount and evidence commitment. Only a successful transfer callback makes the order Paid.
-6. **Keep a receipt.** The pass becomes Completed and cannot purchase again. An unused/rejected allocation has a confirmed-refund exit. Private history stays with the historical buyer after a terminal NFT transfer.
+**Current state:** a live NEAR testnet MVP, with a recorded hosted purchase through Vercel, Neon, the worker, actual NEAR AI inference and the contract. [Inspect that journey](docs/evidence/integration/pass-2-order.json).
 
-Service price is **0.010 native testnet NEAR**, plus a **0.030 storage budget** and wallet gas. Storage backing is retained while the NFT/history exists; it is separate from the service amount. The seller/operator pays NEAR AI inference credits independently of the later seller payout. Buyer rejection does not undo provider usage.
+<p align="center">
+  <img src=".github/assets/landing-desktop.webp" alt="The live ProofBill landing page with its Purchase Pass illustration, wallet entry action and testnet product preview." width="1200" />
+</p>
 
-## Try the app
+<details>
+<summary>View the mobile landing and application receipt</summary>
 
-Use a NEAR **testnet** wallet with message-signing support. The inspected connector selector offered Meteor, Intear, Nightly, Ledger and NEAR CLI; the complete protocol was tested with project-owned account signatures. Browser wallet confirmation is a separate user-controlled step.
+<p>
+  <img src=".github/assets/landing-mobile.webp" alt="ProofBill's mobile landing page." width="260" />
+</p>
 
-- Connect the wallet, then sign a non-transaction login message to unlock private features. Message login uses no gas.
-- Create a Purchase Pass and confirm the funding transaction.
-- Open it, assign Research assistant, enter a brief or use the synthetic example, then Run agent.
-- Open the resulting order. Review its actual output and scoped checks, then approve payment or request a refund.
-- Follow the confirmed receipt and linked NFT state. Public receipts exclude private prompts and results.
+![Recorded application receipt on NEAR testnet](docs/evidence/ui/production-receipt-desktop.png)
 
-No seed phrase or private key is required by the web app.
+The receipt image is a recorded testnet snapshot. The [current app](https://proofbill-two.vercel.app/app/receipts/pass-2-order) first asks for a wallet connection; private output additionally requires the historical buyer's signed session.
+
+</details>
+
+## Review in five minutes
+
+1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), switch through the three purchase steps, and try the clearly labelled handover illustration. This needs no wallet or credits.
+2. **Inspect the working workspace.** [Connect a NEAR testnet wallet](https://proofbill-two.vercel.app/app/purchases). Open the [recorded receipt](https://proofbill-two.vercel.app/app/receipts/pass-2-order) to inspect public financial facts. Another wallet cannot unlock the buyer's private result.
+3. **Check the payment independently.** Compare the [successful seller payment](https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z), [duplicate-payment refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1), and [integration record](docs/evidence/integration/pass-2-order.json). Reading these does not require a new purchase.
+4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, assign Research assistant, enter a brief, run the agent, unlock the result, and approve payment or request a refund where permitted. All financial actions require your wallet approval.
+5. **Review or reproduce the code.** Use the track/source map below, then run [local checks](#checks-and-reproduction). Browser tests use fixtures and need no signing or provider secrets.
+
+The fixed service allocation is **0.010 native testnet NEAR**. Minting also reserves a separate **0.030 NEAR storage budget**, plus transaction gas. Storage backing is retained while its NFT/history exists and is not part of the service refund. The seller/operator pays inference credits independently of the later payout.
 
 ## Four track contributions
 
-| Track | Implemented contribution / evidence |
-| --- | --- |
-| Agent Economy | Restricted agent reservation, actual service execution and holder-approved seller payout |
-| AI Security & Defense | Bound seller/amount/expiry, stale-holder refusal, one-order pass, duplicate-payment refusal and explicit pending/failure states |
-| Privacy & Private AI | Wallet-authenticated buyer-only reads, encrypted private artifacts and actual model-serving TEE response evidence |
-| NFTs That Do Something | Funded NEP-171 purchasing/refund right, unused transfer, active-order lock and terminal metadata |
+| Track | What is implemented | Where to inspect it |
+| --- | --- | --- |
+| **Agent Economy** | A named, restricted agent reserves one bound service order; actual execution leads to a separately approved seller payout. | [Agent worker](workers/agent/src/index.ts), [reservation transaction](https://testnet.nearblocks.io/txns/7L5yX1XcyydLyYdgsApsajWqoPrPUTAjXuCBwv3BusLk), [paid order](docs/evidence/integration/pass-2-order.json) |
+| **AI Security & Defense** | Fixed seller/amount/expiry, holder and revision checks, method-restricted operational keys, single-use order, explicit pending/failure states and callback-driven payment. | [Contract](contracts/proofbill/src/lib.rs), [Sandbox cases](contracts/proofbill/tests/test_basics.rs), [duplicate refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1) |
+| **Privacy & Private AI** | Buyer-authenticated private reads, encrypted artifacts, exact-byte response checks and scoped model-serving TEE evidence from NEAR AI Cloud. | [Authentication](packages/server/src/auth.ts), [private API](apps/web/src/app/api/%5B...path%5D/route.ts), [inference verifier](workers/inference/inference.py), [response-probe scope](docs/evidence/near-ai-response-probe.md) |
+| **NFTs That Do Something** | A funded NEP-171 purchase/refund entitlement follows ownership; unused transfer clears agent assignment, active orders lock transfer, and completion updates metadata. | [NFT and payment implementation](contracts/proofbill/src/lib.rs), [transfer transaction](https://testnet.nearblocks.io/txns/DcJ1hjcBDByvvY6SMgDNyBLBCYbeuYa4uxTaTqSfBt12), [receiver/ownership cases](contracts/proofbill/tests/test_basics.rs) |
 
-The [official rules](https://nearhackathon.com/HACKATHON.md) govern final submission. Tests establish the stated slices, not a production security guarantee.
+These are implementation claims, not awards or a security certification. [The official NEAR Hackathon rules](https://nearhackathon.com/HACKATHON.md) govern submission eligibility and final track selection.
 
-## Inspect the evidence
+## Evidence you can inspect
 
-- [Completed real purchase: pass-1-order](docs/evidence/integration/pass-1-order.json)
-- [Hosted release and second complete purchase](docs/evidence/hosted-release.md)
-- [Deploy/init transaction](https://testnet.nearblocks.io/txns/Awp98RaHMsffcfz9HqrLCaPR6WeCaWig3suGq816pyHY)
-- [Seller payout transaction](https://testnet.nearblocks.io/txns/9s1TrL3tjWUFn4kuLY2JLfSkztN2MC8LAssPrebcp1vJ)
-- [Rejected duplicate payment](https://testnet.nearblocks.io/txns/EEVzKgstU98jiwA4UbWL6U27REW3vXX13XRuc5kv94KU)
-- [Standalone response-probe scope](docs/evidence/near-ai-response-probe.md)
-- [Deployment identities and code hash](infra/near/testnet-deployment.json)
+| Evidence | What it establishes | Boundary |
+| --- | --- | --- |
+| [Hosted release](docs/evidence/hosted-release.md) and [pass-2-order record](docs/evidence/integration/pass-2-order.json) | The hosted API, private persistence, worker, inference and NEAR testnet purchase were exercised together. | Project-owned test accounts and synthetic input; not customer traction. |
+| [Deployment identities](infra/near/testnet-deployment.json) | Public contract/operator IDs, deploy transaction, Wasm size and artifact hash. | A deployment record, not an audit or a claim that every later source commit was redeployed. |
+| [Response verification probe](docs/evidence/near-ai-response-probe.md) | One actual response, its signature/preflight checks and the verifier's explicit limits. | Response integrity and stated execution context do not establish answer accuracy. |
+| [MVP validation matrix](docs/evidence/mvp-validation.md) | Recorded auth, ownership, refusal, payment and local callback checks, with scope per row. | Local Sandbox uses a synthetic publisher; it is not provider-inference evidence. |
+| [GitHub Actions](https://github.com/EndPx/proofbill/actions/workflows/check.yml) | Fresh-run typechecks, unit tests, production build and browser/accessibility journeys. | No paid inference, wallet signing or chain writes; Rust/Sandbox checks run separately. |
 
-The real response contained structured output for synthetic workshop supplies. Original request/response and evidence are held in the encrypted buyer artifact, not exposed through the public receipt. Local Sandbox checks use a synthetic publisher to isolate contract behavior; they are not AI provenance evidence.
+The hosted record contains a successful buyer read and denial for another authenticated account. Original private request/response artifacts are encrypted and are not made public through a receipt. Browser connection tests use an injected wallet fixture; the recorded integration exercised signatures through the SDK/API, not an automated human wallet confirmation.
 
 ## Architecture and trust
 
 ```mermaid
 flowchart LR
-  U[Holder's testnet wallet] --> V[Vercel web and private API]
-  U --> C[NEAR Purchase Pass contract]
-  V --> D[Neon: sessions and encrypted jobs]
-  W[Isolated agent worker] --> D
-  W --> C
-  W --> P[Local Python verifier]
-  P --> A[NEAR AI Cloud and attestation services]
+  H["Holder's testnet wallet"]
+  UI["Next.js workspace"]
+  API["Server-only API"]
+  subgraph Onchain["Onchain · NEAR testnet"]
+    C["Purchase Pass contract<br/>Funds · ownership · payment state"]
+  end
+  subgraph Offchain["Offchain application and inference"]
+    DB[("Neon<br/>Sessions · jobs · encrypted artifacts")]
+    W["Restricted agent worker"]
+    V["Python inference verifier"]
+    AI["NEAR AI Cloud<br/>Response and attestation evidence"]
+  end
+  H --> UI
+  H -->|"Fund · transfer · approve"| C
+  UI --> API
+  API --> DB
+  API -->|"Read confirmed state"| C
+  W <--> DB
+  W -->|"Reserve · publish delivery"| C
+  W --> V --> AI
 ```
 
-NEAR owns financial/NFT truth. Neon stores private application state and observational transaction references. The contract trusts a disclosed application publisher's offchain evidence statement, then separately requires holder payment approval; it does not verify Intel/NVIDIA quotes itself.
+**Onchain state is the financial authority.** Neon holds private application state and observational references; a database row cannot authorize payment. The agent does not receive the holder's wallet key. The contract separately requires holder approval and a successful seller-transfer callback before marking an order Paid.
 
-Required evidence includes explicit ECDSA `provider_tee`, exact-byte hashes, unique verified preflight signer, accepted Intel TDX and GPU evidence. TLS peer-SPKI binding and independent source/image allowlisting are **Not checked**. NRAS is trusted through authenticated HTTPS; its JWT signing chain is not locally revalidated. Signatures do not establish answer accuracy.
+**The evidence publisher remains trusted.** The contract accepts the application's offchain verification statement; it does not verify Intel/NVIDIA quotes onchain. The implemented verifier checks exact response bytes, the ECDSA signer and required Intel TDX/GPU preflight evidence. TLS connection binding and independent source/image allowlisting are **Not checked**; the NRAS JWT chain is not locally revalidated.
 
-The app operator processes plaintext while executing the service. Do not interpret encrypted storage/TEE inference as an operator-blind or fully end-to-end-encrypted application. Private payloads are removed from active application storage seven days after an observed terminal outcome; explicit buyer erasure preserves public financial history.
+**Private does not mean operator-blind.** The operator processes plaintext while executing the service. Database credentials and artifact keys stay server-side; worker signing/provider keys are excluded from the web environment. See [the security policy](SECURITY.md) for reporting and trust boundaries.
 
-Database credentials and artifact keys are server-only Vercel variables. API imports have a `server-only` boundary. Worker signing/provider keys are excluded from the web environment. The local browser-bundle check found no configured credential values.
+## Repository map
 
-## Source map
-
-```text
-apps/web/               Next.js UI and private API
-contracts/proofbill/    Rust NEP-171 entitlement/payment contract and Sandbox tests
-workers/agent/         Restricted agent, queue leasing and reconciliation
-workers/inference/     Python exact-byte inference and attestation checks
-packages/shared/       Public types and amount/rights helpers
-packages/server/       Server-only persistence, encryption, chain/auth helpers
-docs/database/         ERD, PK/FK, data ownership and relations
-docs/planning/         Product decisions, architecture and delivery intent
-docs/evidence/         Scoped, curated execution evidence
-infra/                 Public deployment templates; no real secret values
-```
+| Path | Responsibility |
+| --- | --- |
+| [`apps/web`](apps/web) | Next.js landing, wallet entry, purchase workspace and private HTTP API |
+| [`contracts/proofbill`](contracts/proofbill) | Rust Purchase Pass contract, native payment lifecycle and Sandbox cases |
+| [`workers/agent`](workers/agent) | Restricted order execution, queue leasing and reconciliation |
+| [`workers/inference`](workers/inference) | NEAR AI request, exact-byte signature and attestation checks |
+| [`packages/shared`](packages/shared) | Public types, integer amounts and pass-rights helpers |
+| [`packages/server`](packages/server) | Server-only auth, encryption, persistence and chain reads |
+| [`infra`](infra) | Public deployment identities, worker service and deployment templates |
+| [`docs/database`](docs/database/ERD.md) | ERD, primary/foreign keys and data ownership |
+| [`docs/evidence`](docs/evidence/hosted-release.md) | Scoped execution records and public testnet references |
+| [`docs/planning`](docs/planning/README.md) | Product and architecture decisions, retained as design context |
 
 ## Local development
 
-Prerequisites: Node.js 24, pnpm 10.21.0, Python 3.12; for contracts Rust 1.99.1, cargo-near 0.23.0 and near-cli-rs 0.31.1. Windows contract tests were run in WSL Ubuntu. Runtime tools should match the pinned manifests/locks.
+**Web preview:** Node.js **24** and pnpm **10.21.0**.
 
 ```sh
+git clone https://github.com/EndPx/proofbill.git
+cd proofbill
 pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Open `http://localhost:3000`. The landing page and wallet entry can be previewed without production credentials. An unconfigured preview cannot execute a purchase.
+
+**Complete local service:** use your own database, testnet contract/accounts, NEAR AI key/credits, and Python **3.12** environment.
+
+```sh
 cp .env.example .env.local
-# Fill your server-only configuration locally; never commit it.
+# Fill the server-only values using your own services and accounts.
 pnpm env:web
 pnpm db:migrate
 pnpm dev
 ```
 
-Generate `ARTIFACT_ENCRYPTION_KEY` as 32 random bytes encoded as 64 hex characters. Use a dedicated Neon database. Contract/agent/seller identities must refer to your real testnet setup; never invent deployment addresses. `tools/write-web-env.mjs` copies only the web allowlist, excluding operational signing keys and the provider key.
+Generate `ARTIFACT_ENCRYPTION_KEY` as 32 random bytes encoded as 64 hex characters. Use a dedicated Neon database. `pnpm env:web` copies only the web allowlist into `apps/web/.env.local`, excluding worker signing keys and the provider key. Never put credentials in `NEXT_PUBLIC_` variables.
 
-For a complete local service, install `workers/inference/requirements.txt` in an isolated Python 3.12 environment, set `PYTHON_BIN`, configure method-restricted agent/publisher keys, then run `pnpm worker` in another terminal. The operator's `provision.ts` reads locally owned CLI testnet keys; it does not contain or provide credentials.
+Install [`workers/inference/requirements.txt`](workers/inference/requirements.txt) in an isolated Python 3.12 environment, set `PYTHON_BIN`, and configure method-restricted agent/publisher accounts. In another terminal, start the worker:
 
-## Checks
+```sh
+pnpm worker
+```
+
+The worker requires your own provisioned accounts and provider access. No operational keys are supplied by the repository. See [the architecture](docs/planning/TECHNICAL-DESIGN.md), [environment template](.env.example) and [contribution guide](CONTRIBUTING.md).
+
+## Checks and reproduction
 
 ```sh
 pnpm check
 pnpm test
 pnpm build
+pnpm --filter @proofbill/web exec playwright install chromium
+pnpm --filter @proofbill/web test:browser
+```
+
+The browser suite builds a production server on port 3215. On Linux, use `playwright install --with-deps chromium`. It covers wallet gating/restoration/disconnect, landing interactions, keyboard FAQ, reduced motion, no-JavaScript readability and accessibility. [CI](.github/workflows/check.yml) runs these checks without provider or signing secrets and preserves browser failure artifacts.
+
+Contract tests require [the pinned Rust toolchain](contracts/proofbill/rust-toolchain.toml), cargo-near and Sandbox prerequisites. Windows contract validation was performed in WSL Ubuntu:
+
+```sh
 cd contracts/proofbill
 cargo test --lib
 cargo test --test test_basics -- --nocapture
 ```
 
-The Wasm/Sandbox test covers receiver keep/return/failure behavior, transferred refund rights, failed native seller payout and the refund exit. Its default path builds using cargo-near; `PROOFBILL_WASM` can select an already-built artifact. The TypeScript tests check exact amounts, rights and authenticated encryption.
+These cover receiver keep/return/failure, transferred refund rights, failed native seller payout and the refund exit. `PROOFBILL_WASM` can select an already-built artifact; the default path builds with cargo-near.
 
-`workers/agent/src/e2e.ts` is an explicit operator test using project-owned testnet keys and **actual inference credits**. It signs real testnet transactions. If interrupted, inspect existing pass/job state and use its resume option rather than blindly creating another purchase.
+[`workers/agent/src/e2e.ts`](workers/agent/src/e2e.ts) is an operator integration runner. It uses project-owned account keys, signs real testnet transactions and consumes actual inference credits. It is deliberately excluded from ordinary CI. If interrupted, inspect pass/job state and its `E2E_TOKEN_ID` resume path before creating another purchase.
 
 ## Deployment
 
-Vercel project `proofbill` connects to `EndPx/proofbill` with root directory `apps/web` and Node.js 24. GitHub pushes are the frontend deployment source. Configure server secrets through Vercel environment management, never `NEXT_PUBLIC_` values.
+- **Web/API:** Vercel project `proofbill`, connected to `EndPx/proofbill`, root `apps/web`, Node.js 24. GitHub is the frontend deployment source.
+- **Private persistence:** a dedicated Neon database; database/artifact credentials are server-only Vercel variables.
+- **Worker:** a separate non-login Linux user with the [systemd service](infra/systemd/proofbill-worker.service) and [deployment script](infra/deploy-worker.sh). Operational keys stay in the worker's private environment; full-access CLI keys are not copied there.
+- **Contract:** `proofbill-endpx-2026.testnet`. [Inspect the contract](https://testnet.nearblocks.io/address/proofbill-endpx-2026.testnet) and [deployment record](infra/near/testnet-deployment.json).
 
-The worker runs as a separate non-login Linux user through [the systemd unit](infra/systemd/proofbill-worker.service), with its local Python helper. [The deployment script](infra/deploy-worker.sh) owns only `/opt/proofbill` and that service. Its private env file contains restricted operational keys; full-access CLI keys stay on the operator's machine.
+## Current boundaries
 
-## Provenance and scope
+ProofBill is a **testnet MVP**, not an audited or mainnet-ready product. Demand and willingness to pay have not been established by an independent pilot. The current agent executes one fixed service/model/seller; it does not shop across a marketplace.
 
-Conceptual inspiration: [Assay](https://github.com/trudransh/Assay), [MoneySwitch](https://github.com/dongsheng123132/moneyswitch) and [Kanmani](https://github.com/zkasuran/kanmani). Assay and Kanmani have also documented paid-receipt interoperation; ProofBill makes no claim to invent evidence-linked payments. Its selected product focus is transferable bounded purchase rights and a private AI service flow on NEAR. No source from those projects is included.
+The seller pays inference costs before buyer approval. A rejection/refund does not undo provider usage. Broader worker retry/ownership-race coverage and seller-accepted commercial terms remain work for a production version.
 
-Built using the official Next.js and cargo-near scaffolds, NEAR SDK/contract standards, NEAR Connect and the attestation libraries declared in the manifests. Design/logo bitmap concepts were generated with ChatGPT Image; prompts are retained under `design/`.
+## Provenance, team and license
 
-ProofBill is independent of the author's ShowStake NEAR event-commitment project, which may also enter the hackathon. They do not share financial state, contracts or budgets; reciprocal disclosure is required before submission.
+Conceptual inspiration: [Assay](https://github.com/trudransh/Assay), [MoneySwitch](https://github.com/dongsheng123132/moneyswitch) and [Kanmani](https://github.com/zkasuran/kanmani). ProofBill does not claim to invent evidence-linked payments; its focus is a transferable bounded purchase right and private AI service flow on NEAR. No source from those projects is included.
 
-Maintainer: **Albary / EndPx** — [GitHub](https://github.com/EndPx) · [X](https://x.com/endpx_). Original project code: [MIT](LICENSE).
+The build uses official Next.js/cargo-near scaffolds, NEAR SDK/contract standards, NEAR Connect and the libraries declared in the manifests and lockfiles. Development used AI coding assistance. Original logo/bitmap concepts and the selected landing illustration were generated with ChatGPT Image; screenshots depict the actual product. Public source and curated evidence are tracked; credentials, raw operational logs, working exports and internal review notes stay local.
+
+**Independent-project disclosure:** the author also builds **ShowStake**, a separate NEAR event-commitment project that may enter the hackathon. ProofBill has separate financial state, contracts and budgets. It is not the same project submitted twice.
+
+Built by **[Albary / EndPx](https://github.com/EndPx)** · [X](https://x.com/endpx_) · [MIT license](LICENSE) · [Contributing](CONTRIBUTING.md) · [Report a vulnerability privately](SECURITY.md)
