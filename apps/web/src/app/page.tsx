@@ -1,122 +1,335 @@
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowUpRight,
+  ArrowDown,
   ArrowRight,
+  ArrowUpRight,
   Check,
-  ReceiptText,
+  FileKey2,
+  Fingerprint,
   KeyRound,
+  ReceiptText,
   ShieldCheck,
+  Ticket,
 } from "lucide-react";
+import { landing } from "@/data/landing";
+import { PurchaseStory } from "@/components/purchase-story";
+import { LandingMotion } from "@/components/landing-motion";
+import { PassHandover } from "@/components/pass-handover";
+import styles from "./home.module.css";
+
+export const metadata: Metadata = {
+  title: { absolute: landing.title },
+  description: landing.description,
+  alternates: { canonical: landing.url },
+  openGraph: {
+    title: landing.title,
+    description: landing.description,
+    url: landing.url,
+    type: "website",
+    images: [
+      { url: `${landing.url}/opengraph-image`, width: 1200, height: 630 },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: landing.title,
+    description: landing.description,
+    images: [`${landing.url}/opengraph-image`],
+  },
+};
+
 export default function Home() {
   return (
-    <div className="landing">
-      <nav className="landing-nav">
-        <Link className="brand" href="/">
-          <img src="/brand/icon.png" alt="" />
+    <div className={styles.home} id="proofbill-home">
+      <a className={styles.skip} href="#main-content">
+        Skip to content
+      </a>
+      <header className={styles.header}>
+        <Link className={styles.brand} href="/" aria-label="ProofBill home">
+          <Image src="/brand/icon.png" alt="" width={35} height={35} />
           ProofBill
         </Link>
-        <div>
-          <a
-            href="https://github.com/EndPx/proofbill"
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub <ArrowUpRight size={15} />
+        <nav aria-label="Main navigation">
+          <a className={styles.navLink} href="#how-it-works">
+            How it works
           </a>
-          <Link className="button light" href="/app/purchases">
-            Open app <ArrowRight size={16} />
+          <a
+            className={styles.navLink}
+            href={landing.github}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub <ArrowUpRight size={14} />
+          </a>
+          <Link className={styles.smallCta} href="/app/purchases">
+            Open app <ArrowRight size={15} />
           </Link>
-        </div>
-      </nav>
-      <main className="landing-sheet">
-        <div className="landing-hero">
-          <div>
-            <span className="badge neutral">Built on NEAR testnet</span>
-            <h1>
-              Give your agent a budget.
+        </nav>
+      </header>
+      <main id="main-content" tabIndex={-1}>
+        <section className={styles.hero} aria-labelledby="hero-title">
+          <div className={styles.heroCopy}>
+            <div className={styles.network}>
+              <span /> Agent purchases, on your terms
+            </div>
+            <h1 id="hero-title" data-intro>
+              {landing.hero.first}
               <br />
-              Know what it bought.
+              <span>{landing.hero.second}</span>
             </h1>
-            <p>
-              A Purchase Pass puts clear limits around an AI service purchase.
-              Review the private result, inspect its evidence, and approve the
-              exact payment.
-            </p>
-            <Link className="button primary" href="/app/passes/new">
-              Create a Purchase Pass <ArrowRight size={18} />
-            </Link>
-            <span className="hero-note">
-              Test funds. One service. One clear receipt.
+            <p data-intro>{landing.hero.body}</p>
+            <div className={styles.heroActions} data-intro>
+              <Link className={styles.cta} href="/app/purchases">
+                Open ProofBill <ArrowRight size={18} />
+              </Link>
+              <a className={styles.textLink} href="#how-it-works">
+                See how it works <ArrowDown size={16} />
+              </a>
+            </div>
+            <small>{landing.hero.note}</small>
+          </div>
+          <div className={styles.heroArt} data-pass-art>
+            <Image
+              src="/art/purchase-pass.webp"
+              alt=""
+              width={1200}
+              height={800}
+              sizes="(max-width: 760px) 100vw, 52vw"
+              priority
+            />
+            <div className={styles.artCaption}>
+              <Ticket size={16} />
+              <span>A purchase pass. A clear permission.</span>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className={styles.previewSection}
+          aria-label="ProofBill product preview"
+        >
+          <div className={styles.previewHeading}>
+            <p>From an agent request to a payment you can trace.</p>
+            <span>
+              <span className={styles.statusDot} /> Working testnet MVP
             </span>
           </div>
-          <div className="hero-receipt receipt">
-            <div className="receipt-top">
-              <ReceiptText size={26} />
-              <span>How a purchase works</span>
+          <figure className={styles.preview} data-product-preview>
+            <div className={styles.previewViewport}>
+              <Image
+                src="/art/testnet-receipt.webp"
+              unoptimized
+                alt="Recorded ProofBill testnet receipt showing a private brief result locked to the buyer and a confirmed 0.010 NEAR seller payment."
+                width={1280}
+                height={720}
+                sizes="(max-width: 760px) 100vw, 90vw"
+              />
             </div>
-            <h2>Private brief extraction</h2>
-            <p>Turn a purchase brief into structured details.</p>
-            <div className="receipt-rule" />
-            <div className="flow-row">
-              <span>1</span>
-              <div>
-                <strong>Fund a pass</strong>
-                <small>Set the service and spending limit.</small>
-              </div>
+            <figcaption>
+              <span>
+                Actual testnet receipt{" "}
+                <span className={styles.captionMeta}>
+                  / pass-2-order / snapshot
+                </span>
+              </span>
+              <Link href={landing.receipt} prefetch={false}>
+                Open receipt <ArrowUpRight size={15} />
+              </Link>
+            </figcaption>
+          </figure>
+          <div className={styles.previewFoot}>
+            <span>
+              <KeyRound size={16} /> Wallet-approved payments
+            </span>
+            <span>
+              <FileKey2 size={16} /> Buyer-only private results
+            </span>
+            <span>
+              <ReceiptText size={16} /> Onchain payment record
+            </span>
+          </div>
+        </section>
+
+        <section
+          className={styles.workflow}
+          id="how-it-works"
+          aria-labelledby="workflow-title"
+        >
+          <div className={styles.sectionHeading}>
+            <h2 id="workflow-title">
+              A little permission.
+              <br />A lot more clarity.
+            </h2>
+            <p>
+              One purchase, from the first instruction to the final receipt. You
+              decide when the seller gets paid.
+            </p>
+          </div>
+          <PurchaseStory />
+        </section>
+
+        <section
+          className={styles.privacy}
+          id="privacy"
+          aria-labelledby="privacy-title"
+        >
+          <div className={styles.privacyIntro}>
+            <span className={styles.darkLabel}>
+              <Fingerprint size={17} /> Private where it matters
+            </span>
+            <h2 id="privacy-title">
+              The result is yours.
+              <br />
+              <span>The record adds up.</span>
+            </h2>
+            <p>
+              A public payment should not require publishing your entire brief.
+              ProofBill separates private artifacts from the facts recorded
+              onchain.
+            </p>
+          </div>
+          <div className={styles.recordSplit}>
+            <div>
+              <FileKey2 size={27} />
+              <h3>For the buyer</h3>
+              <p>
+                Your brief, result and detailed evidence report require a signed
+                wallet session.
+              </p>
+              <ul>
+                <li>
+                  <KeyRound size={15} /> Buyer-scoped access
+                </li>
+                <li>
+                  <ShieldCheck size={15} /> Encrypted stored artifacts
+                </li>
+              </ul>
             </div>
-            <div className="flow-row">
-              <span>2</span>
-              <div>
-                <strong>Let your agent order</strong>
-                <small>Receive the result and inspect its evidence.</small>
-              </div>
-            </div>
-            <div className="flow-row">
-              <span>3</span>
-              <div>
-                <strong>Review, then pay</strong>
-                <small>Your wallet approves the exact seller payment.</small>
-              </div>
-            </div>
-            <div className="receipt-rule" />
-            <div className="trust-line">
-              <Check size={17} /> Payment status follows the chain.
+            <div>
+              <ReceiptText size={27} />
+              <h3>On the record</h3>
+              <p>
+                The seller, amount, order state and data commitments remain
+                inspectable on NEAR.
+              </p>
+              <ul>
+                <li>
+                  <Check size={15} /> Confirmed seller transfer
+                </li>
+                <li>
+                  <ArrowUpRight size={15} /> Public transaction references
+                </li>
+              </ul>
             </div>
           </div>
-        </div>
-        <section className="landing-features">
-          <article>
-            <KeyRound />
-            <h2>A pass with a purpose</h2>
-            <p>
-              Transfer an unused pass to a teammate. Its purchasing and refund
-              rights follow the new holder.
-            </p>
-          </article>
-          <article>
-            <ShieldCheck />
-            <h2>Evidence you can inspect</h2>
-            <p>
-              See the response signature and model preflight checks alongside
-              the actual result.
-            </p>
-          </article>
-          <article>
-            <ReceiptText />
-            <h2>A record that adds up</h2>
-            <p>
-              Follow the order from reservation to payment. Keep a receipt for
-              exactly what you approved.
-            </p>
-          </article>
+          <p className={styles.trustNote}>
+            A clear trust boundary: the app operator handles plaintext and
+            publishes offchain evidence. Signature integrity does not guarantee
+            answer accuracy.{" "}
+            <a href="#questions">
+              Read the verification limits <ArrowUpRight size={13} />
+            </a>
+          </p>
         </section>
-        <footer>
-          <span>ProofBill · Private results, clear purchases.</span>
-          <Link href="/app/purchases">
-            Explore the workspace <ArrowRight size={16} />
+
+        <section className={styles.ownership} aria-labelledby="ownership-title">
+          <PassHandover />
+          <div>
+            <span className={styles.label}>
+              An NFT that carries the permission
+            </span>
+            <h2 id="ownership-title">
+              Pass it on.
+              <br />
+              The rights go with it.
+            </h2>
+            <p>
+              Hand an unused Purchase Pass to a teammate. The new holder
+              receives its use and refund rights, and the previous agent
+              assignment is cleared.
+            </p>
+            <p className={styles.ownershipNote}>
+              An active order locks transfer. A completed pass keeps its
+              receipt.
+            </p>
+            <Link
+              className={styles.textLink}
+              href="/app/passes"
+              prefetch={false}
+            >
+              Meet Purchase Passes <ArrowRight size={17} />
+            </Link>
+          </div>
+        </section>
+
+        <section
+          className={styles.faq}
+          id="questions"
+          aria-labelledby="faq-title"
+        >
+          <div className={styles.sectionHeading}>
+            <h2 id="faq-title">
+              Good questions.
+              <br />
+              Clear answers.
+            </h2>
+            <p>The important details before your first purchase.</p>
+          </div>
+          <div className={styles.faqList}>
+            {landing.faqs.map((faq) => (
+              <details key={faq.question}>
+                <summary>
+                  {faq.question}
+                  <span aria-hidden="true">+</span>
+                </summary>
+                <p>{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.finale} aria-labelledby="finale-title">
+          <span>
+            <span className={styles.statusDot} /> Ready to try on NEAR testnet
+          </span>
+          <h2 id="finale-title">
+            Give your agent a pass.
+            <br />
+            Keep the final say.
+          </h2>
+          <Link className={styles.cta} href="/app/purchases">
+            Open ProofBill <ArrowRight size={18} />
           </Link>
-        </footer>
+          <p>Connect your wallet. Make your first purchase a clear one.</p>
+        </section>
       </main>
+      <footer className={styles.footer}>
+        <div>
+          <Link className={styles.brand} href="/">
+            <Image src="/brand/icon.png" alt="" width={35} height={35} />
+            ProofBill
+          </Link>
+          <p>Know what your agent bought.</p>
+        </div>
+        <nav aria-label="Project links">
+          <a href={landing.github} target="_blank" rel="noopener noreferrer">
+            Source code <ArrowUpRight size={14} />
+          </a>
+          <a href={landing.contract} target="_blank" rel="noopener noreferrer">
+            Testnet contract <ArrowUpRight size={14} />
+          </a>
+          <a href={landing.payment} target="_blank" rel="noopener noreferrer">
+            Recorded payment <ArrowUpRight size={14} />
+          </a>
+        </nav>
+        <div className={styles.footerBottom}>
+          <span>Built on NEAR. Made by Albary.</span>
+          <span>Testnet MVP. Test funds only.</span>
+        </div>
+      </footer>
+      <LandingMotion />
     </div>
   );
 }

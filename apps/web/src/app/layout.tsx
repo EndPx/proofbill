@@ -4,6 +4,7 @@ import "./globals.css";
 import { WalletProvider } from "@/components/wallet";
 import { DevTools } from "@/components/dev-tools";
 export const metadata: Metadata = {
+  metadataBase: new URL("https://proofbill-two.vercel.app"),
   title: {
     default: "ProofBill — Know what your agent bought",
     template: "%s · ProofBill",

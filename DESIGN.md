@@ -37,3 +37,27 @@ All `/app` routes first show a wallet entry screen using the existing charcoal f
 ## 8. Verification
 
 One desktop/mobile visual pass, keyboard focus and actual financial pending/error states. Match the approved shell; no redesign loop before the purchase journey works. Check production excludes development instrumentation.
+
+## 9. Public landing page: a purchase on the record
+
+Brief: help developers who use paid AI services understand the single-purchase permission, private delivery and holder-approved payment before connecting a wallet. Use the existing Next.js app and CSS Modules so marketing styles do not affect the workspace or wallet entry. All copy describes the testnet MVP; no customer, market or security-audit metrics are assumed.
+
+Reference: near.com, inspected in a real browser on 13 November 2026. Its hero uses 60px/60px medium-weight Figtree, -1.5px tracking, an open white field, narrow border-aligned content and 12px black CTA corners; product previews lead into split explanations, charcoal privacy sections and a green closing CTA. Adapt that spatial rhythm and retain ProofBill's existing Inter, mint and charcoal identity. Do not reuse NEAR's logo, proprietary copy or example balances.
+
+Concept candidates (originality / fit / feasibility / portability, 1–5; lower portability is better):
+
+- Permission slip: a tactile purchase pass accompanies an agent's request. 4 / 5 / 5 / 2. Signature: pass art settles into the actual product record.
+- Evidence trail: request, delivery and payment align along a technical timeline. 3 / 5 / 5 / 3. Clear but too close to a generic infrastructure page.
+- Checkout counter: a playful shopping scene for agent purchases. 4 / 3 / 3 / 3. More commerce than the current one-service MVP supports.
+
+Selected: permission slip, because the funded NFT and separate holder approval are the product's defining objects. Idea: your agent can order, while you retain approval of the seller payment. Metaphor: a purchase pass becomes a receipt. Emotion: calm authority. Motion verb: settle into place. Screenshot: oversized dark headline, mint pass sculpture, then a framed actual testnet receipt.
+
+Marketing tokens: white #ffffff, ink #171717, muted #606560, line #e4e8e4, pale field #f3f7f3, mint #51e79c, charcoal #252525. Desktop display 64–80px with -0.055em tracking and 1.03 leading; phone 42–48px. Body 17px/1.6. Content max 1280px, gutters 32px desktop and 20px phone, section spacing varies 64/104/128px. Corners 12px for controls, 24px for artwork and product frames. Native details elements handle FAQ; flow selector uses buttons with an explicit selected state and keyboard-operable panels.
+
+Composition: border-aligned header → asymmetric headline/art → full-width actual receipt preview on mint → split interactive three-step explanation → charcoal private/public record comparison → ownership handover diagram → FAQ rows → mint closing statement → quiet footer. Headline and all product copy remain server-rendered. The generated sculpture is decorative art; the product screenshot is an existing recorded testnet receipt, labelled as a snapshot. Example extraction content is explicitly illustrative, never presented as a fresh inference.
+
+Motion: one landing-scoped GSAP context and ticker, Lenis on that same clock, no viewport pinning or loader. The sculpture and preview settle on scroll; buttons move their arrow and respond to press. Keep the site still at rest to favor reading. Reduced motion disables smooth scrolling and all scroll-driven transforms; content remains visible without JavaScript. Cleanup removes the ticker, destroys Lenis and reverts GSAP on leaving the landing page. No global route interception or changes to wallet signing.
+
+Refinement after the first independent screenshot critique: keep a persistent pass motif across the three workflow panels, add a clearly labelled handover illustration with preview/reset controls, magnify the recorded receipt detail on mobile using the same original screenshot, and give the verification-limits link a 28px minimum target. The screenshot ships as a precompressed 49KB WebP at source resolution so enlarged text does not use a low-resolution responsive derivative. Entry into the wallet gate remains immediate; a blocking branded route curtain is deliberately omitted.
+
+Genericness check: replace generic feature-card grids and decorative charts with the real receipt, the fixed allocation/storage distinction, ownership behavior and the operator trust boundary. App access still goes through the wallet gate. QA artifacts, generated source images and critic notes stay local; ship only the optimized selected art, implementation and meaningful tests.

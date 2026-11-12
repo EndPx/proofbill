@@ -25,6 +25,8 @@ target/
 coverage/
 playwright-report/
 test-results/
+.shots/
+.jury/
 *.tsbuildinfo
 .runtime/
 .vercel/
