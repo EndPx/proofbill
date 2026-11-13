@@ -11,6 +11,7 @@ import {
   KeyRound,
   ReceiptText,
   ShieldCheck,
+  Ticket,
 } from "lucide-react";
 import { landing } from "@/data/landing";
 import { PurchaseStory } from "@/components/purchase-story";
@@ -267,18 +268,56 @@ export default function Home() {
         </section>
 
         <section className={styles.finale} aria-labelledby="finale-title">
-          <span>
-            <span className={styles.statusDot} /> Ready to try on NEAR testnet
-          </span>
-          <h2 id="finale-title">
-            Give your agent a pass.
-            <br />
-            Keep the final say.
-          </h2>
-          <Link className={styles.cta} href="/app/purchases">
-            Open ProofBill <ArrowRight size={18} />
-          </Link>
-          <p>Connect your wallet. Make your first purchase a clear one.</p>
+          <div className={styles.finaleCard}>
+            <div className={styles.finaleCopy}>
+              <span className={styles.finaleStatus}>
+                <span className={styles.statusDot} /> Built on NEAR testnet
+              </span>
+              <h2 id="finale-title">
+                Give your agent a pass.
+                <br />
+                <span>Keep the final say.</span>
+              </h2>
+              <p>
+                One clear permission for your next AI purchase. Your wallet
+                approves the payment.
+              </p>
+              <div className={styles.finaleActions}>
+                <Link className={styles.cta} href="/app/purchases">
+                  Open ProofBill <ArrowRight size={18} />
+                </Link>
+                <span>
+                  <KeyRound size={13} /> Connect your wallet to begin
+                </span>
+              </div>
+            </div>
+            <div className={styles.finaleVisual} aria-hidden="true">
+              <div className={styles.finalePassBack} />
+              <div className={styles.finalePass}>
+                <div className={styles.finalePassHeader}>
+                  <span>PROOFBILL</span>
+                  <Ticket size={20} strokeWidth={1.5} />
+                </div>
+                <div className={styles.finaleSeal}>
+                  <Check size={43} strokeWidth={1.5} />
+                </div>
+                <strong>
+                  Your agent.
+                  <br />
+                  Your permission.
+                </strong>
+                <div className={styles.finalePassFoot}>
+                  <span>ONE SERVICE</span>
+                  <span>YOU APPROVE</span>
+                </div>
+              </div>
+            </div>
+            <div className={styles.finaleRule}>
+              <span>Permission first.</span>
+              <span>Private result.</span>
+              <span>Your approval to pay.</span>
+            </div>
+          </div>
         </section>
       </main>
       <footer className={styles.footer}>

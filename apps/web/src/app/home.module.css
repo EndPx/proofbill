@@ -1086,42 +1086,209 @@
   line-height: 1.85;
 }
 .finale {
-  padding: 85px max(34px, calc((100vw - 1212px) / 2)) 90px;
-  background: #51e79c url("/art/mint-security-surface.webp") center/cover;
-  color: #112a1b;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 34px 24px;
 }
-.finale > span {
+.finaleCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(235px, 0.7fr);
+  align-items: center;
+  gap: 44px;
+  padding: 50px 48px 0;
+  border: 1px solid #3b5745;
+  border-radius: 22px;
+  background: #16241b;
+  overflow: hidden;
+}
+.finaleStatus {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #accbb7;
   font:
     10px ui-monospace,
     monospace;
 }
 .finale .statusDot {
-  background: #19472e;
+  background: #51e79c;
 }
 .finale h2 {
-  font-size: clamp(43px, 5.3vw, 72px);
-  font-weight: 800;
+  font-size: clamp(38px, 4.05vw, 58px);
+  font-weight: 760;
   letter-spacing: -0.06em;
-  line-height: 1.01;
-  margin: 28px 0 33px;
+  line-height: 1.06;
+  margin: 23px 0 20px;
+  color: #eceee7;
 }
-.finale .cta {
-  color: #d7f9e4;
-  background: #122b1b;
-  border-color: #122b1b;
-  box-shadow: 0 4px 0 #2c794b;
-}
-.finale .cta:hover {
-  background: #e0f8e9;
-  color: #122b1b;
+.finale h2 > span {
+  color: #aaf0c7;
 }
 .finale p {
-  margin-top: 18px;
-  color: #234e35;
-  font-size: 12px;
+  color: #b1c6b8;
+  font-size: 14px;
+  line-height: 1.75;
+  max-width: 410px;
+}
+.finaleActions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 27px;
+}
+.finaleActions > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #a8bcad;
+  font-size: 10px;
+}
+.finaleVisual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 330px;
+  perspective: 1000px;
+}
+.finalePassBack {
+  position: absolute;
+  width: 235px;
+  height: 290px;
+  border-radius: 16px;
+  background: #203e2b;
+  border: 1px solid #466a50;
+  transform: rotate(-10deg) translate(-13px, 0);
+}
+.finalePass {
+  position: relative;
+  width: 235px;
+  min-height: 290px;
+  padding: 20px 21px;
+  border-radius: 16px;
+  background: #51e79c;
+  color: #173322;
+  border: 1px solid #83f1b5;
+  box-shadow:
+    8px 10px 0 #2e5c3d,
+    18px 25px 34px #0004;
+  transform: rotateY(-10deg) rotateZ(7deg);
+  isolation: isolate;
+}
+.finalePass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/art/mint-security-surface.webp") center/cover;
+  opacity: 0.24;
+  z-index: -1;
+  border-radius: inherit;
+}
+.finalePassHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #28613c66;
+  font:
+    9px ui-monospace,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.finaleSeal {
+  display: grid;
+  place-items: center;
+  width: 66px;
+  height: 66px;
+  border: 1px solid #205635;
+  border-radius: 50%;
+  margin: 21px 0 18px;
+}
+.finalePass > strong {
+  display: block;
+  font:
+    720 25px/1.05 "Archivo Variable",
+    sans-serif;
+  letter-spacing: -1.2px;
+}
+.finalePassFoot {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px dashed #28613c77;
+  margin-top: 23px;
+  padding-top: 12px;
+  font:
+    8px ui-monospace,
+    monospace;
+}
+.finaleRule {
+  grid-column: 1/-1;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  border-top: 1px solid #354a3d;
+  padding-block: 18px;
+  color: #a7c2b1;
+  font:
+    10px ui-monospace,
+    monospace;
+}
+.finaleRule > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.finaleRule > span::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  background: #51e79c;
+  rotate: 45deg;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .finalePass {
+    transition: transform 0.35s ease;
+  }
+  .finaleCard:hover .finalePass {
+    transform: rotateY(-4deg) rotateZ(3deg);
+  }
+}
+@media (max-width: 1050px) {
+  .finaleCard {
+    padding: 35px 30px 0;
+    gap: 30px;
+  }
+  .finaleActions {
+    gap: 15px;
+  }
+  .finaleActions > span {
+    width: 100%;
+  }
+  .finaleVisual {
+    min-height: 320px;
+  }
+}
+@media (max-width: 760px) {
+  .finaleCard {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 29px 23px 0;
+    gap: 27px;
+  }
+  .finaleVisual {
+    min-height: 300px;
+  }
+  .finalePass,
+  .finalePassBack {
+    width: 220px;
+  }
+  .finalePass {
+    min-height: 280px;
+  }
+  .finaleRule {
+    gap: 12px 20px;
+    font-size: 9px;
+  }
 }
 .footer {
   display: grid;
@@ -1496,14 +1663,14 @@
     font-size: 12px;
   }
   .finale {
-    padding: 60px 20px 65px;
+    padding: 0 20px 24px;
   }
   .finale h2 {
-    font-size: 45px;
+    font-size: clamp(32px, 9.2vw, 40px);
   }
   .finale p {
-    max-width: 270px;
-    font-size: 11px;
+    max-width: 360px;
+    font-size: 13px;
   }
   .footer {
     grid-template-columns: 1fr;

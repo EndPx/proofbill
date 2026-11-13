@@ -58,6 +58,8 @@ QA must cover real start/mid/reverse scroll, pointer response, shape controls, p
 
 Purchase-stage changes keep the physical card in place. Its base color, foil/paper texture opacity, border and shadow blend over 450ms. Only the printed content fades out for 140ms, replaces at zero opacity, then fades in for 240ms. Scroll pose and pointer tilt retain their existing transform owners. Interruptions cancel superseded text callbacks; the latest selected stage wins. Reduced-motion changes settle the requested content and materials immediately.
 
+The closing CTA is an inset charcoal panel aligned with the content grid, replacing the full-width mint texture. White/mint copy and the primary action occupy the left; a small decorative purchase pass carries a restrained 24% foil texture on the right. Its footer summarizes permission, private result and approval. Mobile stacks those elements; all copy stays readable and the live-app action retains the wallet gate.
+
 ## 10. Interactive landing workspace preview
 
 Replace the static product screenshot with a client-side sandbox that follows the real app's charcoal sidebar and rounded white panel. Purchases, Purchase Passes and Receipts are working local views; order Result/Request/Evidence tabs are keyboard accessible. Include local pass creation, approval simulation, search and reset so controls demonstrate a coherent journey. Use explicit demo-prefixed IDs and synthetic content. Persistent labels say Interactive demo / Sample data; no wallet, API, storage or transaction calls belong to this component. The live-app link remains a real navigation through the wallet gate.
