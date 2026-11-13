@@ -19,9 +19,9 @@ After `pnpm install`, copy [.env.own-agent.example](../.env.own-agent.example) t
 node --env-file=.env.own-agent.local --import tsx workers/agent/src/run-own-agent.ts
 ```
 
-The command stores the private input, salt and nonce under ignored `.local/own-agent/` before reserving. Reuse that file after an interruption. Inspect the onchain order before retrying an unknown transaction outcome. Console output contains public order/status/transaction identifiers only.
+The command stores the expected buyer, authorization revision, private input, salt and nonce under ignored `.local/own-agent/` before reserving. A saved request fails closed after the owner or authorization changes. Archive the old file and provide a fresh brief for the new authorization; the CLI never silently reuses another buyer's brief. Reuse that file after an interruption. Inspect the onchain order before retrying an unknown transaction outcome. Console output contains public order/status/transaction identifiers only.
 
-The [Node/TypeScript SDK](../packages/agent-client/src/index.ts) exports `makeAgentBrief` and `runOwnAgent`. Supply the signer and NEAR RPC provider from your agent runtime. The key never travels over the API.
+The [Node/TypeScript SDK](../packages/agent-client/src/index.ts) exports `makeAgentBrief` and `runOwnAgent`. Supply the signer, NEAR RPC provider, expected `buyerId` and `revision` from your agent runtime. The key never travels over the API.
 
 ## Protocol
 

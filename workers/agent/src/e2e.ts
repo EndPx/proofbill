@@ -163,7 +163,7 @@ if (!token) {
 } else {
   const resumed = await view<PurchasePass>("get_pass", { token_id: token });
   assert.equal(resumed.owner_id, bob.id);
-  assert.ok(["Available", "InUse", "Completed"].includes(resumed.phase));
+  assert.ok(["Available", "InUse"].includes(resumed.phase));
   assert.equal(resumed.agent_id, assignedAgent);
   assert.equal(resumed.payment_mode ?? "Manual", paymentMode);
   steps.push({
@@ -203,6 +203,7 @@ if (!existingOrder && agentKind === "proofbill") {
     );
     await writeFile(requestFile, JSON.stringify(brief), { mode: 0o600 });
   }
+  const agentPass = await view<PurchasePass>("get_pass", { token_id: token });
   const external = await runOwnAgent({
     baseUrl: base,
     contractId: root,
@@ -210,6 +211,8 @@ if (!existingOrder && agentKind === "proofbill") {
     signer: alice.signer,
     provider: provider(),
     tokenId: token,
+    buyerId: bob.id,
+    revision: agentPass.authorization_revision,
     brief,
   });
   steps.push({
@@ -226,6 +229,8 @@ if (!existingOrder && agentKind === "proofbill") {
     signer: alice.signer,
     provider: provider(),
     tokenId: token,
+    buyerId: bob.id,
+    revision: agentPass.authorization_revision,
     brief,
   });
   assert.equal(repeated.orderId, id);

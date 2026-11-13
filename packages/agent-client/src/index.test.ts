@@ -44,6 +44,8 @@ function setup(config: object, authChallenge = challenge) {
       signer,
       provider,
       tokenId: "pass-1",
+      buyerId: "buyer.testnet",
+      revision: 1,
       brief: {
         input: "Order 12 notebooks.",
         salt: "a".repeat(64),
@@ -97,4 +99,25 @@ test("authenticated agent still needs an actual assigned pass", async () => {
   });
   await assert.rejects(runOwnAgent(f.options), /AGENT_NOT_AUTHORIZED/);
   assert.equal(f.signatures(), 1);
+});
+
+test("saved request cannot cross to another NFT owner or authorization revision", async () => {
+  for (const patch of [
+    { owner_id: "new-buyer.testnet", authorization_revision: 1 },
+    { owner_id: "buyer.testnet", authorization_revision: 2 },
+  ]) {
+    const f = setup({
+      network: "testnet",
+      contractId: "proofbill.testnet",
+      advancedModes: true,
+    });
+    f.options.provider = {
+      callFunction: async () => ({
+        agent_id: id,
+        transfer_pending: false,
+        ...patch,
+      }),
+    } as unknown as JsonRpcProvider;
+    await assert.rejects(runOwnAgent(f.options), /PASS_AUTHORIZATION_CHANGED/);
+  }
 });

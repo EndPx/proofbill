@@ -22,6 +22,8 @@ export async function runOwnAgent(options: {
   signer: KeyPairSigner;
   provider: JsonRpcProvider;
   tokenId: string;
+  buyerId: string;
+  revision: number;
   brief: PrivateBrief;
 }) {
   const { contractId, agentId, signer, provider, tokenId, brief } = options;
@@ -98,8 +100,13 @@ export async function runOwnAgent(options: {
   });
   if (!pass || pass.agent_id !== agentId || pass.transfer_pending)
     throw new Error("AGENT_NOT_AUTHORIZED");
+  if (
+    pass.owner_id !== options.buyerId ||
+    pass.authorization_revision !== options.revision
+  )
+    throw new Error("PASS_AUTHORIZATION_CHANGED");
   const orderId = `${tokenId}-order`,
-    revision = pass.authorization_revision;
+    revision = options.revision;
   const requestCommitment = createHash("sha256")
     .update(
       Buffer.concat([
