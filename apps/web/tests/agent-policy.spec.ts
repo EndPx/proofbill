@@ -153,6 +153,37 @@ test("agent and payment controls remain reachable on a narrow screen", async ({
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeVisible();
   await expect(save).toBeEnabled();
+  const checkbox = page.getByRole("checkbox");
+  await expect(checkbox).toBeInViewport();
+  const layout = await checkbox.evaluate((input) => {
+    const label = input.closest("label")!,
+      info = label.parentElement!,
+      style = getComputedStyle(label);
+    return {
+      label: label.getBoundingClientRect().toJSON(),
+      info: info.getBoundingClientRect().toJSON(),
+      text: label.textContent,
+      color: style.color,
+      opacity: style.opacity,
+      visibility: style.visibility,
+    };
+  });
+  expect(layout.label.height).toBeGreaterThan(100);
+  expect(layout.info.height).toBeGreaterThanOrEqual(layout.label.height);
+  expect(layout.text).toContain("No final wallet");
+  expect(layout.visibility).toBe("visible");
+  await test
+    .info()
+    .attach("consent-layout", {
+      body: JSON.stringify(layout),
+      contentType: "application/json",
+    });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    );
+  });
   await page.screenshot({
     path: test.info().outputPath("agent-automatic-mobile.png"),
   });
