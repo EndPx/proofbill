@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://proofbill-two.vercel.app"><img src=".github/assets/badges/live-app.svg" alt="Live app" height="34" /></a>
   <a href="#review-in-five-minutes"><img src=".github/assets/badges/reviewer-walkthrough.svg" alt="Reviewer walkthrough" height="34" /></a>
-  <a href="docs/evidence/hosted-release.md"><img src=".github/assets/badges/execution-evidence.svg" alt="Execution evidence" height="34" /></a>
+  <a href="docs/evidence/budget-pass-hosted.md"><img src=".github/assets/badges/execution-evidence.svg" alt="Execution evidence" height="34" /></a>
   <a href="#local-development"><img src=".github/assets/badges/run-locally.svg" alt="Run locally" height="34" /></a>
 </p>
 
@@ -55,7 +55,7 @@ The receipt image is a recorded testnet snapshot. The [public receipt](https://p
 
 ## Review in five minutes
 
-1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), click through the sample workspace menus, switch through the three purchase steps, and try the clearly labelled handover illustration. The interactive workspace uses local mock records; it needs no wallet or credits and submits no transactions.
+1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), create a sample budget in the interactive workspace, choose a hosted/custom sample agent and Manual/Automatic payment, then repeat purchases with that same pass. The preview uses local mock records and the shared funding quote helper; it needs no wallet or credits and submits no transactions. The prominent real-receipt link opens actual anonymous financial facts separately.
 2. **Inspect a real public receipt.** Open the [Manual example](https://proofbill-two.vercel.app/receipts/pass-2-order) or [Automatic example](https://proofbill-two.vercel.app/receipts/pass-10-order) without connecting a wallet. The [workspace](https://proofbill-two.vercel.app/app/purchases) remains wallet-gated; another wallet cannot unlock the buyer's private result.
 3. **Check the payment independently.** Compare the [successful seller payment](https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z), [duplicate-payment refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1), and [integration record](docs/evidence/integration/pass-2-order.json). Reading these does not require a new purchase.
 4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, choose the ProofBill assistant or your own agent, and set the payment policy before ordering. With the ProofBill assistant, enter a brief and run the agent; for your own agent, follow the [SDK/CLI setup](docs/agent-integration.md). Sign a buyer session to unlock the result. Manual payment requires your approval after review; Automatic settlement starts after matching publisher delivery under your advance authorization. Refund actions depend on contract state. Funding and policy changes require a wallet transaction.

@@ -97,7 +97,7 @@ test("landing is readable without JavaScript", async ({ browser, baseURL }) => {
     "Agents order.",
   );
   await expect(
-    page.getByRole("heading", { name: /One pass.*One purchase/ }),
+    page.getByRole("heading", { name: /One pass.*Repeat purchases/ }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Open ProofBill", exact: true }).first(),

@@ -90,6 +90,9 @@ export default function Home() {
               <a className={styles.textLink} href="#how-it-works">
                 See how it works <ArrowDown size={16} />
               </a>
+              <Link className={styles.textLink} href={landing.receipt}>
+                View a real public receipt <ArrowUpRight size={16}/>
+              </Link>
             </div>
             <small>{landing.hero.note}</small>
           </div>
@@ -205,7 +208,7 @@ export default function Home() {
             A clear trust boundary: the app operator handles plaintext and
             publishes offchain evidence. Signature integrity does not guarantee
             answer accuracy.{" "}
-            <a href="#questions">
+            <a href="#verification-limits">
               Read the verification limits <ArrowUpRight size={13} />
             </a>
           </p>
@@ -221,8 +224,8 @@ export default function Home() {
               The rights go with it.
             </h2>
             <p>
-              Send an unused pass to a teammate. The purchase and refund rights
-              move with it, while the previous agent assignment is cleared.
+              Send the remaining budget to a teammate between orders. The use and refund rights
+              move with the NFT, while the previous agent assignment and Automatic permission are cleared.
             </p>
             <ul className={styles.ownershipFacts}>
               <li>
@@ -267,7 +270,9 @@ export default function Home() {
           </div>
           <div className={styles.faqList}>
             {landing.faqs.map((faq) => (
-              <details key={faq.question}>
+              <details key={faq.question}
+                id={faq.question==="Does verified evidence mean the AI answer is correct?"?"verification-limits":undefined}
+                open={faq.question==="Does verified evidence mean the AI answer is correct?"}>
                 <summary>
                   {faq.question}
                   <span aria-hidden="true">+</span>

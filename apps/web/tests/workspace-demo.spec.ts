@@ -59,6 +59,15 @@ test("landing demo menus, tabs, pass creation and reset work without a wallet", 
     page.getByRole("heading", { name: "Connect to continue" }),
   ).toBeVisible();
 });
+test("real receipt CTA opens anonymous financial facts and verification limits are directly visible", async ({page})=>{
+  await page.goto("/");
+  await page.getByRole("link",{name:"Read the verification limits"}).click();
+  await expect(page.locator("#verification-limits")).toHaveAttribute("open","");
+  await page.getByRole("link",{name:"View a real public receipt"}).click();
+  await expect(page).toHaveURL(/\/receipts\/pass-12-order-1$/);
+  await expect(page.getByRole("heading",{name:"Seller payment confirmed"})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Connect to continue"})).toHaveCount(0);
+});
 
 test("demo approval changes only sample records and never submits an API mutation", async ({
   page,
@@ -100,7 +109,8 @@ test("demo approval changes only sample records and never submits an API mutatio
       exact: true,
     }),
   });
-  await expect(pass).toContainText("Completed");
+  await expect(pass).toContainText("Available");
+  await expect(pass).toContainText("0.020 NEAR");
   await demo.getByRole("button", { name: "Reset demo" }).click();
   await demo.getByRole("button", { name: "Receipts", exact: true }).click();
   await expect(
@@ -108,6 +118,40 @@ test("demo approval changes only sample records and never submits an API mutatio
   ).toHaveCount(0);
   expect(mutations).toEqual([]);
   expect(liveDataReads).toEqual([]);
+});
+test("one demo NFT funds multiple purchases with current quotes and retained automatic authorization", async ({page})=>{
+  await page.goto("/");
+  const demo=page.getByRole("region",{name:"Interactive workspace demo",exact:true});
+  await demo.getByRole("button",{name:"Purchase Passes",exact:true}).click();
+  await demo.getByRole("button",{name:"New demo pass",exact:true}).click();
+  await demo.getByRole("textbox",{name:"Pass name",exact:true}).fill("Reusable team budget");
+  await demo.getByRole("textbox",{name:"Service budget (sample NEAR)",exact:true}).fill("0.030");
+  await expect(demo.getByText("0.060 NEAR",{exact:true})).toBeVisible();
+  await expect(demo.getByText("0.090 NEAR",{exact:true})).toBeVisible();
+  await demo.getByRole("button",{name:"Create demo pass"}).click();
+  const card=demo.getByRole("article").filter({has:page.getByRole("heading",{name:"Reusable team budget",exact:true})});
+  await card.getByRole("button",{name:"New demo purchase"}).click();
+  await demo.getByRole("combobox",{name:"Purchasing agent"}).selectOption("custom");
+  await demo.getByRole("textbox",{name:"Agent NEAR account"}).fill("my-agent.testnet");
+  await demo.getByRole("combobox",{name:"Payment approval"}).selectOption("Automatic");
+  await expect(demo.getByRole("button",{name:"Run demo agent"})).toBeDisabled();
+  await demo.getByRole("checkbox").check();
+  for(let n=0;n<3;n++){
+    await demo.getByRole("button",{name:"Run demo agent"}).click();
+    await expect(demo.getByText("Automatic payment example",{exact:true})).toBeVisible();
+    await expect(demo.getByText("my-agent.testnet",{exact:true})).toBeVisible();
+    await expect(demo.getByRole("button",{name:"Approve in demo"})).toHaveCount(0);
+    await demo.getByRole("button",{name:"Simulate delivery and payment"}).click();
+    if(n<2){
+      await demo.getByRole("button",{name:"Buy again with this pass"}).click();
+      await expect(demo.getByRole("checkbox")).toBeChecked();
+    }
+  }
+  await expect(demo.getByRole("button",{name:"Buy again with this pass"})).toHaveCount(0);
+  await demo.getByRole("button",{name:"Purchase Passes",exact:true}).click();
+  await expect(card).toContainText("Completed");
+  await expect(card.getByRole("button",{name:"New demo purchase"})).toHaveCount(0);
+  await expect(page.getByRole("link",{name:"View a real public receipt"})).toHaveAttribute("href","/receipts/pass-12-order-1");
 });
 
 test("mobile demo keeps named menus, internal scrolling and accessible controls", async ({

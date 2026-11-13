@@ -8,7 +8,7 @@ export const landing = {
   github: "https://github.com/EndPx/proofbill",
   contract:
     "https://testnet.nearblocks.io/address/proofbill-endpx-2026.testnet",
-  receipt: "/receipts/pass-2-order",
+  receipt: "/receipts/pass-12-order-1",
   payment:
     "https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z",
   hero: {

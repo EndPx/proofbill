@@ -184,7 +184,7 @@ export function PurchaseObject({ phase: requestedPhase }: { phase: number }) {
                 <h3>
                   One pass.
                   <br />
-                  One purchase.
+                  Repeat purchases.
                 </h3>
                 <dl>
                   <div>
