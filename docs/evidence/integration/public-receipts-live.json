@@ -1,0 +1,38 @@
+{
+  "tested_at": "2026-11-13T12:08:11.638Z",
+  "origin": "https://proofbill-two.vercel.app",
+  "passed": true,
+  "cases": [
+    {
+      "order_id": "pass-2-order",
+      "mode": "Manual",
+      "http_status": 200,
+      "order_phase": "Paid",
+      "nft_phase": "Completed",
+      "block_height": 277507862,
+      "references": 3,
+      "public_cookie_independent": true,
+      "anonymous_private_status": 401
+    },
+    {
+      "order_id": "pass-10-order",
+      "mode": "Automatic",
+      "http_status": 200,
+      "order_phase": "Paid",
+      "nft_phase": "Completed",
+      "block_height": 277507869,
+      "references": 1,
+      "public_cookie_independent": true,
+      "anonymous_private_status": 401
+    }
+  ],
+  "legacy_receipt_redirect": true,
+  "anonymous_workspace_gated": true,
+  "public_wallet_initialization": false,
+  "public_private_endpoint_requests": false,
+  "public_receipt_without_javascript": true,
+  "page_errors": [],
+  "limits": [
+    "Read-only browser/API checks; no wallet connection, signing, transaction or paid inference."
+  ]
+}
