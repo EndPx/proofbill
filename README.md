@@ -28,11 +28,13 @@ When an agent uses a paid AI service, its owner needs to connect three things: *
 
 ProofBill puts that purchase into one lifecycle:
 
-**Purchase Pass → chosen agent → private result and evidence → manual approval or preauthorized settlement → confirmed seller payment → receipt.**
+**Fund a Purchase Pass budget → chosen agent orders → private result and evidence → Manual approval or preauthorized settlement → confirmed seller payment and receipt → use the remaining budget again or refund it.**
 
-The initial user is a developer or small team operating paid-API agents. The current service turns a short purchase brief into an item, quantity and requester. The agent has a bounded purchasing role; the holder chooses Manual approval or explicitly preauthorizes Automatic payment for that pass.
+The initial user is a developer or small team operating paid-API agents. The current service turns a short purchase brief into an item, quantity and requester. The holder chooses a total service budget, agent, expiry and payment policy. Each order has a fixed price and seller, with only one active order per pass. Manual approval applies per order; Automatic authorizes purchases within the remaining budget.
 
 **Current state:** a hosted NEAR testnet MVP. Both the ProofBill assistant and owner-operated agents have completed Manual and Automatic purchases through Vercel, Neon, the worker, actual NEAR AI inference and the contract. [Inspect the four combinations](docs/evidence/agent-payment-hosted.md), [recovery/storage release](docs/evidence/recovery-storage-release.md) and [anonymous public receipts](docs/evidence/public-receipts.md).
+
+Version 3 adds [reusable NFT budgets](docs/evidence/budget-pass-hosted.md) and [buyer-run private evidence verification](docs/verify-private-result.md). One real NFT funded Automatic and Manual purchases, transferred its remaining entitlement, and refunded only the unspent allocation to the new holder. A buyer export passed independent checking; a tampered copy was rejected. Earlier single-use passes keep their original behavior; dated reports identify which version was exercised.
 
 <p align="center">
   <img src=".github/assets/landing-desktop.webp" alt="The live ProofBill landing page with its Purchase Pass illustration, wallet entry action and testnet product preview." width="1200" />
@@ -59,16 +61,16 @@ The receipt image is a recorded testnet snapshot. The [public receipt](https://p
 4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, choose the ProofBill assistant or your own agent, and set the payment policy before ordering. With the ProofBill assistant, enter a brief and run the agent; for your own agent, follow the [SDK/CLI setup](docs/agent-integration.md). Sign a buyer session to unlock the result. Manual payment requires your approval after review; Automatic settlement starts after matching publisher delivery under your advance authorization. Refund actions depend on contract state. Funding and policy changes require a wallet transaction.
 5. **Review or reproduce the code.** Use the track/source map below, then run [local checks](#checks-and-reproduction). Browser tests use fixtures and need no signing or provider secrets.
 
-The fixed service allocation is **0.010 native testnet NEAR**. Minting also reserves a separate **0.030 NEAR storage budget**, plus transaction gas. Storage backing is retained while its NFT/history exists and is not part of the service refund. The seller/operator pays inference credits independently of the later payout.
+Each service purchase costs **0.010 native testnet NEAR**. A new budget pass funds 1–100 purchases; separate storage backing is **0.030 NEAR + the chosen service budget**, plus wallet gas. For example, 0.050 service budget and 0.080 storage require 0.130 NEAR plus gas. Refund returns remaining service funds, excluding earlier seller payments and storage. Storage backing is retained while the NFT/history exists. Legacy single-use creation keeps its original 0.010 service/0.030 storage amounts. The seller/operator pays inference credits independently of the later payout.
 
 ## Four track contributions
 
 | Track | What is implemented | Where to inspect it |
 | --- | --- | --- |
-| **Agent Economy** | The ProofBill assistant or an assigned external agent reserves one bound service order. Manual approval or explicit Automatic authorization controls the fixed seller payout. | [Agent worker](workers/agent/src/index.ts), [own-agent SDK](packages/agent-client/src/index.ts), [four hosted combinations](docs/evidence/agent-payment-hosted.md) |
+| **Agent Economy** | The ProofBill assistant or an external agent reserves numbered orders within a funded NFT budget. Owner policy controls fixed-price seller payouts; exhausted budgets and stale task reruns cannot silently buy again. | [Agent worker](workers/agent/src/index.ts), [own-agent SDK](packages/agent-client/src/index.ts), [budget checks](docs/evidence/budget-pass-application.md) |
 | **AI Security & Defense** | Fixed seller/amount/expiry, holder and revision checks, method-restricted operational keys, single-use order, explicit pending/failure states and callback-driven payment. | [Contract](contracts/proofbill/src/lib.rs), [Sandbox cases](contracts/proofbill/tests/test_basics.rs), [duplicate refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1) |
-| **Privacy & Private AI** | Buyer-authenticated private reads, encrypted artifacts, exact-byte response checks and scoped model-serving TEE evidence from NEAR AI Cloud. | [Authentication](packages/server/src/auth.ts), [private API](apps/web/src/app/api/%5B...path%5D/route.ts), [inference verifier](workers/inference/inference.py), [response-probe scope](docs/evidence/near-ai-response-probe.md) |
-| **NFTs That Do Something** | A funded NEP-171 purchase/refund entitlement follows ownership; unused transfer clears agent assignment and Automatic permission, active orders lock transfer, and completion updates metadata. | [NFT and payment implementation](contracts/proofbill/src/lib.rs), [transfer transaction](https://testnet.nearblocks.io/txns/DcJ1hjcBDByvvY6SMgDNyBLBCYbeuYa4uxTaTqSfBt12), [receiver/ownership cases](contracts/proofbill/tests/test_basics.rs) |
+| **Privacy & Private AI** | Buyer-authenticated private reads, encrypted artifacts, scoped NEAR AI TEE/signature checks and a buyer-run verifier that checks private delivery bytes against onchain commitments. | [Authentication](packages/server/src/auth.ts), [private API](apps/web/src/app/api/%5B...path%5D/route.ts), [buyer verification](docs/verify-private-result.md), [verification scope](docs/evidence/near-ai-response-probe.md) |
+| **NFTs That Do Something** | A funded NEP-171 budget carries remaining purchase/refund rights between holders. Transfer clears agent/Automatic authorization, active orders lock transfer, and historical buyer access stays separate. | [NFT and budget implementation](contracts/proofbill/src/lib.rs), [budget callback/handover cases](contracts/proofbill/tests/test_basics.rs), [legacy transfer](https://testnet.nearblocks.io/txns/DcJ1hjcBDByvvY6SMgDNyBLBCYbeuYa4uxTaTqSfBt12) |
 
 These are implementation claims, not awards or a security certification. [The official NEAR Hackathon rules](https://nearhackathon.com/HACKATHON.md) govern submission eligibility and final track selection.
 
@@ -76,6 +78,7 @@ These are implementation claims, not awards or a security certification. [The of
 
 | Evidence | What it establishes | Boundary |
 | --- | --- | --- |
+| [Reusable budget and buyer verification](docs/evidence/budget-pass-hosted.md) | Two real purchases from one NFT, remaining-budget handover/refund, historical buyer access and verification/tampering checks on a real response export. | Project-owned accounts/synthetic briefs; historical response evidence, no new completion during re-verification. |
 | [Agent/payment release](docs/evidence/agent-payment-hosted.md), [recovery/storage release](docs/evidence/recovery-storage-release.md) and [public receipts](docs/evidence/public-receipts.md) | Hosted agent/payment combinations, restart and storage regressions, and anonymous receipt access with private boundaries intact. | Each report separates local fixtures from real provider/testnet checks; no mainnet or independent customer claim. |
 | [Hosted release](docs/evidence/hosted-release.md) and [pass-2-order record](docs/evidence/integration/pass-2-order.json) | The hosted API, private persistence, worker, inference and NEAR testnet purchase were exercised together. | Project-owned test accounts and synthetic input; not customer traction. |
 | [Deployment identities](infra/near/testnet-deployment.json) | Public contract/operator IDs, deploy transaction, Wasm size and artifact hash. | A deployment record, not an audit or a claim that every later source commit was redeployed. |

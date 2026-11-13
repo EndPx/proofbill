@@ -48,6 +48,7 @@ import {
   type PurchaseOrder,
   type PrivateResult,
   type PaymentMode,
+  type PassBudget,
 } from "@proofbill/shared";
 import { api, useWallet } from "./wallet";
 type Job = { order_id: string; state: string; error_code: string | null };
@@ -55,6 +56,7 @@ type OrderDetail = {
   order: PurchaseOrder | null;
   job: Job | null;
   payment_mode?: PaymentMode;
+  pass_budget?: PassBudget | null;
   observations: { action: string; tx_hash: string; signer_id: string }[];
 };
 const errorCopy: Record<string, string> = {
@@ -120,6 +122,10 @@ function Empty({
   );
 }
 const explorer = (hash: string) => `https://testnet.nearblocks.io/txns/${hash}`;
+function budgetRefundCopy(budget: PassBudget) {
+  const amount = formatNear((BigInt(budget.available_yocto) + BigInt(budget.reserved_yocto)).toString());
+  return `Refund returns ${amount} testnet NEAR and closes this budget pass. Prior payments and storage backing are excluded.`;
+}
 function PaymentChoice({
   mode,
   onChange,
@@ -432,7 +438,7 @@ export function Workspace() {
         )}
         <div className="detail-grid">
           <section className="panel form-panel">
-            <h2>Choose your purchase</h2>
+            <h2>Service and budget</h2>
             <div className="service-option">
               <span className="service-icon">
                 <FileText />
@@ -478,8 +484,8 @@ export function Workspace() {
             <div className="info">
               <ShieldCheck size={18} />
               <p>
-                You choose the agent and payment policy. An unused pass can be
-                transferred with its service and refund rights.
+                You choose the agent and payment policy. Between orders, an available
+                pass can transfer its remaining service and refund rights.
               </p>
             </div>
             <dl className="facts">
@@ -500,8 +506,9 @@ export function Workspace() {
           <aside className="receipt">
             <h2>Fund your pass</h2>
             <p>
-              The service allocation stays in the contract until the selected
-              payment policy settles the order or a refund is confirmed.
+              {wallet.config.budgetPasses
+                ? "Each order reserves 0.010 NEAR from your budget. Unspent service funds stay available for another purchase or refund."
+                : "The service allocation stays in the contract until the selected payment policy settles the order or a refund is confirmed."}
             </p>
             <div className="receipt-rule" />
             <dl className="facts">
@@ -618,6 +625,17 @@ export function Workspace() {
                 <dd>{pass.payment_mode ?? "Manual"}</dd>
               </div>
             </dl>
+            {pass.budget && pass.budget.orders_created > 0 && (
+              <section className="panel section-gap">
+                <h3>Public purchase history</h3>
+                {Array.from({length:pass.budget.orders_created},(_,i)=>(
+                  <Link className="chain-link" key={i} href={`/receipts/${pass.token_id}-order-${i+1}`}>
+                    Order {i+1} receipt <ExternalLink size={14}/>
+                  </Link>
+                ))}
+                <p className="fine">Financial records are public. Private results stay with each order's historical buyer.</p>
+              </section>
+            )}
             {pass.order_id && (
               <Link
                 className="button secondary"
@@ -763,6 +781,7 @@ export function Workspace() {
                   Transfer pass <ArrowUpRight size={16} />
                 </Button>
                 <hr />
+                {pass.budget && <p className="fine">{budgetRefundCopy(pass.budget)}</p>}
                 <Button
                   secondary
                   onClick={() =>
@@ -1083,6 +1102,8 @@ export function Workspace() {
                     {["Reserved", "Delivered", "TransferFailed"].includes(
                       o.phase,
                     ) && (
+                      <>
+                      {detail?.pass_budget && <p className="fine">{budgetRefundCopy(detail.pass_budget)}</p>}
                       <Button
                         secondary
                         onClick={() =>
@@ -1094,6 +1115,7 @@ export function Workspace() {
                       >
                         Request service refund
                       </Button>
+                      </>
                     )}
                   </>
                 )}

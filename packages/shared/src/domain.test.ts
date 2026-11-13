@@ -25,7 +25,7 @@ test("atomic amounts retain exact integer precision", () => {
   assert.equal(formatNear("10000000000000000000000"), "0.010");
   assert.throws(() => formatNear("1e24"));
 });
-test("only unused or financially terminal passes transfer", () => {
+test("only available or financially terminal passes transfer", () => {
   const p = {
     phase: "Available",
     expires_at_ns: "2000000000000000000",

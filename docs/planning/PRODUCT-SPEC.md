@@ -15,8 +15,8 @@ Problem hypothesis: spending permission, delivered bytes and payment status are 
 | Capability | Product behavior |
 | --- | --- |
 | Wallet/session | Connect a testnet wallet, authenticate private requests, show the active account/network |
-| Purchase Pass | Mint and fund a real NEP-171 NFT for one fixed-price service purchase |
-| Transfer | Transfer an unused pass and its remaining service/refund entitlement to another holder |
+| Purchase Pass | Mint a real NEP-171 NFT with a chosen budget for repeated fixed-price purchases; legacy single-use passes remain supported |
+| Transfer | Transfer an available pass and its remaining service/refund entitlement between orders |
 | Purchasing agent | An explicitly assigned hosted or owner-operated agent account reserves an order within the pass rules |
 | Private AI result | Call the supported NEAR AI model, retain exact evidence and keep input/output access-controlled |
 | Review | Buyer-authenticated result/evidence; Manual permits review before payment, while Automatic has no final review gate |
@@ -30,17 +30,17 @@ The current service uses one seller, one service version, `Qwen/Qwen3.8-27B` and
 
 | Question | Decision for this build |
 | --- | --- |
-| What does one NFT buy? | One service purchase/order. No subscription or renewable balance. |
-| How much is funded? | 0.010 native testnet NEAR for service and 0.030 NEAR for storage; network gas is separate. Storage backing is excluded from the service refund. |
+| What does one NFT buy? | A budget for 1–100 sequential service purchases at a fixed 0.010 testnet NEAR each. No subscriptions or top-ups. Legacy passes remain single-use. |
+| How much is funded? | Chosen service budget, plus separate storage backing of 0.030 NEAR + service budget; network gas is separate. Storage is excluded from the service refund. |
 | Who holds the service budget? | One ProofBill contract, with isolated per-pass liabilities. The NFT carries the right to use/refund its allocation. |
-| What follows an unused transfer? | The entire unspent service allocation and its refund right follow the new token owner. The previous funder has no residual claim on it. This is shown before transfer confirmation. |
+| What follows transfer between orders? | The unspent service allocation and refund right follow the new owner. Prior payments stay recorded and prior buyers keep their private history. |
 | Can payment settle automatically? | Manual is the default. The owner can explicitly authorize Automatic settlement for one pass after matching publisher delivery; the agent cannot enable this policy or change the seller/amount. |
 | What is immutable in a pass? | Service version, seller, quoted amount, model policy and absolute expiry, snapshotted at mint. |
-| When can it transfer? | Unused/unexpired with no reservation, or terminal with zero financial claim. Active orders, native payouts/refunds and unresolved transfer-calls lock transfer. |
+| When can it transfer? | Available/unexpired between orders, or terminal with zero financial claim. Active orders, native payouts/refunds and unresolved transfer-calls lock transfer. |
 | What changes on transfer? | Current holder and authorization revision. Prior agent/task delegations and unused Automatic payment permission are invalidated. |
-| What happens after use? | The NFT remains as a Completed pass referencing the receipt; it has no remaining purchase value. |
+| What happens after payment? | A budget pass with remaining funds returns to Available; an exhausted pass becomes Completed. Each numbered order keeps its receipt and recorded policy. Successful settlement increments authorization revision. |
 | Does transfer give private history? | No. Prior private inputs/results remain available only to the historical buyer session. Token ownership conveys public pass state, not past plaintext. |
-| Can rejection run another inference? | No. Cancellation/rejection ends this one-order entitlement through refund. A new purchase needs a new pass. Re-verifying saved evidence does not run inference again. |
+| Can rejection run another inference? | No. Cancel/refund closes the pass and returns available/reserved service funds. Paid orders are not refunded. A successful paid order can be followed by a new explicitly identified task using remaining budget. |
 | What is the platform fee? | Zero for the hackathon flow. Seller service price and provider usage cost are different. |
 | Where does it run? | Financial/NFT state on NEAR testnet; actual inference on NEAR AI Cloud. |
 
@@ -63,7 +63,7 @@ The first seller/operator may be run by the project. Label it accordingly; do no
 
 The user connects a testnet wallet and signs a login challenge for private features. Public product information remains browsable. They open **New Purchase Pass**, inspect service, seller, quote, supported model, expiry and storage cost, then confirm mint/funding in their wallet.
 
-The pass becomes Available only after its transaction is confirmed. Wallet cancellation leaves an actionable draft. The interface shows the contract-held allocation separately from wallet balance and remaining inference credits.
+The pass becomes Available only after its transaction is confirmed. The budget field and funding quote use exact atomic amounts; changing the budget clears Automatic consent. Wallet cancellation leaves an actionable draft. Contract-held service allocation, storage backing, wallet balance and operator inference credits are distinct.
 
 ### B. Optional: give the pass to another holder
 
@@ -91,7 +91,7 @@ In Automatic mode, the owner's prior per-pass authorization starts the fixed sel
 
 ### F. Receipt and Completed pass
 
-After confirmed payment, the public receipt shows the historical buyer, current holder, authorization mode, commitments and recorded transaction references. The pass becomes Completed with zero remaining service allocation. The buyer may unlock and export private evidence in the workspace; the public receipt contains no private result or verification bundle.
+After confirmed payment, the public receipt shows that order's historical buyer, current holder, recorded authorization mode and commitments/references. Remaining budget reopens the pass as Available; zero remaining budget makes it Completed. Another task needs the new order ID/revision. Earlier receipts and private buyer access remain unchanged. The buyer can export and [verify private evidence](../verify-private-result.md); the public receipt excludes it.
 
 ## 6. Manual payment journey (default)
 
@@ -108,7 +108,10 @@ flowchart TD
   H --> I{Current holder decides}
   I -->|Approve| J[Wallet approval starts exact payout]
   J --> K[Successful transfer result]
-  K --> L[Paid receipt and Completed NFT]
+  K --> L[Paid receipt retained]
+  L --> O{Budget remains?}
+  O -->|Yes| D
+  O -->|No| P[Completed NFT]
   I -->|Reject| M[Refund service allocation]
   G -->|Failure or unavailable evidence| M
   M --> N[Confirmed refund and Refunded NFT]

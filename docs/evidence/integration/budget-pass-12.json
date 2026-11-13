@@ -1,0 +1,75 @@
+{
+  "tested_at": "2026-11-13T18:59:28.356Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "token_id": "pass-12",
+  "passed": true,
+  "actual_provider": true,
+  "scripted_project_accounts": true,
+  "budget": {
+    "funded_yocto": "30000000000000000000000",
+    "available_yocto": "0",
+    "reserved_yocto": "0",
+    "spent_yocto": "20000000000000000000000",
+    "refunded_yocto": "10000000000000000000000",
+    "orders_created": 2
+  },
+  "current_holder": "bob.proofbill-endpx-2026.testnet",
+  "refund_receiver": "bob.proofbill-endpx-2026.testnet",
+  "orders": [
+    {
+      "order_id": "pass-12-order-1",
+      "payment_mode": "Automatic",
+      "phase": "Paid",
+      "agent_id": "bob.proofbill-endpx-2026.testnet",
+      "buyer_id": "alice.proofbill-endpx-2026.testnet",
+      "anonymous_private_status": 401,
+      "new_holder_private_status": 404,
+      "buyer_export_status": 200,
+      "job_count": 1
+    },
+    {
+      "order_id": "pass-12-order-2",
+      "payment_mode": "Manual",
+      "phase": "Paid",
+      "agent_id": "bob.proofbill-endpx-2026.testnet",
+      "buyer_id": "alice.proofbill-endpx-2026.testnet",
+      "anonymous_private_status": 401,
+      "new_holder_private_status": 404,
+      "buyer_export_status": 200,
+      "job_count": 1
+    }
+  ],
+  "mode_change": [
+    {
+      "method": "assign_agent",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "Hb8eLQ5GZaMYzCHDSGmnCK13U1oqwCEwa7AFWuVux5eV",
+      "expected_failure": null
+    }
+  ],
+  "handover_refund": [
+    {
+      "method": "nft_transfer",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "2eCAe2LXRm5kUeirASGszwi4EkeqxL3dYcZTcMTWPWLf",
+      "expected_failure": null
+    },
+    {
+      "method": "cancel_and_refund",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "9SYsyGVz3dJqiSKm8Cg166aLy6kyh6KbQh7UVpNbczb3",
+      "expected_failure": "HOLDER_ONLY"
+    },
+    {
+      "method": "cancel_and_refund",
+      "signer": "bob.proofbill-endpx-2026.testnet",
+      "tx_hash": "7ypWE5ZXZ9kfThudzVbre8BC2RJshLdkGjZEn1fUrNDp",
+      "expected_failure": null
+    }
+  ],
+  "limits": [
+    "Synthetic briefs and project-owned accounts; not customer traction.",
+    "Provider calls and testnet settlement are real; browser wallet confirmations are not automated."
+  ]
+}

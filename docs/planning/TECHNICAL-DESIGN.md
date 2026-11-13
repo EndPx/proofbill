@@ -63,6 +63,7 @@ Do not collapse inference, ownership and payment into one status string.
 
 ```text
 Available -> In use -> Completed
+Available -> In use -> Available (budget remains after confirmed payment)
 Available -> Refund pending -> Refunded
 In use    -> Refund pending -> Refunded
 ```
@@ -84,17 +85,18 @@ Offchain Running and verifier error states are projections, clearly distinguishe
 
 `service funded = available + reserved + seller payout pending + refund pending + paid + refunded`
 
-These buckets are disjoint and exactly one holds the fixed service amount for a single-use pass. NFT transfer changes the entitlement owner, not the amount. Dashboard Reserved can aggregate reservation and pending buckets but must explain that those funds are unavailable. Refunds remain visible when reconciling lifetime funded totals.
+For legacy single-use passes these conceptual buckets describe one service amount. Reusable passes persist `funded = available + reserved + spent + refunded`; a pending seller payout stays in reserved until its callback confirms success. Only one order can hold a reservation. Each order has a sequence and payment-policy snapshot; a successful payout advances authorization revision. Transfer moves only the remaining entitlement. Storage and gross account balance never authorize extra service spending.
 
 ## 5. Contract interface
 
-The table summarizes methods in [the Rust source](../../contracts/proofbill/src/lib.rs). Optional payment policies default to Manual. Generate the ABI from the intended revision before integration; the repository's initial-build ABI snapshot predates those optional arguments. Exact argument types and guards belong to the source and matching build.
+The table summarizes [the Rust source](../../contracts/proofbill/src/lib.rs). Optional policies default to Manual. The checked-in ABI now describes the official cargo-near version-3 build and identifies its Wasm hash. Use the source and matching build; cargo-near supplies the required `--cfg near` SDK configuration.
 
 | Method | Caller / behavior |
 | --- | --- |
 | `create_purchase_pass(service_id, expires_at_ns, payment_mode?)` | Holder; attach exact service amount plus required storage budget; mint to caller |
+| `create_budget_pass(service_id, expires_at_ns, payment_mode?, budget_yocto)` | Holder; 1–100 service-price increments, separate storage backing, exact per-pass budget conservation |
 | `assign_agent(token_id, expected_revision, agent_id, payment_mode?)` | Current holder; only Available/unexpired; increment revision and optionally change policy |
-| `reserve_order(token_id, expected_revision, request_commitment)` | Assigned agent; zero attached service funds; snapshot buyer/terms and reserve once |
+| `reserve_order(token_id, expected_revision, request_commitment)` | Assigned agent; reserve one fixed-price allocation, snapshot buyer/policy and allocate a numbered order; no concurrent reservation |
 | `publish_delivery(order_id, request_commitment, response_commitment, evidence_commitment, model_id, policy_id, signature_kind)` | Configured publisher; validate the bound request/model/policy and record delivery; Automatic mode starts the preauthorized payout |
 | `approve_and_pay(order_id, expected_delivery_commitment)` | Historical/current locked holder; before approval deadline; validate exact tuple and start one native transfer |
 | `cancel_and_refund(token_id, expected_revision)` | Entitlement holder; before seller payout starts or after a proven failed attempt; snapshot refund receiver and consume entitlement |
@@ -103,6 +105,8 @@ The table summarizes methods in [the Rust source](../../contracts/proofbill/src/
 | `on_payment_result` / `on_refund_result` | Private callbacks; unique attempt match; consume one actual promise result |
 | NEP-171 core transfer/view/resolver | Current owner only; see transfer boundary below |
 | Pass/order/receipt views and pagination | Public facts; no prompt, result plaintext or secret |
+
+Budget data and order policies occupy additional storage prefixes; existing Borsh root/pass/order records remain unchanged. Legacy IDs stay `pass-N-order`; new IDs are `pass-N-order-K`. Budget refunds close the pass and return remaining available/reserved service funds; earlier Paid orders and storage backing remain excluded.
 
 Holder-sensitive operations follow appropriate one-yocto authorization conventions where required; that authorization deposit is not seller revenue. Callback methods are private. Client-supplied seller, amount or ownership values cannot override the stored snapshot. A function-call gas allowance does not replace the pass's contract-enforced service amount.
 

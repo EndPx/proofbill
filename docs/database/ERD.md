@@ -55,7 +55,7 @@ erDiagram
         text network
         text contract_id
         text order_id "unique with network and contract_id"
-        text token_id "unique with network and contract_id"
+        text token_id "indexed pass history; many orders per budget NFT"
         text buyer_id FK
         text agent_id "nullable bound account; not a SQL FK"
         integer revision
@@ -87,7 +87,7 @@ erDiagram
     }
 ```
 
-`UK` means a unique constraint. The three-column job uniqueness rules and two-column transaction uniqueness rule are specified below; individual `order_id`, `token_id` or `tx_hash` columns are not globally unique by themselves.
+`UK` means a unique constraint. Scoped order identity is unique; pass identity is an indexed history relationship. Individual `order_id`, `token_id` or `tx_hash` columns are not globally unique by themselves.
 
 ## 3. What each table owns
 
@@ -113,7 +113,7 @@ One account can have multiple sessions. Session identity is fixed; switching bro
 
 Primary key: internal `job_id` UUID. Foreign key: `buyer_id -> pb_accounts.account_id`. This buyer binding is immutable once reserved/execution has started. An unreserved, unattempted stale request can be rebound only through the guarded fresh-task path after an ownership/revision change; a new holder's request never reuses the former holder's private input.
 
-External order identity is `(network, contract_id, order_id)` with a unique constraint. One Purchase Pass allows one job through `UNIQUE(network, contract_id, token_id)`. This avoids colliding `pass-1` or `pass-1-order` identifiers after deploying a different contract. The internal UUID stays stable for leases and DB relations.
+External order identity `(network, contract_id, order_id)` is unique. Version 3 replaces the permanent per-pass uniqueness index with `pb_jobs_pass_history(network, contract_id, token_id, created_at)`: a budget NFT has several numbered orders, while the contract permits only one active order. Legacy IDs remain `pass-N-order`; budget IDs are `pass-N-order-K`. The internal UUID stays stable for leases and relations.
 
 The row owns the worker lifecycle, encrypted input/result/evidence bundle, one provider-attempt marker and private retention. A queued row may exist before an onchain reservation, so a SQL row alone never proves an order was created onchain. `revision` snapshots authorization when the task is accepted.
 
@@ -150,7 +150,7 @@ An account can be buyer in one context and signer/agent in another; do not encod
 - Account network is explicitly testnet in this first release; validate public account ID format.
 - `UNIQUE(pb_challenges.nonce)` and challenge consume update guarded by `used_at IS NULL` and server expiry.
 - `UNIQUE(pb_jobs.network, contract_id, order_id)` for external order identity.
-- `UNIQUE(pb_jobs.network, contract_id, token_id)` for one job per single-use pass.
+- A non-unique scoped pass-history index; unique order identity plus contract reservation enforces each numbered purchase. Preparation locks the pass's SQL task rows before chain validation.
 - `UNIQUE(pb_chain_observations.network, tx_hash)` for one saved envelope per transaction.
 - If an observation has `job_id`, its network/contract/order association must match that job. Enforce the identity check in the writer; a simple UUID FK alone does not prove this equality. Use a composite FK including scope fields if a second independent writer is introduced.
 - Job revision is nonnegative; allowed worker states are explicit rather than arbitrary caller strings. Unknown provider execution is not automatically retried.
@@ -168,7 +168,7 @@ These are logical entities persisted in the Rust contract, not SQL tables or cro
 erDiagram
     NEAR_ACCOUNT ||--o{ PURCHASE_PASS : current_holder
     SERVICE_SNAPSHOT ||--o{ PURCHASE_PASS : fixes_terms
-    PURCHASE_PASS ||--o| PURCHASE_ORDER : allows_one
+    PURCHASE_PASS ||--o{ PURCHASE_ORDER : numbered_budget_purchases
     PURCHASE_ORDER ||--o{ NATIVE_ATTEMPT : payment_or_refund
     NEAR_ACCOUNT ||--o{ PURCHASE_ORDER : historical_buyer
     NEAR_ACCOUNT ||--o{ NATIVE_ATTEMPT : beneficiary
@@ -204,7 +204,7 @@ erDiagram
 
 The attempt entity describes the financial identity/invariant. The initial implementation may persist its nonce and state within pass/order records rather than as a separate iterable collection. A diagram entity does not imply a separate implemented map.
 
-One pass has zero orders before reservation and one order after reservation. That order may have several explicit attempts after proven failure, but at most one successful seller payment. A refund is an alternative exit, not an additional service purchase. The current holder/refund entitlement can change before use; the historical buyer on an existing order cannot.
+A legacy pass has at most one order; a budget pass retains a sequence of orders with at most one active. Each order can have explicit retries after proven failure but only one successful seller payment. The contract's budget sidecar tracks funded, available, reserved, spent and refunded amounts with exact conservation. Transfer between orders moves the remaining allocation; it never rewrites earlier buyers or their private artifacts. Budget/policy sidecars preserve existing Borsh record layouts.
 
 ## 7. Joining the two layers
 

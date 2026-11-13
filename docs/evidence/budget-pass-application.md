@@ -1,6 +1,6 @@
 # Reusable budget application checks
 
-Validated locally on 14 November 2026. Hosted deployment/provider evidence is recorded separately.
+Validated locally on 14 November 2026. [Hosted deployment/provider evidence](budget-pass-hosted.md) and subsequent refund/history/recovery checks are recorded separately.
 
 The queue uses scoped order identity and a pass-history index instead of one permanent job per NFT. Per-pass transaction locks protect draft replacement before chain reads; distinct numbered orders preserve earlier buyer bindings. Budget-agent SDK calls require an explicit order ID and current authorization, preventing a completed task rerun from silently purchasing again. The worker retains its lease fencing, single provider-attempt and saved-result recovery rules.
 

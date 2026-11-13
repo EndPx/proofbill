@@ -74,6 +74,17 @@ test("budget funding uses exact amounts and a changed cap requires renewed autom
   expect(sent.args.budget_yocto).toBe("40000000000000000000000");
   expect(sent.deposit).toBe("110000000000000000000000");
 });
+test("remaining budget refund explains closure and prior public receipts stay reachable", async ({ page }) => {
+  await setup(page,false,true);
+  await page.route("**/api/pass/**", r=>r.fulfill({json:{...pass,budget:{
+    funded_yocto:"30000000000000000000000",available_yocto:"10000000000000000000000",
+    reserved_yocto:"0",spent_yocto:"20000000000000000000000",refunded_yocto:"0",orders_created:2,
+  }}}));
+  await page.goto("/app/passes/pass-99");
+  await expect(page.getByText(/Refund returns 0.010 testnet NEAR and closes this budget pass/)).toBeVisible();
+  await expect(page.getByRole("link",{name:"Order 1 receipt"})).toHaveAttribute("href","/receipts/pass-99-order-1");
+  await expect(page.getByRole("link",{name:"Order 2 receipt"})).toHaveAttribute("href","/receipts/pass-99-order-2");
+});
 async function transactions(page: Page) {
   return page.evaluate(
     () =>

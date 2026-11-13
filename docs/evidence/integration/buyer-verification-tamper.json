@@ -1,0 +1,8 @@
+{
+  "verified": false,
+  "error_code": "DISPLAYED_RESULT_MISMATCH",
+  "expected_rejection": true,
+  "network": "testnet",
+  "order_id": "pass-12-order-2",
+  "scope": "Modified copy of the real buyer export; no transaction or new inference."
+}

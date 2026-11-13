@@ -43,7 +43,7 @@ after(async () => {
   await admin.unsafe(`drop schema ${schema} cascade`);
   await admin.end();
 });
-async function seed() {
+async function seed(budget = false) {
   const pass = {
     token_id: "pass-restart",
     owner_id: "buyer.testnet",
@@ -59,6 +59,7 @@ async function seed() {
     storage_credit_yocto: "20000000000000000000000",
     transfer_pending: false,
     attempt: 0,
+    ...(budget ? {budget:{funded_yocto:"30000000000000000000000",available_yocto:"30000000000000000000000",reserved_yocto:"0",spent_yocto:"0",refunded_yocto:"0",orders_created:0}} : {}),
   };
   await sql`insert into worker_chain(token_id,pass_json) values(${pass.token_id},${JSON.stringify(pass)})`;
   return queuePurchase(
@@ -356,6 +357,23 @@ test("legacy failed but already Paid publication is reconciled even after termin
   assert.equal((await row()).state, "delivered");
   assert.equal((await chain()).publish_calls, 1);
   assert.equal((await chain()).provider_calls, 1);
+});
+test("saved budget delivery recovers after later ownership change and remaining-balance refund", async () => {
+  const job=await seed(true);
+  assert.equal(job.order_id,"pass-restart-order-1");
+  assert.equal(child("published").signal,"SIGKILL");
+  const current=await chain(),pass=JSON.parse(current.pass_json);
+  assert.equal(pass.phase,"Available");
+  pass.phase="Refunded";pass.owner_id="teammate.testnet";pass.agent_id=null;pass.authorization_revision+=2;
+  pass.budget.refunded_yocto=pass.budget.available_yocto;pass.budget.available_yocto="0";
+  await sql`update worker_chain set pass_json=${JSON.stringify(pass)}`;
+  await sql`update pb_jobs set state='failed',lease_until=null,lease_token=null,terminal_at=now(),error_code='EXECUTION_UNAVAILABLE'`;
+  assert.equal(child().status,0);
+  assert.equal((await row()).state,"delivered");
+  assert.equal((await row()).buyer_id,"buyer.testnet");
+  assert.equal((await chain()).provider_calls,1);
+  assert.equal((await chain()).publish_calls,1);
+  assert.equal((await chain()).payments,1);
 });
 test("a transient read failure before inference can retry safely", async () => {
   await seed();

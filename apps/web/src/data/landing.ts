@@ -20,9 +20,9 @@ export const landing = {
   steps: [
     {
       title: "Fund a Purchase Pass",
-      body: "Start with one fixed-price service. Your NFT holds the service allocation and names the seller before your agent can order.",
+      body: "Choose a service budget for repeated fixed-price purchases. Your NFT carries the remaining allocation and fixes the seller before your agent can order.",
       detail:
-        "One pass authorizes one purchase. Storage is budgeted separately.",
+        "One active order at a time. Unspent service funds can be refunded; storage is separate.",
     },
     {
       title: "Give your agent the brief",
@@ -41,7 +41,7 @@ export const landing = {
     {
       question: "What can I try today?",
       answer:
-        "The testnet MVP extracts an item, quantity and requester from a purchase brief. Assign the ProofBill assistant or your own agent. Manual payment lets you review before approving; Automatic payment starts after matching publisher delivery. Paid appears only after the seller transfer succeeds. Refunds follow contract state.",
+        "The testnet MVP extracts an item, quantity and requester from a purchase brief. Fund a reusable budget and assign the ProofBill assistant or your own agent. Manual payment lets you review each delivery; Automatic uses your advance authorization. Paid appears only after a successful seller transfer. Refunds follow contract state.",
     },
     {
       question: "Do I need a NEAR wallet?",
@@ -51,7 +51,7 @@ export const landing = {
     {
       question: "What does the Purchase Pass pay for?",
       answer:
-        "The current service allocation is 0.010 testnet NEAR. Minting also reserves a separate 0.030 NEAR storage budget, plus transaction gas. Storage is not part of the service refund. Review the amounts in your wallet before signing.",
+        "Each purchase costs 0.010 testnet NEAR. Choose a service budget from 0.010 to 1.000 NEAR in 0.010 increments. Storage backing is separate: 0.030 NEAR plus the chosen service budget, with wallet gas on top. For a 0.050 service budget, funding is 0.130 NEAR plus gas. Only unspent service funds are refundable; storage backs the NFT and retained history.",
     },
     {
       question: "Does verified evidence mean the AI answer is correct?",
@@ -61,7 +61,7 @@ export const landing = {
     {
       question: "Can I transfer or refund a pass?",
       answer:
-        "An unused pass can move to another holder with its use and refund rights. Transfer clears the previous agent assignment and automatic-payment permission. An active order locks transfer. Refund availability follows the contract state; a completed pass keeps its receipt and has no remaining service allocation.",
+        "Between orders, a pass can move to another holder with its remaining use and refund rights. Transfer clears the previous agent assignment and Automatic permission. Active orders lock transfer. Earlier private results remain with their historical buyers. Refunds return unspent service funds; earlier seller payments and storage are excluded.",
     },
   ],
 } as const;

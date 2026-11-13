@@ -8,7 +8,7 @@ import {
   KeyRound,
   Ticket,
 } from "lucide-react";
-import { formatNear, SERVICE_PRICE, STORAGE_BUDGET } from "@proofbill/shared";
+import { formatNear, SERVICE_PRICE, budgetFunding } from "@proofbill/shared";
 import { landing } from "@/data/landing";
 import styles from "@/app/home.module.css";
 
@@ -188,12 +188,12 @@ export function PurchaseObject({ phase: requestedPhase }: { phase: number }) {
                 </h3>
                 <dl>
                   <div>
-                    <dt>Service allocation</dt>
-                    <dd>{formatNear(SERVICE_PRICE)} NEAR</dd>
+                    <dt>Example service budget</dt>
+                    <dd>0.050 NEAR</dd>
                   </div>
                   <div>
                     <dt>Separate storage budget</dt>
-                    <dd>{formatNear(STORAGE_BUDGET)} NEAR</dd>
+                    <dd>{formatNear(budgetFunding((BigInt(SERVICE_PRICE) * 5n).toString()).storage)} NEAR</dd>
                   </div>
                   <div>
                     <dt>Service</dt>

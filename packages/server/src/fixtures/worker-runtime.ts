@@ -2,6 +2,7 @@
 import postgres from "postgres";
 import {
   MODEL_ID,
+  nextOrderId,
   type PurchaseOrder,
   type PurchasePass,
 } from "@proofbill/shared";
@@ -47,7 +48,7 @@ export function fixtureRuntime(
     async view<T>(method: string, args: Record<string, unknown>): Promise<T> {
       if (method === "get_pass") crash("claimed");
       const token = String(
-        args.token_id ?? String(args.order_id).replace(/-order$/, ""),
+        args.token_id ?? String(args.order_id).replace(/-order(?:-\d+)?$/, ""),
       );
       const [row] =
         await sql`select * from worker_chain where token_id=${token}`;
@@ -61,7 +62,7 @@ export function fixtureRuntime(
     },
     async call(role, method, args) {
       const token = String(
-        args.token_id ?? String(args.order_id).replace(/-order$/, ""),
+        args.token_id ?? String(args.order_id).replace(/-order(?:-\d+)?$/, ""),
       );
       if (role === "publisher") crash("saved");
       await sql.unsafe(
@@ -85,7 +86,7 @@ export function fixtureRuntime(
           )
             throw new Error("FIXTURE_INVALID_RESERVATION");
           order = {
-            order_id: `${token}-order`,
+            order_id: nextOrderId(pass),
             token_id: token,
             buyer_id: pass.owner_id,
             agent_id: agent,
@@ -102,6 +103,10 @@ export function fixtureRuntime(
           };
           pass.phase = "InUse";
           pass.order_id = order.order_id;
+          if(pass.budget){
+            pass.budget.available_yocto=(BigInt(pass.budget.available_yocto)-BigInt(pass.price_yocto)).toString();
+            pass.budget.reserved_yocto=pass.price_yocto;pass.budget.orders_created++;
+          }
         } else {
           if (
             !order ||
@@ -117,6 +122,11 @@ export function fixtureRuntime(
           if (order.phase === "Paid") {
             order.attempt = 1;
             pass.phase = "Completed";
+            if(pass.budget){
+              pass.budget.spent_yocto=(BigInt(pass.budget.spent_yocto)+BigInt(pass.price_yocto)).toString();
+              pass.budget.reserved_yocto="0";pass.order_id=null;pass.authorization_revision++;
+              if(BigInt(pass.budget.available_yocto)>0n)pass.phase="Available";
+            }
             await tx.unsafe(
               "update worker_chain set payments=payments+1 where token_id=$1",
               [token],
