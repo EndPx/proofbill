@@ -231,7 +231,7 @@ export default async function PublicReceiptPage({
             </div>
             <p>
               {automatic
-                ? "The owner authorized one fixed payment in advance. Matching publisher delivery starts settlement without a final wallet approval."
+                ? "This order uses the owner's advance authorization. Matching publisher delivery starts its fixed seller payment without a final wallet approval."
                 : "The buyer approves the exact delivered result and seller payment in the wallet before settlement starts."}
             </p>
             {automatic && (
@@ -260,8 +260,8 @@ export default async function PublicReceiptPage({
               </div>
             </dl>
             <p className="fine">
-              NFT ownership and historical buyer access are separate after a
-              completed pass changes hands.
+              The current NFT holder may differ from this order's buyer.
+              Transferring a pass never transfers access to earlier private results.
             </p>
           </section>
           <section className={`panel ${styles.card}`}>

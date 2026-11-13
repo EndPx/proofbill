@@ -30,6 +30,7 @@ interface Config {
   network: string;
   loaded?: boolean;
   advancedModes?: boolean;
+  budgetPasses?: boolean;
   sellerId?: string;
 }
 interface WalletState {

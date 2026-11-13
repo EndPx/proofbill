@@ -141,7 +141,7 @@ async function execute(rt: WorkerRuntime, job: JobRow, signal: AbortSignal) {
     throw new Error("PASS_AUTHORIZATION_CHANGED");
   let order = existing;
   if (order) checkOrder(order, pass, job, requestHash, rt.agent);
-  if (pass.phase === "Refunded" || order?.phase === "Refunded")
+  if ((!order && pass.phase === "Refunded") || order?.phase === "Refunded")
     throw new Error("ORDER_REFUNDED");
   let saved: Saved | undefined;
   if (job.result_cipher) {

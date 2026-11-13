@@ -2,6 +2,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { runOwnAgent, makeAgentBrief } from "@proofbill/agent-client";
 import { KeyPairSigner, JsonRpcProvider } from "near-api-js";
+import { nextOrderId, type PurchasePass } from "@proofbill/shared";
 const { OWN_AGENT_ID, OWN_AGENT_KEY, PURCHASE_PASS_ID, PRIVATE_BRIEF_FILE } =
   process.env;
 if (
@@ -18,11 +19,7 @@ const pass = (await rpc.callFunction({
   method: "get_pass",
   args: { token_id: PURCHASE_PASS_ID },
   blockQuery: { finality: "final" },
-})) as {
-  owner_id: string;
-  authorization_revision: number;
-  agent_id: string | null;
-} | null;
+})) as PurchasePass | null;
 if (!pass || pass.agent_id !== OWN_AGENT_ID)
   throw new Error("AGENT_NOT_AUTHORIZED");
 await mkdir(".local/own-agent", { recursive: true });
@@ -30,6 +27,7 @@ const saved = `.local/own-agent/${PURCHASE_PASS_ID}.json`;
 let request: {
   buyerId: string;
   revision: number;
+  orderId?: string;
   brief: ReturnType<typeof makeAgentBrief>;
 };
 try {
@@ -39,6 +37,7 @@ try {
   request = {
     buyerId: pass.owner_id,
     revision: pass.authorization_revision,
+    orderId: pass.order_id ?? nextOrderId(pass),
     brief: makeAgentBrief(await readFile(PRIVATE_BRIEF_FILE, "utf8")),
   };
   await writeFile(saved, JSON.stringify(request), { mode: 0o600 });

@@ -100,6 +100,16 @@ test("authenticated agent still needs an actual assigned pass", async () => {
   await assert.rejects(runOwnAgent(f.options), /AGENT_NOT_AUTHORIZED/);
   assert.equal(f.signatures(), 1);
 });
+test("a budget agent must name the expected order rather than accidentally buying again", async () => {
+  const f = setup({network:"testnet",contractId:"proofbill.testnet",advancedModes:true});
+  f.options.provider = {callFunction:async()=>({
+    token_id:f.options.tokenId, owner_id:f.options.buyerId, agent_id:id,
+    authorization_revision:f.options.revision, transfer_pending:false,
+    budget:{orders_created:1}, order_id:null,
+  })} as unknown as JsonRpcProvider;
+  await assert.rejects(runOwnAgent(f.options),/EXPECTED_ORDER_ID_REQUIRED/);
+  await assert.rejects(runOwnAgent({...f.options,orderId:`${f.options.tokenId}-order-1`}),/PASS_AUTHORIZATION_CHANGED/);
+});
 
 test("saved request cannot cross to another NFT owner or authorization revision", async () => {
   for (const patch of [

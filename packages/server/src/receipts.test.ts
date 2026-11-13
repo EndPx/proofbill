@@ -51,6 +51,25 @@ function fixture() {
     },
   };
 }
+test("a reusable pass preserves historical receipts and their authorization after later purchases and handover", async () => {
+  const f=fixture();
+  f.order.order_id="pass-2-order-1";
+  f.order.payment_mode="Automatic";
+  f.pass.budget={funded_yocto:"30000000000000000000000",available_yocto:"10000000000000000000000",reserved_yocto:"0",spent_yocto:"20000000000000000000000",refunded_yocto:"0",orders_created:2};
+  f.pass.owner_id="teammate.testnet";
+  f.pass.phase="Available";
+  f.pass.order_id=null;
+  f.pass.payment_mode="Manual";
+  const receipt=await readPublicReceipt(f.order.order_id,f.reader);
+  assert.equal(receipt?.order_phase,"Paid");
+  assert.equal(receipt?.payment_mode,"Automatic");
+  assert.equal(receipt?.buyer_id,"buyer.testnet");
+  assert.equal(receipt?.current_holder,"teammate.testnet");
+  f.pass.phase="Refunded";
+  assert.equal((await readPublicReceipt(f.order.order_id,f.reader))?.order_phase,"Paid");
+  delete f.order.payment_mode;
+  await assert.rejects(readPublicReceipt(f.order.order_id,f.reader),/RECEIPT_UNAVAILABLE/);
+});
 test("public receipt projects only allowlisted fields including references", async () => {
   const f = fixture();
   Object.assign(f.order, {

@@ -18,7 +18,7 @@ const pass = {
   transfer_pending: false,
   attempt: 0,
 };
-async function setup(page: Page, custom = false) {
+async function setup(page: Page, custom = false, budgetPasses = false) {
   await prepareWallet(page, true, false, true);
   const current = { ...pass, agent_id: custom ? "custom.testnet" : null };
   await page.route("**/api/**", (route) => {
@@ -31,6 +31,7 @@ async function setup(page: Page, custom = false) {
               network: "testnet",
               configured: true,
               advancedModes: true,
+              budgetPasses,
               agentId: "agent.testnet",
               sellerId: "seller.testnet",
             }
@@ -44,6 +45,35 @@ async function setup(page: Page, custom = false) {
     });
   });
 }
+test("budget funding uses exact amounts and a changed cap requires renewed automatic consent", async ({ page }) => {
+  await page.setViewportSize({width:360,height:800});
+  await setup(page,false,true);
+  await page.goto("/app/passes/new");
+  const input=page.getByRole("textbox",{name:"Service budget (testnet NEAR)"});
+  const mint=page.getByRole("button",{name:"Confirm and mint pass"});
+  await expect(input).toHaveValue("0.050");
+  await expect(page.getByText("5 purchases at 0.010 NEAR each. Storage is separate.")).toBeVisible();
+  await input.fill("0.015");
+  await expect(input).toHaveAttribute("aria-invalid","true");
+  await expect(mint).toBeDisabled();
+  await input.fill("0.030");
+  await page.getByRole("combobox",{name:"Payment approval"}).selectOption("Automatic");
+  await page.getByRole("checkbox").check();
+  await input.fill("0.040");
+  await expect(page.getByRole("checkbox")).not.toBeChecked();
+  await expect(mint).toBeDisabled();
+  await expect(page.getByText(/remaining service budget of 0.040/)).toBeVisible();
+  await page.getByRole("checkbox").check();
+  await mint.scrollIntoViewIfNeeded();
+  await page.screenshot({path:test.info().outputPath("budget-funding-mobile.png")});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await mint.click();
+  await expect.poll(async ()=>(await transactions(page)).length).toBe(1);
+  const sent=(await transactions(page))[0].actions[0].params as {methodName:string;args:Record<string,unknown>;deposit:string};
+  expect(sent.methodName).toBe("create_budget_pass");
+  expect(sent.args.budget_yocto).toBe("40000000000000000000000");
+  expect(sent.deposit).toBe("110000000000000000000000");
+});
 async function transactions(page: Page) {
   return page.evaluate(
     () =>

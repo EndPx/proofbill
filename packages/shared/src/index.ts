@@ -4,6 +4,32 @@ export const MODEL_ID = "Qwen/Qwen3.8-27B";
 export const SERVICE_PRICE = "10000000000000000000000";
 export const STORAGE_BUDGET = "30000000000000000000000";
 export type PaymentMode = "Manual" | "Automatic";
+export interface PassBudget {
+  funded_yocto: string;
+  available_yocto: string;
+  reserved_yocto: string;
+  spent_yocto: string;
+  refunded_yocto: string;
+  orders_created: number;
+}
+export function parseNearAmount(value: string): string {
+  const match = /^(0|[1-9]\d*)(?:\.(\d{1,24}))?$/.exec(value);
+  if (!match) throw new Error("INVALID_SERVICE_BUDGET");
+  return (BigInt(match[1]) * 10n ** 24n + BigInt((match[2] ?? "").padEnd(24, "0"))).toString();
+}
+export function nextOrderId(pass: Pick<PurchasePass, "token_id" | "budget">): string {
+  return pass.budget
+    ? `${pass.token_id}-order-${pass.budget.orders_created + 1}`
+    : `${pass.token_id}-order`;
+}
+export function budgetFunding(amount: string) {
+  if (!/^(0|[1-9]\d*)$/.test(amount)) throw new Error("INVALID_SERVICE_BUDGET");
+  const budget = BigInt(amount), price = BigInt(SERVICE_PRICE);
+  if (budget < price || budget > price * 100n || budget % price !== 0n)
+    throw new Error("INVALID_SERVICE_BUDGET");
+  const storage = BigInt(STORAGE_BUDGET) + budget;
+  return { storage: storage.toString(), total: (budget + storage).toString(), orders: Number(budget / price) };
+}
 export interface PublicReceipt {
   network: "testnet";
   contract_id: string;
@@ -70,6 +96,7 @@ export interface PurchasePass {
   authorization_revision: number;
   agent_id: string | null;
   payment_mode?: PaymentMode;
+  budget?: PassBudget | null;
   phase: PassPhase;
   order_id: string | null;
   storage_credit_yocto: string;
@@ -78,6 +105,7 @@ export interface PurchasePass {
 }
 export interface PurchaseOrder {
   order_id: string;
+  payment_mode?: PaymentMode;
   token_id: string;
   buyer_id: string;
   agent_id: string;

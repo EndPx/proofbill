@@ -116,8 +116,13 @@ if (process.env.CONFIRM_PROOFBILL_TESTNET_UPGRADE === "yes") {
         value,
       );
   }
-  for (const old of beforeOrders)
-    assert.deepEqual(await view("get_order", { order_id: old.order_id }), old);
+  for (const old of beforeOrders) {
+    const current = await view<PurchaseOrder>("get_order", { order_id: old.order_id });
+    for (const [field, value] of Object.entries(old))
+      assert.deepEqual((current as unknown as Record<string, unknown>)[field], value);
+    const previousMode = old.payment_mode ?? beforePasses.find(p => p.token_id === old.token_id)?.payment_mode ?? "Manual";
+    assert.equal(current.payment_mode ?? previousMode, previousMode);
+  }
   const report = {
     tested_at: new Date().toISOString(),
     network: "testnet",

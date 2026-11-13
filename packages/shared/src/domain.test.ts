@@ -4,8 +4,22 @@ import {
   formatNear,
   canTransfer,
   validAccountId,
+  parseNearAmount,
+  budgetFunding,
+  nextOrderId,
   type PurchasePass,
 } from "./index.js";
+test("budget quotes separate service allocation from storage with exact atomic amounts", () => {
+  const amount = parseNearAmount("0.050");
+  assert.equal(amount, "50000000000000000000000");
+  assert.deepEqual(budgetFunding(amount), {
+    orders: 5, storage: "80000000000000000000000", total: "130000000000000000000000",
+  });
+  for (const value of ["1e-2", "-0.01", "0.015", "0", "1.01", "0.0000000000000000000000001"])
+    assert.throws(() => budgetFunding(parseNearAmount(value)));
+  assert.equal(nextOrderId({token_id:"pass-1"}),"pass-1-order");
+  assert.equal(nextOrderId({token_id:"pass-1",budget:{orders_created:2} as PurchasePass["budget"]}),"pass-1-order-3");
+});
 test("atomic amounts retain exact integer precision", () => {
   assert.equal(formatNear("12345678901234567890123456789", 6), "12345.678901");
   assert.equal(formatNear("10000000000000000000000"), "0.010");

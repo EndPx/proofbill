@@ -41,12 +41,25 @@ const actions = new Set([
   "nft_transfer_call",
   "assign_agent",
   "create_purchase_pass",
+  "create_budget_pass",
 ]);
 const hash = (value: unknown) =>
   typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 const optionalHash = (value: unknown) => value === null || hash(value);
 export function validReceiptId(id: string) {
-  return /^pass-[1-9]\d{0,19}-order$/.test(id);
+  return /^pass-[1-9]\d{0,19}-order(?:-[1-9]\d{0,2})?$/.test(id);
+}
+function validBudget(pass: PurchasePass, id: string): boolean {
+  if (!pass.budget) return !/-order-\d+$/.test(id);
+  const b = pass.budget;
+  try {
+    const amounts = [b.funded_yocto,b.available_yocto,b.reserved_yocto,b.spent_yocto,b.refunded_yocto];
+    amounts.forEach(formatReceiptNear);
+    const sequence = Number(id.match(/-order-(\d+)$/)?.[1]);
+    return Number.isSafeInteger(b.orders_created) && b.orders_created >= sequence && b.orders_created <= 100 && sequence > 0 &&
+      BigInt(b.funded_yocto) > 0n && BigInt(b.funded_yocto) === amounts.slice(1).reduce((sum,n)=>sum+BigInt(n),0n) &&
+      BigInt(b.reserved_yocto) <= BigInt(pass.price_yocto);
+  } catch { return false; }
 }
 
 // Explicit projection: this reader has no session/input/result lookup, even for a signed-in buyer.
@@ -58,17 +71,19 @@ export async function readPublicReceipt(
   const order = await reader.order(id);
   if (!order) return null;
   const pass = await reader.pass(order.token_id);
-  const mode = pass?.payment_mode ?? "Manual";
+  const mode = order.payment_mode ?? pass?.payment_mode ?? "Manual";
+  const historicalBudgetOrder = !!pass?.budget && ["Paid", "Refunded"].includes(order.phase);
   if (
     !pass ||
+    !validBudget(pass, id) ||
     !validAccountId(reader.contract) ||
     !/^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(reader.block.hash) ||
     !Number.isSafeInteger(reader.block.height) ||
     reader.block.height < 0 ||
     order.order_id !== id ||
-    order.token_id !== id.replace(/-order$/, "") ||
+    order.token_id !== id.replace(/-order(?:-\d+)?$/, "") ||
     pass.token_id !== order.token_id ||
-    pass.order_id !== id ||
+    (!historicalBudgetOrder && pass.order_id !== id) ||
     ![order.buyer_id, order.agent_id, order.seller_id, pass.owner_id].every(
       (value) => typeof value === "string" && validAccountId(value),
     ) ||
@@ -76,7 +91,9 @@ export async function readPublicReceipt(
     pass.price_yocto !== order.price_yocto ||
     typeof order.price_yocto !== "string" ||
     !phasePairs[order.phase] ||
-    phasePairs[order.phase] !== pass.phase ||
+    (!historicalBudgetOrder && phasePairs[order.phase] !== pass.phase) ||
+    (historicalBudgetOrder && !["Available","InUse","Completed","RefundPending","Refunded","RefundFailed"].includes(pass.phase)) ||
+    (!!pass.budget && order.payment_mode === undefined) ||
     !["Manual", "Automatic"].includes(mode) ||
     !hash(order.request_commitment) ||
     !optionalHash(order.response_commitment) ||

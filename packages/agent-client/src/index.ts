@@ -2,6 +2,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { Account, KeyPairSigner, JsonRpcProvider, actions } from "near-api-js";
 import {
   inferenceRequest,
+  nextOrderId,
   type PrivateBrief,
   type PurchasePass,
   type PurchaseOrder,
@@ -22,6 +23,7 @@ export async function runOwnAgent(options: {
   signer: KeyPairSigner;
   provider: JsonRpcProvider;
   tokenId: string;
+  orderId?: string;
   buyerId: string;
   revision: number;
   brief: PrivateBrief;
@@ -105,8 +107,11 @@ export async function runOwnAgent(options: {
     pass.authorization_revision !== options.revision
   )
     throw new Error("PASS_AUTHORIZATION_CHANGED");
-  const orderId = `${tokenId}-order`,
+  if (pass.budget && !options.orderId) throw new Error("EXPECTED_ORDER_ID_REQUIRED");
+  const orderId = options.orderId ?? pass.order_id ?? nextOrderId(pass),
     revision = options.revision;
+  if (orderId !== (pass.order_id ?? nextOrderId(pass)))
+    throw new Error("PASS_AUTHORIZATION_CHANGED");
   const requestCommitment = createHash("sha256")
     .update(
       Buffer.concat([
@@ -160,6 +165,7 @@ export async function runOwnAgent(options: {
     throw new Error("ORDER_RESERVATION_MISMATCH");
   const submitted = await post<{ job: { state: string } }>("agent/submit", {
     tokenId,
+    orderId,
   });
   return { orderId, reservationTx, state: submitted.job.state };
 }

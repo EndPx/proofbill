@@ -45,7 +45,8 @@ DO $$ BEGIN
  END IF;
 END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS pb_jobs_chain_identity ON pb_jobs(network,contract_id,order_id);
-CREATE UNIQUE INDEX IF NOT EXISTS pb_jobs_single_use_pass ON pb_jobs(network,contract_id,token_id);
+DROP INDEX IF EXISTS pb_jobs_single_use_pass;
+CREATE INDEX IF NOT EXISTS pb_jobs_pass_history ON pb_jobs(network,contract_id,token_id,created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS pb_observations_transaction ON pb_chain_observations(network,tx_hash);
 CREATE UNIQUE INDEX IF NOT EXISTS pb_challenges_nonce ON pb_challenges(nonce);
 CREATE INDEX IF NOT EXISTS pb_challenges_expiry ON pb_challenges(expires_at);

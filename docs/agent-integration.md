@@ -2,6 +2,8 @@
 
 Choose the built-in ProofBill assistant or a dedicated NEAR account controlled by your own agent. The NFT stays in the owner's wallet. Each pass binds one service, seller, amount and expiry.
 
+Version 3 adds opt-in reusable budgets. The owner chooses a service budget in 0.010 testnet NEAR increments, up to 1.000. Each order costs 0.010; only one order is active at a time. The funding quote separates service budget from storage backing (`0.030 + service budget`) and wallet gas. Automatic authorizes purchases within the remaining budget, fixed seller/price and expiry; Manual asks for approval for each delivered order. Existing single-use passes keep their original behavior.
+
 ## Owner setup
 
 1. Fund a Purchase Pass. Manual payment is the default. Automatic payment requires explicit consent to its seller, amount and delivery trigger.
@@ -22,6 +24,10 @@ node --env-file=.env.own-agent.local --import tsx workers/agent/src/run-own-agen
 The command stores the expected buyer, authorization revision, private input, salt and nonce under ignored `.local/own-agent/` before reserving. A saved request fails closed after the owner or authorization changes. Archive the old file and provide a fresh brief for the new authorization; the CLI never silently reuses another buyer's brief. Reuse that file after an interruption. Inspect the onchain order before retrying an unknown transaction outcome. Console output contains public order/status/transaction identifiers only.
 
 The [Node/TypeScript SDK](../packages/agent-client/src/index.ts) exports `makeAgentBrief` and `runOwnAgent`. Supply the signer, NEAR RPC provider, expected `buyerId` and `revision` from your agent runtime. The key never travels over the API.
+
+For a budget pass, also supply an explicit `orderId`: the active `pass.order_id`, or `nextOrderId(pass)` from `@proofbill/shared` for an intentional new purchase. Persist that ID with the buyer, revision, salt and nonce before reserving. The SDK rejects an omitted or stale order ID rather than silently buying again. Successful settlement increments the pass revision; refresh the pass before creating a new task. The CLI stores this context in its existing local request file. After confirming a task is complete, deliberately archive that file before starting another purchase on the same pass. Rerunning a stale request is not a command to spend the next allocation.
+
+`POST /api/agent/submit` accepts `orderId` with `tokenId` so retries identify the same reservation. A repeated completed submission does not enqueue another inference. Budget handover clears agent assignment and Automatic permission and moves only the remaining service/refund rights. Earlier private results stay with their recorded buyers.
 
 ## Protocol
 

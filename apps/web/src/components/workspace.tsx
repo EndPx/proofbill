@@ -42,6 +42,8 @@ import {
   SERVICE_PRICE,
   STORAGE_BUDGET,
   MODEL_ID,
+  parseNearAmount,
+  budgetFunding,
   type PurchasePass,
   type PurchaseOrder,
   type PrivateResult,
@@ -124,6 +126,7 @@ function PaymentChoice({
   consent,
   onConsent,
   seller,
+  budget,
   disabled = false,
 }: {
   mode: PaymentMode;
@@ -131,6 +134,7 @@ function PaymentChoice({
   consent: boolean;
   onConsent: (value: boolean) => void;
   seller: string;
+  budget?: string;
   disabled?: boolean;
 }) {
   return (
@@ -160,8 +164,8 @@ function PaymentChoice({
               disabled={disabled}
               onChange={(e) => onConsent(e.target.checked)}
             />{" "}
-            I authorize one automatic payment of {formatNear(SERVICE_PRICE)}{" "}
-            testnet NEAR to {seller || "the fixed service seller"} after the
+            {budget ? `I authorize automatic purchases up to the remaining service budget of ${formatNear(budget)} testnet NEAR, at ${formatNear(SERVICE_PRICE)} per order, before the pass expires. Payments go to ` : `I authorize one automatic payment of ${formatNear(SERVICE_PRICE)} testnet NEAR to `}
+            {seller || "the fixed service seller"} after the
             configured publisher records matching delivery. No final wallet
             approval is requested. Evidence checks do not guarantee answer
             quality.
@@ -237,6 +241,7 @@ function AgentSettings({
           consent={consent}
           onConsent={setConsent}
           seller={pass.seller_id}
+          budget={pass.budget?.available_yocto}
           disabled={busy}
         />
       )}
@@ -281,6 +286,7 @@ export function Workspace() {
     [brief, setBrief] = useState(""),
     [receiver, setReceiver] = useState(""),
     [hours, setHours] = useState("72"),
+    [serviceBudget, setServiceBudget] = useState("0.050"),
     [paymentMode, setPaymentMode] = useState<PaymentMode>("Manual"),
     [automaticConsent, setAutomaticConsent] = useState(false),
     [tab, setTab] = useState("Result");
@@ -347,14 +353,17 @@ export function Workspace() {
       setBusy("");
     }
   }
+  let budgetQuote: ReturnType<typeof budgetFunding> | null = null;
+  let budgetAmount = SERVICE_PRICE;
+  try { budgetAmount = parseNearAmount(serviceBudget); budgetQuote = budgetFunding(budgetAmount); } catch { /* Invalid draft is explained next to the field. */ }
   const available = passes
-      .filter((p) => p.phase === "Available")
-      .reduce((s, p) => s + BigInt(p.price_yocto), 0n),
+      .filter((p) => ["Available", "InUse"].includes(p.phase))
+      .reduce((s, p) => s + BigInt(p.budget?.available_yocto ?? (p.phase === "Available" ? p.price_yocto : "0")), 0n),
     reserved = passes
       .filter((p) =>
         ["InUse", "RefundPending", "RefundFailed"].includes(p.phase),
       )
-      .reduce((s, p) => s + BigInt(p.price_yocto), 0n),
+      .reduce((s, p) => s + (p.budget ? BigInt(p.budget.reserved_yocto) + (["RefundPending", "RefundFailed"].includes(p.phase) ? BigInt(p.budget.available_yocto) : 0n) : BigInt(p.price_yocto)), 0n),
     paid = orders
       .filter((o) => o.phase === "Paid")
       .reduce((s, o) => s + BigInt(o.price_yocto), 0n);
@@ -419,7 +428,7 @@ export function Workspace() {
       <>
         {pageHeader(
           "New Purchase Pass",
-          "One service purchase. A clear spending limit.",
+          wallet.config.budgetPasses ? "One NFT. Multiple purchases within your budget." : "One service purchase. A clear spending limit.",
         )}
         <div className="detail-grid">
           <section className="panel form-panel">
@@ -436,6 +445,17 @@ export function Workspace() {
               </div>
               <CheckCircle2 size={20} />
             </div>
+            {wallet.config.budgetPasses && (
+              <label className="field">
+                Service budget (testnet NEAR)
+                <input aria-describedby="budget-help" aria-invalid={!budgetQuote} inputMode="decimal"
+                  value={serviceBudget} disabled={!!busy}
+                  onChange={(e) => { setServiceBudget(e.target.value); setAutomaticConsent(false); }} />
+                <small id="budget-help" aria-live="polite">
+                  {budgetQuote ? `${budgetQuote.orders} purchases at 0.010 NEAR each. Storage is separate.` : "Enter 0.010 to 1.000 NEAR in increments of 0.010."}
+                </small>
+              </label>
+            )}
             <label className="field">
               Pass expires after
               <select value={hours} onChange={(e) => setHours(e.target.value)}>
@@ -451,6 +471,7 @@ export function Workspace() {
                 consent={automaticConsent}
                 onConsent={setAutomaticConsent}
                 seller={wallet.config.sellerId ?? ""}
+                budget={wallet.config.budgetPasses && budgetQuote ? budgetAmount : undefined}
                 disabled={!!busy}
               />
             )}
@@ -472,7 +493,7 @@ export function Workspace() {
               </div>
               <div>
                 <dt>Use</dt>
-                <dd>One fixed-price order</dd>
+                <dd>{wallet.config.budgetPasses ? "Multiple fixed-price orders · one active at a time" : "One fixed-price order"}</dd>
               </div>
             </dl>
           </section>
@@ -485,16 +506,16 @@ export function Workspace() {
             <div className="receipt-rule" />
             <dl className="facts">
               <div>
-                <dt>Service allocation</dt>
-                <dd>{formatNear(SERVICE_PRICE)} NEAR</dd>
+                <dt>{wallet.config.budgetPasses ? "Service budget" : "Service allocation"}</dt>
+                <dd>{wallet.config.budgetPasses ? budgetQuote ? `${formatNear(budgetAmount)} NEAR` : "Enter a valid budget" : `${formatNear(SERVICE_PRICE)} NEAR`}</dd>
               </div>
               <div>
                 <dt>Storage budget</dt>
-                <dd>{formatNear(STORAGE_BUDGET)} NEAR</dd>
+                <dd>{formatNear(wallet.config.budgetPasses ? budgetQuote?.storage ?? "0" : STORAGE_BUDGET)} NEAR</dd>
               </div>
             </dl>
             <div className="amount">
-              {formatNear(
+              {wallet.config.budgetPasses ? budgetQuote ? formatNear(budgetQuote.total) : "—" : formatNear(
                 (BigInt(SERVICE_PRICE) + BigInt(STORAGE_BUDGET)).toString(),
               )}
               <small>testnet NEAR + wallet gas</small>
@@ -507,21 +528,23 @@ export function Workspace() {
               <Button
                 disabled={
                   !wallet.config.configured ||
+                  (wallet.config.budgetPasses && !budgetQuote) ||
                   (paymentMode === "Automatic" && !automaticConsent)
                 }
                 onClick={() =>
                   void run("Creating pass", async () => {
                     await wallet.transact(
-                      "create_purchase_pass",
+                      wallet.config.budgetPasses ? "create_budget_pass" : "create_purchase_pass",
                       {
                         service_id: SERVICE_ID,
                         payment_mode: paymentMode,
+                        ...(wallet.config.budgetPasses ? { budget_yocto: budgetAmount } : {}),
                         expires_at_ns: (
                           (BigInt(Date.now()) + BigInt(hours) * 3600000n) *
                           1000000n
                         ).toString(),
                       },
-                      (
+                      wallet.config.budgetPasses ? budgetQuote!.total : (
                         BigInt(SERVICE_PRICE) + BigInt(STORAGE_BUDGET)
                       ).toString(),
                     );
@@ -572,9 +595,12 @@ export function Workspace() {
                 <dd>{pass.seller_id}</dd>
               </div>
               <div>
-                <dt>Service allocation</dt>
+                <dt>Price per order</dt>
                 <dd>{formatNear(pass.price_yocto)} testnet NEAR</dd>
               </div>
+              {pass.budget && Object.entries({Funded:pass.budget.funded_yocto, Available:pass.budget.available_yocto, Reserved:pass.budget.reserved_yocto, Spent:pass.budget.spent_yocto, Refunded:pass.budget.refunded_yocto}).map(([label, amount]) => (
+                <div key={label}><dt>{label} service budget</dt><dd>{formatNear(amount)} testnet NEAR</dd></div>
+              ))}
               <div>
                 <dt>Expiry</dt>
                 <dd>
@@ -704,9 +730,9 @@ export function Workspace() {
                   </>
                 ) : null}
                 <hr />
-                <h3>Transfer unused pass</h3>
+                <h3>{pass.budget ? "Transfer remaining budget" : "Transfer unused pass"}</h3>
                 <p className="fine">
-                  The receiver gets the service allocation and refund right. The
+                  The receiver gets the remaining service allocation and refund right. The
                   previous agent assignment and automatic payment permission are
                   cleared.
                 </p>
@@ -799,7 +825,7 @@ export function Workspace() {
           : "Waiting for delivery. You can review the result before authorizing payment.",
       Delivered: "Review the result before approving this exact order and seller payment.",
       PaymentPending: "The seller transfer is pending. Paid appears only after the contract confirms success.",
-      Paid: "The contract confirmed the seller transfer. Your Purchase Pass is Completed.",
+      Paid: "The contract confirmed the seller transfer for this order. Open the Purchase Pass to check any remaining budget.",
       TransferFailed: "The seller transfer failed. The buyer can approve a retry or request a service refund.",
       Refunded: "The contract confirmed the service refund to the buyer. Storage backing is separate.",
       RefundFailed: "The service refund failed. Open the Purchase Pass to retry the confirmed failed refund.",
@@ -1008,7 +1034,7 @@ export function Workspace() {
                 <p>{o.order_id}</p>
                 <p className="fine">
                   {detail?.payment_mode === "Automatic"
-                    ? "Owner preauthorized one payment after matching publisher delivery."
+                    ? "This order uses the owner's advance authorization after matching publisher delivery."
                     : "The buyer authorizes payment in the wallet after delivery."}
                 </p>
                 <dl className="facts">
@@ -1158,8 +1184,8 @@ export function Workspace() {
                   <Status value={p.phase} />
                   <h2>Private brief extraction</h2>
                   <div>
-                    <strong>{formatNear(p.price_yocto)}</strong>
-                    <span>testnet NEAR</span>
+                    <strong>{formatNear(p.budget?.available_yocto ?? p.price_yocto)}</strong>
+                    <span>testnet NEAR{p.budget ? " available" : " per order"}</span>
                   </div>
                   <small>
                     {p.phase === "Available"

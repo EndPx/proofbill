@@ -50,6 +50,7 @@ export async function GET(req: NextRequest, ctx: Context) {
             version?: number;
             agent_modes?: boolean;
             seller_id?: string;
+            budget_passes?: boolean;
           }>("get_config").catch(() => null)
         : null;
       return json({
@@ -60,7 +61,8 @@ export async function GET(req: NextRequest, ctx: Context) {
           process.env.NEXT_PUBLIC_NEAR_AGENT_ID ??
           "",
         configured: !!contractId(),
-        advancedModes: features?.version === 2 && features.agent_modes === true,
+        advancedModes: (features?.version ?? 0) >= 2 && features?.agent_modes === true,
+        budgetPasses: features?.version === 3 && features.budget_passes === true,
         sellerId: features?.seller_id ?? "",
       });
     }
@@ -115,7 +117,8 @@ export async function GET(req: NextRequest, ctx: Context) {
         : null;
       return json({
         order,
-        payment_mode: orderPass?.payment_mode ?? "Manual",
+        payment_mode: order?.payment_mode ?? orderPass?.payment_mode ?? "Manual",
+        pass_budget: orderPass?.budget ?? null,
         observations: refs,
         job: job ? publicJob(job) : null,
       });
@@ -135,7 +138,10 @@ export async function GET(req: NextRequest, ctx: Context) {
         artifactContext(id, buyer, job.contract_id),
       );
       if (req.nextUrl.searchParams.get("export") === "1")
-        return new NextResponse(JSON.stringify(data, null, 2), {
+        return new NextResponse(JSON.stringify({
+          ...data,
+          artifact_serialization_base64: Buffer.from(JSON.stringify(data.artifacts)).toString("base64"),
+        }, null, 2), {
           headers: {
             "Content-Type": "application/json",
             "Content-Disposition": `attachment; filename="proofbill-${id}.json"`,
@@ -228,7 +234,8 @@ export async function POST(req: NextRequest, ctx: Context) {
         return json(
           {
             job: publicJob(
-              await submitAgentPurchase(buyer, body.tokenId, runtime),
+              await submitAgentPurchase(buyer, body.tokenId, runtime,
+                typeof body.orderId === "string" ? body.orderId : undefined),
             ),
           },
           202,

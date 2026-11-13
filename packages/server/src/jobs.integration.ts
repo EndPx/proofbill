@@ -93,6 +93,31 @@ test("normal owner can queue without transferring NFT; duplicate is rejected", a
   assert.equal(job.revision, 1);
   await assert.rejects(f.queue(), /ORDER_ALREADY_QUEUED/);
 });
+test("reusable budget creates distinct jobs and preserves each historical buyer", async () => {
+  const f=fixture();
+  f.pass().budget={funded_yocto:"30000000000000000000000",available_yocto:"30000000000000000000000",reserved_yocto:"0",spent_yocto:"0",refunded_yocto:"0",orders_created:0};
+  const first=await f.queue();
+  assert.equal(first.order_id,`${f.token}-order-1`);
+  const same=await Promise.allSettled([f.queue(),f.queue()]);
+  assert.ok(same.every(r=>r.status==="rejected"));
+  await sql`update pb_jobs set state='delivered',terminal_at=now() where job_id=${first.job_id}`;
+  f.pass().budget!.orders_created=1;
+  f.pass().budget!.available_yocto="20000000000000000000000";
+  f.pass().authorization_revision++;
+  const second=await f.queue();
+  assert.equal(second.order_id,`${f.token}-order-2`);
+  assert.notEqual(first.job_id,second.job_id);
+  assert.equal((await sql`select count(*)::int as count from pb_jobs where token_id=${f.token}`)[0].count,2);
+  f.pass().budget!.orders_created=2;
+  f.pass().budget!.available_yocto="10000000000000000000000";
+  f.handover();
+  const third=await f.queue();
+  assert.equal(third.order_id,`${f.token}-order-3`);
+  assert.equal(third.buyer_id,"bob.testnet");
+  assert.equal((await sql`select buyer_id from pb_jobs where job_id=${first.job_id}`)[0].buyer_id,"alice.testnet");
+  f.pass().budget!.available_yocto="0";
+  await assert.rejects(f.queue(),/SERVICE_BUDGET_EXHAUSTED/);
+});
 
 test("quick worker restart eventually reclaims an expired active lease", async () => {
   const f = fixture();

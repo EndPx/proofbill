@@ -50,12 +50,14 @@ export async function call(
     retries: 0,
   });
   const hash = outcome.transaction.hash;
+  const reserved = typeof args.token_id === "string" && method === "reserve_order"
+    ? await view<{ order_id: string | null }>("get_pass", { token_id: args.token_id }) : null;
   await recordObservation({
     orderId:
       typeof args.order_id === "string"
         ? args.order_id
         : typeof args.token_id === "string"
-          ? `${args.token_id}-order`
+          ? reserved?.order_id ?? `${args.token_id}-order`
           : null,
     tokenId: typeof args.token_id === "string" ? args.token_id : null,
     action: method,

@@ -11,6 +11,8 @@ import {
   SERVICE_ID,
   SERVICE_PRICE,
   STORAGE_BUDGET,
+  budgetFunding,
+  nextOrderId,
   type PurchasePass,
   type PurchaseOrder,
 } from "@proofbill/shared";
@@ -42,8 +44,8 @@ async function identity(name: string) {
   const signer = KeyPairSigner.fromSecretKey(c.private_key ?? c.secret_key);
   return { id, signer, account: new Account(id, provider(), signer) };
 }
-const alice = await identity("alice"),
-  bob = await identity("bob");
+const alice = await identity(process.env.E2E_SWAP_ACCOUNTS === "yes" ? "bob" : "alice"),
+  bob = await identity(process.env.E2E_SWAP_ACCOUNTS === "yes" ? "alice" : "bob");
 const assignedAgent =
   agentKind === "external" ? alice.id : process.env.NEAR_AGENT_ID;
 async function tx(
@@ -111,17 +113,21 @@ async function login(who: typeof alice) {
 }
 await mkdir("docs/evidence/integration", { recursive: true });
 let token = process.env.E2E_TOKEN_ID ?? "";
+const budgetOrders = Number(process.env.E2E_BUDGET_ORDERS ?? "0");
+assert.ok(Number.isInteger(budgetOrders) && budgetOrders >= 0 && budgetOrders <= 100);
+const budgetAmount = (BigInt(SERVICE_PRICE) * BigInt(budgetOrders)).toString();
 if (!token) {
   const initialHolder = transferMode === "none" ? bob : alice;
   const mint = await tx(
     initialHolder,
-    "create_purchase_pass",
+    budgetOrders ? "create_budget_pass" : "create_purchase_pass",
     {
       service_id: SERVICE_ID,
       payment_mode: paymentMode,
+      ...(budgetOrders ? {budget_yocto:budgetAmount} : {}),
       expires_at_ns: ((BigInt(Date.now()) + 86400000n) * 1000000n).toString(),
     },
-    BigInt(SERVICE_PRICE) + BigInt(STORAGE_BUDGET),
+    budgetOrders ? BigInt(budgetFunding(budgetAmount).total) : BigInt(SERVICE_PRICE) + BigInt(STORAGE_BUDGET),
   );
   const value = (mint.status as { SuccessValue?: string }).SuccessValue;
   assert.ok(value);
@@ -175,7 +181,10 @@ if (!token) {
 }
 const bobCookie = await login(bob),
   aliceCookie = await login(alice);
-const id = `${token}-order`;
+const orderPass = await view<PurchasePass>("get_pass", {token_id:token});
+if (process.env.E2E_TOKEN_ID && orderPass.budget)
+  assert.ok(process.env.E2E_ORDER_ID, "Supply E2E_ORDER_ID explicitly when resuming a budget pass; never infer a new purchase from a rerun");
+const id = process.env.E2E_ORDER_ID ?? orderPass.order_id ?? nextOrderId(orderPass);
 const existingOrder = await view<PurchaseOrder | null>("get_order", {
   order_id: id,
 });
@@ -192,7 +201,7 @@ if (!existingOrder && agentKind === "proofbill") {
   assert.equal(queued.status, 201, await queued.text());
 } else if (agentKind === "external") {
   await mkdir(".local/feature-check", { recursive: true });
-  const requestFile = `.local/feature-check/${token}-request.json`;
+  const requestFile = `.local/feature-check/${id}-request.json`;
   let brief: ReturnType<typeof makeAgentBrief>;
   try {
     brief = JSON.parse(await readFile(requestFile, "utf8"));
@@ -211,6 +220,7 @@ if (!existingOrder && agentKind === "proofbill") {
     signer: alice.signer,
     provider: provider(),
     tokenId: token,
+    orderId: id,
     buyerId: bob.id,
     revision: agentPass.authorization_revision,
     brief,
@@ -229,9 +239,15 @@ if (!existingOrder && agentKind === "proofbill") {
     signer: alice.signer,
     provider: provider(),
     tokenId: token,
+    orderId: id,
     buyerId: bob.id,
     revision: agentPass.authorization_revision,
     brief,
+  }).catch(async (error) => {
+    const confirmed = await view<PurchaseOrder>("get_order",{order_id:id});
+    if (orderPass.budget && confirmed.phase === "Paid" && error.message === "PASS_AUTHORIZATION_CHANGED")
+      return {orderId:id,reservationTx:null};
+    throw error;
   });
   assert.equal(repeated.orderId, id);
   assert.equal(repeated.reservationTx, null);
@@ -340,7 +356,8 @@ if (paymentMode === "Manual") {
 const complete = await view<PurchaseOrder>("get_order", { order_id: id });
 const completedPass = await view<PurchasePass>("get_pass", { token_id: token });
 assert.equal(complete.phase, "Paid");
-assert.equal(completedPass.phase, "Completed");
+const expectedPassPhase = completedPass.budget && BigInt(completedPass.budget.available_yocto)>0n ? "Available" : "Completed";
+assert.equal(completedPass.phase, expectedPassPhase);
 assert.equal(completedPass.owner_id, bob.id);
 assert.equal(complete.agent_id, assignedAgent);
 await tx(
@@ -356,7 +373,7 @@ const ownerTokens = await view<
 assert.equal(
   JSON.parse(ownerTokens.find((t) => t.token_id === token)!.metadata.extra)
     .phase,
-  "Completed",
+  expectedPassPhase,
 );
 const report = {
   tested_at: new Date().toISOString(),
@@ -368,6 +385,8 @@ const report = {
   contract_id: root,
   token_id: token,
   order_id: id,
+  pass_phase: completedPass.phase,
+  service_budget: completedPass.budget ?? null,
   passed: true,
   steps,
   limits: [

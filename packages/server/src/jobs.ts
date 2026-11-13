@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import {
   inferenceRequest,
+  nextOrderId,
   type PrivateBrief,
   type PurchasePass,
   type PurchaseOrder,
@@ -112,11 +113,9 @@ async function preparePurchase(
   const { sql, contract, agent } = runtime;
   const external = externalRevision !== undefined;
   return sql.begin(async (tx) => {
-    const id = `${token}-order`;
-    const [old] = await tx.unsafe<JobRow[]>(
-      "select * from pb_jobs where network='testnet' and contract_id=$1 and order_id=$2 for update",
-      [contract, id],
-    );
+    await tx.unsafe("select pg_advisory_xact_lock(hashtextextended($1,0))", [`${contract}:${token}`]);
+    // Hold existing task rows before the chain read so a worker cannot claim a stale draft mid-rebind.
+    await tx.unsafe("select job_id from pb_jobs where network='testnet' and contract_id=$1 and token_id=$2 order by created_at for update", [contract, token]);
     const pass = await runtime.readPass(token);
     if (
       !pass ||
@@ -139,6 +138,13 @@ async function preparePurchase(
       throw new QueueError("PASS_AUTHORIZATION_CHANGED", 409);
     if (!pass.agent_id || (!external && pass.agent_id !== agent))
       throw new QueueError("ASSIGN_AGENT_FIRST", 409);
+    if (pass.budget && BigInt(pass.budget.available_yocto) < BigInt(pass.price_yocto))
+      throw new QueueError("SERVICE_BUDGET_EXHAUSTED", 409);
+    const id = nextOrderId(pass);
+    const [old] = await tx.unsafe<JobRow[]>(
+      "select * from pb_jobs where network='testnet' and contract_id=$1 and order_id=$2 for update",
+      [contract, id],
+    );
     if (await runtime.readOrder(id))
       throw new QueueError("PASS_NOT_AVAILABLE", 409);
     const buyer = pass.owner_id;
@@ -220,19 +226,23 @@ export async function submitAgentPurchase(
   actor: string,
   token: string,
   runtime: QueueRuntime,
+  requestedOrder?: string,
 ): Promise<JobRow> {
   const { sql, contract } = runtime;
   return sql.begin(async (tx) => {
+    const pass = await runtime.readPass(token);
+    if (!pass) throw new QueueError("PASS_NOT_AVAILABLE", 409);
+    const id = requestedOrder ?? pass.order_id ?? nextOrderId(pass);
     const [job] = await tx.unsafe<JobRow[]>(
       "select * from pb_jobs where network='testnet' and contract_id=$1 and order_id=$2 for update",
-      [contract, `${token}-order`],
+      [contract, id],
     );
     if (!job || job.agent_id !== actor || actor === runtime.agent)
       throw new QueueError("ASSIGNED_AGENT_ONLY", 403);
-    const [pass, order] = await Promise.all([
-      runtime.readPass(token),
-      runtime.readOrder(job.order_id),
-    ]);
+    const order = await runtime.readOrder(job.order_id);
+    if (job.token_id === token && job.state === "delivered" && order?.phase === "Paid" &&
+        order.buyer_id === job.buyer_id && order.agent_id === actor && order.revision === job.revision &&
+        order.request_commitment === job.request_commitment) return job;
     if (
       !pass ||
       !order ||
