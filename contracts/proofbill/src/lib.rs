@@ -91,6 +91,23 @@ pub struct PassView {
     #[serde(flatten)]
     pub pass: PurchasePass,
     pub payment_mode: PaymentMode,
+    pub budget: Option<PassBudget>,
+}
+#[near(serializers=[json,borsh])]
+#[derive(Clone, Debug)]
+pub struct PassBudget {
+    pub funded_yocto: U128,
+    pub available_yocto: U128,
+    pub reserved_yocto: U128,
+    pub spent_yocto: U128,
+    pub refunded_yocto: U128,
+    pub orders_created: u32,
+}
+#[near(serializers=[json])]
+pub struct OrderView {
+    #[serde(flatten)]
+    pub order: PurchaseOrder,
+    pub payment_mode: PaymentMode,
 }
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
@@ -137,7 +154,7 @@ impl Contract {
         }
     }
     pub fn get_config(&self) -> near_sdk::serde_json::Value {
-        near_sdk::serde_json::json!({"service_id":SERVICE,"model_id":MODEL,"policy_id":POLICY,"price_yocto":PRICE.to_string(),"storage_budget_yocto":STORAGE.to_string(),"seller_id":self.seller,"publisher_id":self.publisher,"network":"testnet","version":2,"agent_modes":true,"payment_modes":["Manual","Automatic"]})
+        near_sdk::serde_json::json!({"service_id":SERVICE,"model_id":MODEL,"policy_id":POLICY,"price_yocto":PRICE.to_string(),"storage_budget_yocto":STORAGE.to_string(),"seller_id":self.seller,"publisher_id":self.publisher,"network":"testnet","version":3,"agent_modes":true,"budget_passes":true,"max_budget_orders":100,"storage_per_order_yocto":PRICE.to_string(),"payment_modes":["Manual","Automatic"]})
     }
     #[payable]
     pub fn create_purchase_pass(
@@ -203,6 +220,46 @@ impl Contract {
         p
     }
     #[payable]
+    pub fn create_budget_pass(
+        &mut self,
+        service_id: String,
+        expires_at_ns: U64,
+        payment_mode: Option<PaymentMode>,
+        budget_yocto: U128,
+    ) -> PassView {
+        let amount = budget_yocto.0;
+        require!(
+            amount >= PRICE && amount <= PRICE * 100 && amount % PRICE == 0,
+            "INVALID_SERVICE_BUDGET"
+        );
+        // Backing grows with the maximum number of retained order records; it is not seller money.
+        let storage = STORAGE + amount;
+        require!(
+            env::attached_deposit().as_yoctonear() >= amount + storage,
+            "INSUFFICIENT_FUNDING_AND_STORAGE"
+        );
+        let mut p = self.create_purchase_pass(service_id, expires_at_ns, payment_mode);
+        p.storage_credit_yocto.0 -= amount - PRICE;
+        let before = env::storage_usage();
+        self.write_budget(
+            &p.token_id,
+            &PassBudget {
+                funded_yocto: budget_yocto,
+                available_yocto: budget_yocto,
+                reserved_yocto: U128(0),
+                spent_yocto: U128(0),
+                refunded_yocto: U128(0),
+                orders_created: 0,
+            },
+        );
+        self.store_charged(&mut p, before);
+        event(
+            "budget_funded",
+            near_sdk::serde_json::json!({"token_id":p.token_id,"amount_yocto":amount.to_string()}),
+        );
+        self.pass_view(p)
+    }
+    #[payable]
     pub fn assign_agent(
         &mut self,
         token_id: String,
@@ -247,7 +304,24 @@ impl Contract {
             "AGENT_NOT_AUTHORIZED"
         );
         let before = env::storage_usage();
-        let id = format!("{}-order", token_id);
+        let id = if let Some(mut budget) = self.budget(&token_id) {
+            require!(
+                budget.reserved_yocto.0 == 0 && budget.available_yocto.0 >= p.price_yocto.0,
+                "SERVICE_BUDGET_EXHAUSTED"
+            );
+            budget.available_yocto.0 -= p.price_yocto.0;
+            budget.reserved_yocto = p.price_yocto;
+            budget.orders_created = budget
+                .orders_created
+                .checked_add(1)
+                .expect("ORDER_SEQUENCE_OVERFLOW");
+            let id = format!("{}-order-{}", token_id, budget.orders_created);
+            self.write_budget(&token_id, &budget);
+            self.write_order_mode(&id, &self.payment_mode(&token_id));
+            id
+        } else {
+            format!("{}-order", token_id)
+        };
         require!(self.orders.get(&id).is_none(), "ORDER_ALREADY_EXISTS");
         let o = PurchaseOrder {
             order_id: id.clone(),
@@ -388,6 +462,27 @@ impl Contract {
         if ok {
             o.phase = OrderPhase::Paid;
             p.phase = PassPhase::Completed;
+            if let Some(mut budget) = self.budget(&p.token_id) {
+                require!(
+                    budget.reserved_yocto == o.price_yocto,
+                    "BUDGET_RESERVATION_MISMATCH"
+                );
+                budget.reserved_yocto = U128(0);
+                budget.spent_yocto.0 = budget
+                    .spent_yocto
+                    .0
+                    .checked_add(o.price_yocto.0)
+                    .expect("BUDGET_OVERFLOW");
+                self.write_budget(&p.token_id, &budget);
+                p.order_id = None;
+                p.authorization_revision = p
+                    .authorization_revision
+                    .checked_add(1)
+                    .expect("REVISION_OVERFLOW");
+                if budget.available_yocto.0 > 0 {
+                    p.phase = PassPhase::Available;
+                }
+            }
         } else {
             o.phase = OrderPhase::TransferFailed;
         }
@@ -452,6 +547,18 @@ impl Contract {
             "STALE_CALLBACK"
         );
         let ok = env::promise_result_checked(0, 32).is_ok();
+        if ok {
+            if let Some(mut budget) = self.budget(&token_id) {
+                budget.refunded_yocto.0 = budget
+                    .refunded_yocto
+                    .0
+                    .checked_add(budget.available_yocto.0 + budget.reserved_yocto.0)
+                    .expect("BUDGET_OVERFLOW");
+                budget.available_yocto = U128(0);
+                budget.reserved_yocto = U128(0);
+                self.write_budget(&token_id, &budget);
+            }
+        }
         p.phase = if ok {
             PassPhase::Refunded
         } else {
@@ -481,8 +588,11 @@ impl Contract {
     pub fn get_pass(&self, token_id: String) -> Option<PassView> {
         self.passes.get(&token_id).map(|pass| self.pass_view(pass))
     }
-    pub fn get_order(&self, order_id: String) -> Option<PurchaseOrder> {
-        self.orders.get(&order_id)
+    pub fn get_order(&self, order_id: String) -> Option<OrderView> {
+        self.orders.get(&order_id).map(|order| OrderView {
+            payment_mode: self.order_mode(&order),
+            order,
+        })
     }
     pub fn list_passes(
         &self,
@@ -524,6 +634,49 @@ impl Contract {
     }
 }
 impl Contract {
+    fn budget_key(id: &str) -> Vec<u8> {
+        [b"pb:budget:v1:".as_slice(), id.as_bytes()].concat()
+    }
+    fn budget(&self, id: &str) -> Option<PassBudget> {
+        env::storage_read(&Self::budget_key(id))
+            .map(|bytes| near_sdk::borsh::from_slice(&bytes).expect("INVALID_BUDGET_STATE"))
+    }
+    fn write_budget(&self, id: &str, budget: &PassBudget) {
+        require!(
+            budget.funded_yocto.0
+                == budget
+                    .available_yocto
+                    .0
+                    .checked_add(budget.reserved_yocto.0)
+                    .and_then(|n| n.checked_add(budget.spent_yocto.0))
+                    .and_then(|n| n.checked_add(budget.refunded_yocto.0))
+                    .expect("BUDGET_OVERFLOW"),
+            "BUDGET_ACCOUNTING_MISMATCH"
+        );
+        env::storage_write(
+            &Self::budget_key(id),
+            &near_sdk::borsh::to_vec(budget).unwrap(),
+        );
+    }
+    fn write_order_mode(&self, id: &str, mode: &PaymentMode) {
+        env::storage_write(
+            &[b"pb:order-mode:".as_slice(), id.as_bytes()].concat(),
+            &[if *mode == PaymentMode::Automatic {
+                1
+            } else {
+                0
+            }],
+        );
+    }
+    fn order_mode(&self, order: &PurchaseOrder) -> PaymentMode {
+        match env::storage_read(&[b"pb:order-mode:".as_slice(), order.order_id.as_bytes()].concat())
+        {
+            Some(v) if v == [1] => PaymentMode::Automatic,
+            Some(v) if v == [0] => PaymentMode::Manual,
+            None => self.payment_mode(&order.token_id),
+            _ => env::panic_str("INVALID_ORDER_POLICY"),
+        }
+    }
     fn payment_key(id: &str) -> Vec<u8> {
         [b"pb:payment:".as_slice(), id.as_bytes()].concat()
     }
@@ -548,6 +701,7 @@ impl Contract {
     fn pass_view(&self, pass: PurchasePass) -> PassView {
         PassView {
             payment_mode: self.payment_mode(&pass.token_id),
+            budget: self.budget(&pass.token_id),
             pass,
         }
     }
@@ -583,6 +737,7 @@ impl Contract {
             p.phase == PassPhase::InUse && !p.transfer_pending,
             "PASS_LOCKED"
         );
+        require!(p.order_id.as_ref() == Some(&o.order_id), "ORDER_NOT_ACTIVE");
         o.phase = OrderPhase::PaymentPending;
         o.attempt += 1;
         self.orders.insert(&o.order_id, o);
@@ -614,7 +769,11 @@ impl Contract {
         }
         self.passes.insert(&p.token_id, p);
         Promise::new(p.refund_receiver.clone().expect("NO_BENEFICIARY"))
-            .transfer(NearToken::from_yoctonear(p.price_yocto.0))
+            .transfer(NearToken::from_yoctonear(
+                self.budget(&p.token_id)
+                    .map(|b| b.available_yocto.0 + b.reserved_yocto.0)
+                    .unwrap_or(p.price_yocto.0),
+            ))
             .then(
                 Promise::new(env::current_account_id()).function_call(
                     "on_refund_result",
@@ -760,6 +919,9 @@ impl NonFungibleTokenCore for Contract {
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
         self.tokens.nft_token(token_id.clone()).map(|mut t| {
             if let Some(ref mut m) = t.metadata {
+                if self.budget(&token_id).is_some() {
+                    m.description = Some("Reusable AI service budget on NEAR testnet; ownership carries remaining use and refund rights".into());
+                }
                 m.extra = Some(
                     near_sdk::serde_json::to_string(&self.pass_view(self.pass(&token_id))).unwrap(),
                 );
@@ -853,6 +1015,171 @@ mod tests {
             "seller.testnet".parse().unwrap(),
             "publisher.testnet".parse().unwrap(),
         )
+    }
+    #[allow(deprecated)]
+    fn callback(success: bool) {
+        let mut b = VMContextBuilder::new();
+        b.current_account_id("proofbill.testnet".parse().unwrap())
+            .predecessor_account_id("proofbill.testnet".parse().unwrap())
+            .account_balance(NearToken::from_near(20))
+            .block_timestamp(100);
+        near_sdk::test_utils::testing_env_with_promise_results(
+            b.build(),
+            if success {
+                near_sdk::PromiseResult::Successful(vec![])
+            } else {
+                near_sdk::PromiseResult::Failed
+            },
+        );
+    }
+    #[test]
+    fn budget_repeats_purchases_snapshots_policy_and_refunds_only_unspent_money() {
+        let mut c = setup();
+        ctx("alice.testnet", PRICE * 6 + STORAGE);
+        let id = c
+            .create_budget_pass(
+                SERVICE.into(),
+                U64(1_000_000),
+                Some(PaymentMode::Automatic),
+                U128(PRICE * 3),
+            )
+            .pass
+            .token_id;
+        ctx("alice.testnet", 1);
+        c.assign_agent(id.clone(), 0, "agent.testnet".parse().unwrap(), None);
+        for n in 1..=2 {
+            let revision = c.pass(&id).authorization_revision;
+            ctx("agent.testnet", 0);
+            let order = c.reserve_order(id.clone(), revision, "a".repeat(64));
+            assert_eq!(order.order_id, format!("{id}-order-{n}"));
+            let b = c.budget(&id).unwrap();
+            assert_eq!(b.available_yocto.0, PRICE * (3 - n));
+            assert_eq!(b.reserved_yocto.0, PRICE);
+            ctx("publisher.testnet", 0);
+            c.publish_delivery(
+                order.order_id.clone(),
+                "a".repeat(64),
+                "b".repeat(64),
+                "c".repeat(64),
+                MODEL.into(),
+                POLICY.into(),
+                "provider_tee".into(),
+            );
+            callback(true);
+            assert!(c.on_payment_result(order.order_id, 1));
+            assert_eq!(c.pass(&id).phase, PassPhase::Available);
+            assert!(c.pass(&id).order_id.is_none());
+            assert_eq!(c.budget(&id).unwrap().spent_yocto.0, PRICE * n);
+        }
+        ctx("alice.testnet", 1);
+        c.nft_transfer("bob.testnet".parse().unwrap(), id.clone(), None, None);
+        assert_eq!(c.payment_mode(&id), PaymentMode::Manual);
+        assert!(c.pass(&id).agent_id.is_none());
+        assert_eq!(
+            c.get_order(format!("{id}-order-1")).unwrap().payment_mode,
+            PaymentMode::Automatic
+        );
+        ctx("bob.testnet", 1);
+        c.cancel_and_refund(id.clone(), c.pass(&id).authorization_revision);
+        callback(false);
+        assert!(!c.on_refund_result(id.clone(), 1));
+        assert_eq!(c.budget(&id).unwrap().available_yocto.0, PRICE);
+        ctx("bob.testnet", 1);
+        c.retry_failed_refund(id.clone(), 1);
+        callback(true);
+        assert!(c.on_refund_result(id.clone(), 2));
+        let b = c.budget(&id).unwrap();
+        assert_eq!(b.available_yocto.0, 0);
+        assert_eq!(b.spent_yocto.0, PRICE * 2);
+        assert_eq!(b.refunded_yocto.0, PRICE);
+        assert_eq!(c.order(&format!("{id}-order-2")).phase, OrderPhase::Paid);
+    }
+    #[test]
+    #[should_panic(expected = "PASS_NOT_AVAILABLE")]
+    fn budget_blocks_concurrent_reservations() {
+        let mut c = setup();
+        ctx("alice.testnet", PRICE * 4 + STORAGE);
+        let id = c
+            .create_budget_pass(SERVICE.into(), U64(1_000_000), None, U128(PRICE * 2))
+            .pass
+            .token_id;
+        ctx("alice.testnet", 1);
+        c.assign_agent(id.clone(), 0, "agent.testnet".parse().unwrap(), None);
+        ctx("agent.testnet", 0);
+        c.reserve_order(id.clone(), 1, "a".repeat(64));
+        c.reserve_order(id, 1, "b".repeat(64));
+    }
+    #[test]
+    fn budget_failed_payment_keeps_allocation_reserved_for_owner_refund() {
+        let mut c = setup();
+        ctx("alice.testnet", PRICE * 4 + STORAGE);
+        let id = c
+            .create_budget_pass(
+                SERVICE.into(),
+                U64(1_000_000),
+                Some(PaymentMode::Automatic),
+                U128(PRICE * 2),
+            )
+            .pass
+            .token_id;
+        ctx("alice.testnet", 1);
+        c.assign_agent(id.clone(), 0, "agent.testnet".parse().unwrap(), None);
+        ctx("agent.testnet", 0);
+        let o = c.reserve_order(id.clone(), 1, "a".repeat(64));
+        ctx("publisher.testnet", 0);
+        c.publish_delivery(
+            o.order_id.clone(),
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            MODEL.into(),
+            POLICY.into(),
+            "provider_tee".into(),
+        );
+        callback(false);
+        assert!(!c.on_payment_result(o.order_id.clone(), 1));
+        assert_eq!(c.budget(&id).unwrap().spent_yocto.0, 0);
+        assert_eq!(c.budget(&id).unwrap().reserved_yocto.0, PRICE);
+        ctx("alice.testnet", 1);
+        c.cancel_and_refund(id.clone(), 1);
+        callback(true);
+        c.on_refund_result(id.clone(), 1);
+        assert_eq!(c.budget(&id).unwrap().refunded_yocto.0, PRICE * 2);
+        assert_eq!(c.order(&o.order_id).phase, OrderPhase::Refunded);
+    }
+    #[test]
+    #[should_panic(expected = "PASS_NOT_AVAILABLE")]
+    fn exhausted_budget_cannot_reserve_another_order() {
+        let mut c = setup();
+        ctx("alice.testnet", PRICE * 2 + STORAGE);
+        let id = c
+            .create_budget_pass(
+                SERVICE.into(),
+                U64(1_000_000),
+                Some(PaymentMode::Automatic),
+                U128(PRICE),
+            )
+            .pass
+            .token_id;
+        ctx("alice.testnet", 1);
+        c.assign_agent(id.clone(), 0, "agent.testnet".parse().unwrap(), None);
+        ctx("agent.testnet", 0);
+        let order = c.reserve_order(id.clone(), 1, "a".repeat(64));
+        ctx("publisher.testnet", 0);
+        let _ = c.publish_delivery(
+            order.order_id.clone(),
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            MODEL.into(),
+            POLICY.into(),
+            "provider_tee".into(),
+        );
+        callback(true);
+        c.on_payment_result(order.order_id, 1);
+        assert_eq!(c.budget(&id).unwrap().available_yocto.0, 0);
+        ctx("agent.testnet", 0);
+        c.reserve_order(id, 2, "d".repeat(64));
     }
     #[test]
     fn transfer_moves_entitlement() {

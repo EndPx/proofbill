@@ -2,6 +2,162 @@
 use near_api::{AccountId, NearGas, NearToken};
 use near_sdk::serde_json::{Value, json};
 const PRICE: u128 = 10_000_000_000_000_000_000_000;
+
+#[tokio::test]
+async fn reusable_budget_purchases_handover_and_remaining_refund() -> testresult::TestResult<()> {
+    let s = near_sandbox::Sandbox::start_sandbox().await?;
+    let net = near_api::NetworkConfig::from_rpc_url("sandbox", s.rpc_addr.parse()?);
+    let alice = account(&s, "alice.sandbox").await?;
+    let bob = account(&s, "bob.sandbox").await?;
+    let seller = account(&s, "seller.sandbox").await?;
+    let deployed = account(&s, "budget.sandbox").await?;
+    let contract = deployed.as_contract();
+    let signer = near_api::Signer::from_secret_key(
+        near_sandbox::config::DEFAULT_GENESIS_ACCOUNT_PRIVATE_KEY.parse()?,
+    )?;
+    let path = match std::env::var("PROOFBILL_WASM") {
+        Ok(p) => std::path::PathBuf::from(p),
+        Err(_) => cargo_near_build::build_with_cli(Default::default())?.into(),
+    };
+    near_api::Contract::deploy(contract.account_id().clone())
+        .use_code(std::fs::read(path)?)
+        .with_init_call(
+            "init",
+            json!({"seller_id":seller.account_id(),"publisher_id":alice.account_id()}),
+        )?
+        .with_signer(signer.clone())
+        .send_to(&net)
+        .await?
+        .assert_success();
+    macro_rules! send {
+        ($who:expr,$method:expr,$args:expr,$deposit:expr) => {
+            contract
+                .call_function($method, $args)
+                .transaction()
+                .deposit(NearToken::from_yoctonear($deposit))
+                .gas(NearGas::from_tgas(200))
+                .with_signer($who.account_id().clone(), signer.clone())
+                .send_to(&net)
+                .await?
+        };
+    }
+    macro_rules! read {
+        ($method:expr,$args:expr) => {
+            contract
+                .call_function($method, $args)
+                .read_only()
+                .fetch_from(&net)
+                .await?
+                .data
+        };
+    }
+    let expiry = ((std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs()
+        + 3600)
+        * 1_000_000_000)
+        .to_string();
+    send!(&alice,"create_budget_pass",json!({"service_id":"private-extraction-v1","expires_at_ns":expiry,"payment_mode":"Automatic","budget_yocto":(4*PRICE).to_string()}), 11*PRICE).assert_success();
+    send!(
+        &alice,
+        "assign_agent",
+        json!({"token_id":"pass-1","expected_revision":0,"agent_id":bob.account_id()}),
+        1
+    )
+    .assert_success();
+    for number in 1..=3 {
+        let pass: Value = read!("get_pass", json!({"token_id":"pass-1"}));
+        let revision = pass["authorization_revision"].as_u64().unwrap();
+        if number == 3 {
+            send!(
+                &alice,
+                "nft_transfer",
+                json!({"token_id":"pass-1","receiver_id":bob.account_id()}),
+                1
+            )
+            .assert_success();
+            let transferred: Value = read!("get_pass", json!({"token_id":"pass-1"}));
+            assert_eq!(transferred["payment_mode"], "Manual");
+            assert!(transferred["agent_id"].is_null());
+            assert_eq!(
+                transferred["budget"]["available_yocto"],
+                (2 * PRICE).to_string()
+            );
+            let denied = send!(
+                &alice,
+                "cancel_and_refund",
+                json!({"token_id":"pass-1","expected_revision":transferred["authorization_revision"]}),
+                1
+            );
+            assert!(!denied.is_success());
+            send!(&bob,"assign_agent",json!({"token_id":"pass-1","expected_revision":transferred["authorization_revision"],"agent_id":alice.account_id(),"payment_mode":"Manual"}),1).assert_success();
+        }
+        let pass: Value = read!("get_pass", json!({"token_id":"pass-1"}));
+        let revision = if number == 3 {
+            pass["authorization_revision"].as_u64().unwrap()
+        } else {
+            revision
+        };
+        let agent = if number == 3 { &alice } else { &bob };
+        let id = format!("pass-1-order-{number}");
+        send!(agent,"reserve_order",json!({"token_id":"pass-1","expected_revision":revision,"request_commitment":"a".repeat(64)}),0).assert_success();
+        let denied = send!(
+            agent,
+            "reserve_order",
+            json!({"token_id":"pass-1","expected_revision":revision,"request_commitment":"d".repeat(64)}),
+            0
+        );
+        assert!(!denied.is_success());
+        send!(&alice,"publish_delivery",json!({"order_id":id,"request_commitment":"a".repeat(64),"response_commitment":"b".repeat(64),"evidence_commitment":"c".repeat(64),"model_id":"Qwen/Qwen3.8-27B","policy_id":"near-tee-ecdsa-v1","signature_kind":"provider_tee"}),0).assert_success();
+        if number == 3 {
+            let before: Value = read!("get_order", json!({"order_id":id}));
+            assert_eq!(before["phase"], "Delivered");
+            send!(
+                &bob,
+                "approve_and_pay",
+                json!({"order_id":id,"expected_delivery_commitment":"c".repeat(64)}),
+                1
+            )
+            .assert_success();
+        }
+        let order: Value = read!("get_order", json!({"order_id":id}));
+        assert_eq!(order["phase"], "Paid");
+        assert_eq!(order["price_yocto"], PRICE.to_string());
+        let pass: Value = read!("get_pass", json!({"token_id":"pass-1"}));
+        assert_eq!(pass["phase"], "Available");
+        assert_eq!(pass["budget"]["spent_yocto"], (number * PRICE).to_string());
+        assert_eq!(
+            pass["budget"]["available_yocto"],
+            ((4 - number) * PRICE).to_string()
+        );
+        assert_eq!(pass["budget"]["reserved_yocto"], "0");
+    }
+    let pass: Value = read!("get_pass", json!({"token_id":"pass-1"}));
+    send!(
+        &bob,
+        "cancel_and_refund",
+        json!({"token_id":"pass-1","expected_revision":pass["authorization_revision"]}),
+        1
+    )
+    .assert_success();
+    let pass: Value = read!("get_pass", json!({"token_id":"pass-1"}));
+    assert_eq!(pass["phase"], "Refunded");
+    assert_eq!(pass["refund_receiver"], "bob.sandbox");
+    assert_eq!(pass["budget"]["refunded_yocto"], PRICE.to_string());
+    assert_eq!(pass["budget"]["spent_yocto"], (3 * PRICE).to_string());
+    for number in 1..=3 {
+        let order: Value = read!(
+            "get_order",
+            json!({"order_id":format!("pass-1-order-{number}")})
+        );
+        assert_eq!(order["phase"], "Paid");
+        assert_eq!(
+            order["payment_mode"],
+            if number == 3 { "Manual" } else { "Automatic" }
+        );
+    }
+    Ok(())
+}
 async fn account(
     s: &near_sandbox::Sandbox,
     name: &str,
