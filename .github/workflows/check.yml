@@ -37,6 +37,9 @@ jobs:
       - run: pnpm test:queue
         env:
           QUEUE_TEST_DATABASE_URL: postgres://queue_check:queue_check_ci_only@127.0.0.1:5432/proofbill_queue_check
+      - run: pnpm test:recovery
+        env:
+          QUEUE_TEST_DATABASE_URL: postgres://queue_check:queue_check_ci_only@127.0.0.1:5432/proofbill_queue_check
       - run: pnpm build
   browser:
     name: Browser journeys and accessibility

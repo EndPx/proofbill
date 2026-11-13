@@ -94,6 +94,19 @@ test("normal owner can queue without transferring NFT; duplicate is rejected", a
   await assert.rejects(f.queue(), /ORDER_ALREADY_QUEUED/);
 });
 
+test("quick worker restart eventually reclaims an expired active lease", async () => {
+  const f = fixture();
+  await f.queue();
+  const claimed = await claimNextJob(sql, contract);
+  // The old startup sweep does not touch a lease that has not expired yet.
+  await sql`update pb_jobs set state='reconciliation_required',error_code='WORKER_INTERRUPTED_CHECK_ORDER' where state in ('claimed','reserving','running','publishing') and lease_until<now()`;
+  assert.equal(await claimNextJob(sql, contract), undefined);
+  // Advance only the isolated test lease clock, without changing/requeuing business state.
+  await sql`update pb_jobs set lease_until=now()-interval '1 second' where job_id=${claimed.job_id}`;
+  const recovered = await claimNextJob(sql, contract);
+  assert.equal(recovered?.job_id, claimed.job_id);
+});
+
 test("queued before transfer: recipient submits fresh encrypted brief", async () => {
   const f = fixture(),
     old = await f.queue();

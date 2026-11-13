@@ -180,6 +180,8 @@ The browser suite builds a production server on port 3215. On Linux, use `playwr
 
 Queue ownership regression tests use real PostgreSQL row locks and controlled chain fixtures. Create an isolated database named `proofbill_queue_check`, set `QUEUE_TEST_DATABASE_URL`, and run `pnpm test:queue`. Each run creates and removes its own random schema. Never point this test at the application database. CI provisions its own PostgreSQL service. See [the ownership queue regression](docs/evidence/queue-ownership-regression.md) for scope and safety limits.
 
+Run `pnpm test:recovery` with the same isolated database to test actual killed/restarted Node processes, lease fencing, saved-result publication and unknown-provider handling. Its RPC/provider/payment boundaries are durable fixtures, with no paid inference or live signing. See [worker recovery evidence](docs/evidence/worker-recovery.md).
+
 Contract tests require [the pinned Rust toolchain](contracts/proofbill/rust-toolchain.toml), cargo-near and Sandbox prerequisites. Windows contract validation was performed in WSL Ubuntu:
 
 ```sh

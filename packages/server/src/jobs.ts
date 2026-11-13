@@ -19,10 +19,16 @@ export class QueueError extends Error {
 export async function claimNextJob(
   sql: ReturnType<typeof db>,
   contract: string,
+  leaseMs = 360000,
 ) {
   const rows = await sql<
     JobRow[]
-  >`update pb_jobs set state='claimed',lease_until=now()+interval '6 minutes',updated_at=now() where job_id=(select job_id from pb_jobs where state='queued' and network='testnet' and contract_id=${contract} order by created_at for update skip locked limit 1) returning *`;
+  >`update pb_jobs set state='claimed',lease_token=gen_random_uuid(),lease_until=now()+${leaseMs}*interval '1 millisecond',updated_at=now() where job_id=(select job_id from pb_jobs where network='testnet' and contract_id=${contract} and erased_at is null and (terminal_at is null or (state='failed' and result_cipher is not null)) and (
+      state='queued'
+      or (state in ('claimed','reserving','running','publishing') and (lease_until is null or lease_until<=now()))
+      or (state='reconciliation_required' and lease_until<=now())
+      or (state='failed' and result_cipher is not null)
+    ) order by created_at for update skip locked limit 1) returning *`;
   return rows[0];
 }
 
@@ -180,7 +186,7 @@ async function preparePurchase(
     );
     const rows = old
       ? await tx.unsafe<JobRow[]>(
-          "update pb_jobs set buyer_id=$1,agent_id=$2,revision=$3,input_cipher=$4,request_commitment=$5,state=$6,error_code=null,created_at=now(),updated_at=now() where job_id=$7 returning *",
+          "update pb_jobs set buyer_id=$1,agent_id=$2,revision=$3,input_cipher=$4,request_commitment=$5,state=$6,error_code=null,lease_token=null,created_at=now(),updated_at=now() where job_id=$7 returning *",
           [
             buyer,
             pass.agent_id,

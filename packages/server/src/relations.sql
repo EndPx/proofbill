@@ -14,6 +14,7 @@ ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS contract_id text;
 UPDATE pb_jobs SET contract_id=NULLIF(current_setting('proofbill.contract_id',true),'') WHERE contract_id IS NULL;
 ALTER TABLE pb_jobs ALTER COLUMN contract_id SET NOT NULL;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS agent_id text;
+ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS lease_token uuid;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS erased_at timestamptz;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS terminal_at timestamptz;
 ALTER TABLE pb_jobs ALTER COLUMN input_cipher DROP NOT NULL;

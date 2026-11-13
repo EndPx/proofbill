@@ -67,6 +67,10 @@ const errorCopy: Record<string, string> = {
     "This pass already has a queued task. Open its order to continue.",
   PASS_JOB_REQUIRES_RECONCILIATION:
     "An earlier task may already be processing. Refresh its status before retrying. If it stays blocked, contact support for reconciliation.",
+  PROVIDER_OUTCOME_UNKNOWN:
+    "The inference was interrupted and will not run again automatically. You can request a refund while the contract allows it.",
+  PRIVATE_RESULT_UNAVAILABLE:
+    "The chain recorded delivery, but its private result is unavailable. No new inference will start. Contact support to reconcile this order.",
   SERVICE_UNAVAILABLE:
     "The service could not be reached. Your funds have not been marked as paid.",
   CHALLENGE_EXPIRED:
