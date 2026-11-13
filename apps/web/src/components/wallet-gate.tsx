@@ -56,13 +56,14 @@ export function WalletGate({ children }: { children: ReactNode }) {
           </h1>
           <p>
             Connect your NEAR wallet to manage Purchase Passes, review private
-            results, and approve payments.
+            results, and choose how payment is authorized.
           </p>
           <div className="wallet-entry-note">
             <ShieldCheck size={20} />
             <p>
-              Connecting does not move funds. You approve each payment in your
-              wallet.
+              Connecting does not move funds. Manual payment needs your
+              approval; Automatic payment uses the permission you give in
+              advance.
             </p>
           </div>
         </section>

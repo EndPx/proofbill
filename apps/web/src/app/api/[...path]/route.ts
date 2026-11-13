@@ -1,3 +1,4 @@
+import { loadPublicReceipt } from "@proofbill/server/receipts";
 import { NextRequest, NextResponse } from "next/server";
 import {
   queuePurchase,
@@ -62,6 +63,12 @@ export async function GET(req: NextRequest, ctx: Context) {
         advancedModes: features?.version === 2 && features.agent_modes === true,
         sellerId: features?.seller_id ?? "",
       });
+    }
+    if (route.startsWith("receipt/")) {
+      const receipt = await loadPublicReceipt(route.slice(8));
+      return receipt
+        ? json(receipt)
+        : json({ error: "RECEIPT_NOT_FOUND" }, 404);
     }
     if (route === "session") return json({ accountId: await session(req) });
     if (route === "workspace") {

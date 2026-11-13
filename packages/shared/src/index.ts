@@ -4,6 +4,46 @@ export const MODEL_ID = "Qwen/Qwen3.8-27B";
 export const SERVICE_PRICE = "10000000000000000000000";
 export const STORAGE_BUDGET = "30000000000000000000000";
 export type PaymentMode = "Manual" | "Automatic";
+export interface PublicReceipt {
+  network: "testnet";
+  contract_id: string;
+  block_hash: string;
+  block_height: number;
+  order_id: string;
+  token_id: string;
+  buyer_id: string;
+  agent_id: string;
+  seller_id: string;
+  current_holder: string;
+  price_yocto: string;
+  created_at_ns: string;
+  payment_mode: PaymentMode;
+  order_phase: OrderPhase;
+  nft_phase: PassPhase;
+  request_commitment: string;
+  response_commitment: string | null;
+  evidence_commitment: string | null;
+  policy_id: string | null;
+  references_available: boolean;
+  observations: {
+    action: string;
+    tx_hash: string;
+    signer_id: string;
+    created_at: string;
+  }[];
+}
+export function formatReceiptNear(raw: string): string {
+  if (!/^(0|[1-9]\d{0,38})$/.test(raw) || BigInt(raw) > (1n << 128n) - 1n)
+    throw new Error("Invalid atomic amount");
+  const n = BigInt(raw),
+    scale = 10n ** 24n;
+  const fraction = (n % scale)
+    .toString()
+    .padStart(24, "0")
+    .replace(/0+$/, "")
+    .padEnd(3, "0");
+  return `${n / scale}.${fraction}`;
+}
 export type PassPhase =
   | "Available"
   | "InUse"

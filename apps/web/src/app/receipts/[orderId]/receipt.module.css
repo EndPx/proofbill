@@ -1,0 +1,231 @@
+.frame {
+  padding: 24px;
+  min-height: 100dvh;
+  background: var(--shell);
+}
+.sheet {
+  max-width: 1100px;
+  margin: 0 auto;
+  border-radius: 24px;
+  padding: 34px;
+  background: var(--surface);
+}
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+.nav .brand { color:var(--ink); }
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin: 34px 0;
+}
+.heading h1 {
+  margin: 12px 0;
+}
+.heading p {
+  max-width: 56ch;
+}
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.stack {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.card {
+  min-width: 0;
+}
+.card h2 {
+  margin-bottom: 16px;
+}
+.card p {
+  font-size: 14px;
+}
+.card p + p {
+  margin-top: 12px;
+}
+.receipt {
+  padding: 28px 24px;
+}
+.receipt h2 {
+  font-size: 23px;
+  margin-bottom: 10px;
+}
+.amount {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -1px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  margin: 24px 0 6px;
+}
+.unit {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.facts {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+}
+.facts div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.facts dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.facts a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mode {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.private {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.private svg {
+  color: var(--success-ink);
+}
+.private h2 {
+  margin-bottom: 8px;
+}
+.hashes {
+  margin-top: 24px;
+}
+.hashes summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 0;
+}
+.hashes dl {
+  margin-top: 18px;
+}
+.hashes dd,
+.id {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.references {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 16px;
+}
+.references li {
+  min-width: 0;
+}
+.references a {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.references small {
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.footer a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.error {
+  max-width: 620px;
+  margin: 48px auto;
+}
+.error h1 {
+  margin-bottom: 16px;
+}
+.error .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sheet {
+    padding: 24px;
+  }
+  .heading {
+    flex-direction: column;
+  }
+}
+@media (max-width: 600px) {
+  .frame {
+    padding: 8px;
+  }
+  .sheet {
+    padding: 20px;
+    border-radius: 20px;
+  }
+  .nav {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding-bottom: 24px;
+  }
+  .nav .button {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+  .heading {
+    margin: 26px 0;
+  }
+  .receipt {
+    padding: 24px 20px;
+  }
+  .grid,
+  .stack {
+    gap: 20px;
+  }
+  .card {
+    padding: 20px;
+  }
+}

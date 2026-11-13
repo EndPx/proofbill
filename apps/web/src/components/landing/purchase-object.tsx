@@ -205,7 +205,7 @@ export function PurchaseObject({ phase: requestedPhase }: { phase: number }) {
                     <Check size={13} /> Fixed seller
                   </span>
                   <span>
-                    <KeyRound size={13} /> You approve
+                    <KeyRound size={13} /> Your policy
                   </span>
                 </div>
               </>

@@ -326,7 +326,7 @@ export default function Home() {
             <div className={styles.finaleRule}>
               <span>Permission first.</span>
               <span>Private result.</span>
-              <span>Your approval to pay.</span>
+              <span>Your payment policy.</span>
             </div>
           </div>
         </section>

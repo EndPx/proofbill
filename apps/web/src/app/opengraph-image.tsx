@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "ProofBill. Agents order. You approve.";
+export const alt = "ProofBill. Agents order. You decide.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -40,10 +40,10 @@ export default function OpenGraphImage() {
           }}
         >
           <span>Agents order.</span>
-          <span>You approve.</span>
+          <span>You decide.</span>
         </div>
         <div style={{ display: "flex", fontSize: 25 }}>
-          One Purchase Pass. A private result. Your approval to pay.
+          One Purchase Pass. A private result. Your payment policy.
         </div>
       </div>
     ),

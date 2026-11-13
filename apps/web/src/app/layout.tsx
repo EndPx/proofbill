@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "@fontsource-variable/inter";
 import "./globals.css";
-import { WalletProvider } from "@/components/wallet";
 import { DevTools } from "@/components/dev-tools";
 export const metadata: Metadata = {
   metadataBase: new URL("https://proofbill-two.vercel.app"),
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s · ProofBill",
   },
   description:
-    "Fund a Purchase Pass, let your agent order a private AI service, inspect its evidence, and approve the exact payment.",
+    "Fund a Purchase Pass, choose your agent and payment policy, and trace the private service purchase to its onchain receipt.",
 };
 export default function RootLayout({
   children,
@@ -20,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <WalletProvider>{children}</WalletProvider>
+        {children}
         {process.env.NODE_ENV === "development" && <DevTools />}
       </body>
     </html>

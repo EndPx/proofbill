@@ -4,16 +4,16 @@ export const landing = {
   url: "https://proofbill-two.vercel.app",
   title: "ProofBill | Permission before payment.",
   description:
-    "Give your AI agent a funded Purchase Pass on NEAR. Review the private result and its evidence, then approve the exact seller payment.",
+    "Give your AI agent a funded Purchase Pass on NEAR. Choose Manual approval or preauthorized Automatic payment, then inspect its public receipt.",
   github: "https://github.com/EndPx/proofbill",
   contract:
     "https://testnet.nearblocks.io/address/proofbill-endpx-2026.testnet",
-  receipt: "/app/receipts/pass-2-order",
+  receipt: "/receipts/pass-2-order",
   payment:
     "https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z",
   hero: {
     first: "Agents order.",
-    second: "You approve.",
+    second: "You decide.",
     body: "Choose ProofBill’s assistant or your own agent. Fund one Purchase Pass, inspect what comes back, and choose manual approval or preauthorized payment.",
     note: "Built on NEAR testnet. Start with your wallet.",
   },
@@ -32,7 +32,7 @@ export const landing = {
     },
     {
       title: "Review it. Then approve payment.",
-      body: "Inspect the result before your wallet approves the seller payment. The receipt becomes Paid after the contract confirms the transfer.",
+      body: "Manual mode lets you inspect the result before approving. Automatic mode uses your advance authorization after matching delivery. Paid appears after the transfer is confirmed.",
       detail:
         "Manual is the default. Automatic payment is an explicit per-pass choice.",
     },

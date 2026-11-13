@@ -14,7 +14,8 @@ test("every app entry waits for a wallet without mounting the workspace", async 
     "/app",
     "/app/purchases",
     "/app/passes/new",
-    "/app/receipts/pass-2-order",
+    "/app/receipts",
+    "/app/orders/pass-2-order",
   ]) {
     await page.goto(path);
     await expect(

@@ -1063,7 +1063,7 @@ export function Workspace() {
                 {o.phase === "Paid" && !receiptMode && (
                   <Link
                     className="button secondary"
-                    href={`/app/receipts/${encodeURIComponent(id)}`}
+                    href={`/receipts/${encodeURIComponent(id)}`}
                   >
                     Open receipt <ReceiptText size={16} />
                   </Link>
@@ -1238,7 +1238,7 @@ export function Workspace() {
                       className="order-row"
                       href={
                         section === "receipts"
-                          ? `/app/receipts/${o.order_id}`
+                          ? `/receipts/${o.order_id}`
                           : orderLink(o.order_id)
                       }
                       key={o.order_id}

@@ -47,14 +47,14 @@ The initial user is a developer or small team operating paid-API agents. The cur
 
 ![Recorded application receipt on NEAR testnet](docs/evidence/ui/production-receipt-desktop.png)
 
-The receipt image is a recorded testnet snapshot. The [current app](https://proofbill-two.vercel.app/app/receipts/pass-2-order) first asks for a wallet connection; private output additionally requires the historical buyer's signed session.
+The receipt image is a recorded testnet snapshot. The [public receipt](https://proofbill-two.vercel.app/receipts/pass-2-order) shows finalized financial facts without a wallet. Workspace access requires a wallet connection; private output additionally requires the historical buyer's signed session.
 
 </details>
 
 ## Review in five minutes
 
 1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), click through the sample workspace menus, switch through the three purchase steps, and try the clearly labelled handover illustration. The interactive workspace uses local mock records; it needs no wallet or credits and submits no transactions.
-2. **Inspect the working workspace.** [Connect a NEAR testnet wallet](https://proofbill-two.vercel.app/app/purchases). Open the [recorded receipt](https://proofbill-two.vercel.app/app/receipts/pass-2-order) to inspect public financial facts. Another wallet cannot unlock the buyer's private result.
+2. **Inspect a real public receipt.** Open the [Manual example](https://proofbill-two.vercel.app/receipts/pass-2-order) or [Automatic example](https://proofbill-two.vercel.app/receipts/pass-10-order) without connecting a wallet. The [workspace](https://proofbill-two.vercel.app/app/purchases) remains wallet-gated; another wallet cannot unlock the buyer's private result.
 3. **Check the payment independently.** Compare the [successful seller payment](https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z), [duplicate-payment refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1), and [integration record](docs/evidence/integration/pass-2-order.json). Reading these does not require a new purchase.
 4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, assign Research assistant, enter a brief, run the agent, unlock the result, and approve payment or request a refund where permitted. Funding and policy changes require your wallet signature. Manual payments require another approval; Automatic settlement uses advance authorization after matching publisher delivery. See [own-agent and payment-mode setup](docs/agent-integration.md).
 5. **Review or reproduce the code.** Use the track/source map below, then run [local checks](#checks-and-reproduction). Browser tests use fixtures and need no signing or provider secrets.
