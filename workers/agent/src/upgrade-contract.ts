@@ -31,7 +31,7 @@ const accountBefore = await rpc.viewAccount({
   blockQuery: { finality: "final" },
 });
 const active =
-  await db()`select count(*)::int as count from pb_jobs where contract_id=${root} and state in ('awaiting_reservation','queued','claimed','reserving','running','publishing')`;
+  await db()`select count(*)::int as count from pb_jobs where contract_id=${root} and (state in ('awaiting_reservation','queued','claimed','reserving','running','publishing') or (state='reconciliation_required' and lease_until is not null) or (state='failed' and result_cipher is not null))`;
 assert.equal(
   active[0].count,
   0,
@@ -42,15 +42,6 @@ assert.ok(
     (p) => !p.transfer_pending && !["InUse", "RefundPending"].includes(p.phase),
   ),
   "Wait for active onchain operations",
-);
-await mkdir(".local/feature-check", { recursive: true });
-await writeFile(
-  ".local/feature-check/pre-upgrade.json",
-  JSON.stringify(
-    { passes: beforePasses, orders: beforeOrders, account: accountBefore },
-    (_, value) => (typeof value === "bigint" ? value.toString() : value),
-    2,
-  ),
 );
 console.log(
   JSON.stringify({
@@ -64,14 +55,22 @@ console.log(
 
 if (process.env.CONFIRM_PROOFBILL_TESTNET_UPGRADE === "yes") {
   assert.ok(
-    process.env.PROOFBILL_WASM && process.env.EXPECTED_WASM_SHA256,
-    "Supply reviewed candidate path and SHA-256",
+    process.env.PROOFBILL_WASM &&
+      process.env.EXPECTED_WASM_SHA256 &&
+      process.env.EXPECTED_PREVIOUS_WASM_SHA256,
+    "Supply reviewed candidate path, candidate SHA-256 and expected current SHA-256",
   );
-  const config = await view<{ version?: number }>("get_config");
-  assert.notEqual(
-    config.version,
-    2,
-    "Feature upgrade is already installed; inspect state before another deployment",
+  const recordName = process.env.UPGRADE_RECORD_NAME ?? "contract-upgrade";
+  assert.match(recordName, /^[a-z0-9-]{1,64}$/);
+  const backupDir = `.local/upgrades/${recordName}`;
+  await mkdir(backupDir, { recursive: true });
+  await writeFile(
+    `${backupDir}/before.json`,
+    JSON.stringify(
+      { passes: beforePasses, orders: beforeOrders, account: accountBefore },
+      (_, value) => (typeof value === "bigint" ? value.toString() : value),
+      2,
+    ),
   );
   const wasm = await readFile(process.env.PROOFBILL_WASM);
   assert.equal(digest(wasm), process.env.EXPECTED_WASM_SHA256);
@@ -79,7 +78,12 @@ if (process.env.CONFIRM_PROOFBILL_TESTNET_UPGRADE === "yes") {
     contractId: root,
     blockQuery: { finality: "final" },
   });
-  await writeFile(".local/feature-check/previous.wasm", previous.code);
+  assert.equal(
+    digest(previous.code),
+    process.env.EXPECTED_PREVIOUS_WASM_SHA256,
+    "Existing code changed; inspect it before another deployment",
+  );
+  await writeFile(`${backupDir}/previous.wasm`, previous.code);
   const credential = JSON.parse(
     await readFile(
       join(homedir(), ".near-credentials", "testnet", root + ".json"),
@@ -106,7 +110,6 @@ if (process.env.CONFIRM_PROOFBILL_TESTNET_UPGRADE === "yes") {
     const current = await view<PurchasePass>("get_pass", {
       token_id: old.token_id,
     });
-    assert.equal(current.payment_mode, "Manual");
     for (const [field, value] of Object.entries(old))
       assert.deepEqual(
         (current as unknown as Record<string, unknown>)[field],
@@ -124,11 +127,12 @@ if (process.env.CONFIRM_PROOFBILL_TESTNET_UPGRADE === "yes") {
     wasm_bytes: wasm.length,
     preserved_passes: beforePasses.length,
     preserved_orders: beforeOrders.length,
-    old_policy_default: "Manual",
+    previous_wasm_sha256: digest(previous.code),
+    payment_policies_preserved: true,
     state_reinitialized: false,
   };
   await writeFile(
-    "infra/near/agent-payment-upgrade.json",
+    `infra/near/${recordName}.json`,
     JSON.stringify(report, null, 2) + "\n",
   );
   console.log(JSON.stringify(report));

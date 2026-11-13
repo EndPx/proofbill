@@ -633,6 +633,37 @@ impl Contract {
             near_sdk::serde_json::json!({"standard":"nep171","version":"1.2.0","event":"nft_metadata_update","data":[{"token_ids":[id]}]})
         ));
     }
+    fn transfer_storage_key(id: &str) -> Vec<u8> {
+        [b"pb:nft-transfer:".as_slice(), id.as_bytes()].concat()
+    }
+    fn transfer_reserve(pending: bool) -> u128 {
+        (if pending { 1024_u128 } else { 256_u128 }) * env::storage_byte_cost().as_yoctonear()
+    }
+    fn reconcile_transfer_storage(&mut self, p: &mut PurchasePass, before: u64, release: u128) {
+        let after = env::storage_usage();
+        let available = p
+            .storage_credit_yocto
+            .0
+            .checked_add(release)
+            .expect("STORAGE_CREDIT_OVERFLOW");
+        let price = env::storage_byte_cost().as_yoctonear();
+        p.storage_credit_yocto = U128(if after >= before {
+            let cost = u128::from(after - before)
+                .checked_mul(price)
+                .expect("STORAGE_COST_OVERFLOW");
+            require!(available >= cost, "TRANSFER_STORAGE_REQUIRED");
+            available - cost
+        } else {
+            available
+                .checked_add(
+                    u128::from(before - after)
+                        .checked_mul(price)
+                        .expect("STORAGE_COST_OVERFLOW"),
+                )
+                .expect("STORAGE_CREDIT_OVERFLOW")
+        });
+        self.passes.insert(&p.token_id, p);
+    }
     fn begin_transfer(&mut self, id: &String, receiver: &AccountId, pending: bool) -> PurchasePass {
         let mut p = self.pass(id);
         require!(p.owner_id == env::predecessor_account_id(), "HOLDER_ONLY");
@@ -653,8 +684,7 @@ impl Contract {
             .expect("REVISION_OVERFLOW");
         p.owner_id = receiver.clone();
         p.transfer_pending = pending;
-        let reserve: u128 = if pending { 1024 } else { 256 };
-        let cost = reserve * env::storage_byte_cost().as_yoctonear();
+        let cost = Self::transfer_reserve(pending);
         require!(
             p.storage_credit_yocto.0 >= cost,
             "TRANSFER_STORAGE_REQUIRED"
@@ -699,9 +729,16 @@ impl NonFungibleTokenCore for Contract {
         require!(msg.len() <= 4096, "MESSAGE_TOO_LARGE");
         require!(env::prepaid_gas().as_tgas() >= 100, "TRANSFER_GAS_REQUIRED");
         let previous_owner_id = self.pass(&token_id).owner_id;
-        self.begin_transfer(&token_id, &receiver_id, true);
+        let before = env::storage_usage();
+        let mut pass = self.begin_transfer(&token_id, &receiver_id, true);
         self.tokens
             .nft_transfer(receiver_id.clone(), token_id.clone(), approval_id, memo);
+        env::storage_write(
+            &Self::transfer_storage_key(&token_id),
+            &Self::transfer_reserve(true).to_le_bytes(),
+        );
+        // Charge this receipt only. Unrelated calls may change global storage before resolution.
+        self.reconcile_transfer_storage(&mut pass, before, 0);
         let args = near_sdk::serde_json::json!({"sender_id":env::predecessor_account_id(),"previous_owner_id":previous_owner_id,"token_id":token_id,"msg":msg});
         let resolve = near_sdk::serde_json::json!({"previous_owner_id":previous_owner_id,"receiver_id":receiver_id,"token_id":token_id,"approved_account_ids":null});
         PromiseOrValue::Promise(
@@ -742,6 +779,11 @@ impl NonFungibleTokenResolver for Contract {
         approved_account_ids: Option<HashMap<AccountId, u64>>,
     ) -> bool {
         require!(self.pass(&token_id).transfer_pending, "NO_PENDING_TRANSFER");
+        let before = env::storage_usage();
+        let key = Self::transfer_storage_key(&token_id);
+        let reserved = env::storage_read(&key).map(|bytes| {
+            u128::from_le_bytes(bytes.try_into().expect("INVALID_TRANSFER_STORAGE_RECORD"))
+        });
         let result = self.tokens.nft_resolve_transfer(
             previous_owner_id,
             receiver_id,
@@ -756,6 +798,11 @@ impl NonFungibleTokenResolver for Contract {
             .expect("TOKEN_MISSING");
         p.transfer_pending = false;
         self.passes.insert(&token_id, &p);
+        if let Some(reserved) = reserved {
+            env::storage_remove(&key);
+            self.reconcile_transfer_storage(&mut p, before, reserved);
+        }
+        // An already-pending legacy transfer has no marker; finish it without guessing a refund.
         result
     }
 }
@@ -921,5 +968,44 @@ mod tests {
             POLICY.into(),
             "provider_tee".into(),
         );
+    }
+    #[test]
+    #[allow(deprecated)]
+    fn repeated_async_return_does_not_consume_credit() {
+        let mut c = setup();
+        c.create_purchase_pass(SERVICE.into(), U64(1_000_000), None);
+        let original = c.pass(&"pass-1".into()).storage_credit_yocto;
+        for _ in 0..4 {
+            ctx("alice.testnet", 1);
+            c.nft_transfer_call(
+                "returner.testnet".parse().unwrap(),
+                "pass-1".into(),
+                None,
+                None,
+                String::new(),
+            );
+            let mut b = VMContextBuilder::new();
+            b.current_account_id("proofbill.testnet".parse().unwrap())
+                .predecessor_account_id("proofbill.testnet".parse().unwrap())
+                .account_balance(NearToken::from_near(20))
+                .block_timestamp(100);
+            near_sdk::test_utils::testing_env_with_promise_results(
+                b.build(),
+                near_sdk::PromiseResult::Successful(b"true".to_vec()),
+            );
+            c.nft_resolve_transfer(
+                "alice.testnet".parse().unwrap(),
+                "returner.testnet".parse().unwrap(),
+                "pass-1".into(),
+                None,
+            );
+            let p = c.pass(&"pass-1".into());
+            assert_eq!(p.owner_id, "alice.testnet");
+            assert!(!p.transfer_pending);
+            assert_eq!(
+                p.storage_credit_yocto, original,
+                "unused asynchronous reserve must be returned"
+            );
+        }
     }
 }
