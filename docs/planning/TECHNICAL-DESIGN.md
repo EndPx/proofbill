@@ -1,6 +1,6 @@
 # ProofBill technical design
 
-Status: proposed interfaces and implementation design. No address, method or service in this document is claimed to exist onchain. Product rights and scope are defined in [PRODUCT-SPEC.md](PRODUCT-SPEC.md).
+Architecture guide aligned with the implemented testnet scope on 14 November 2026. Product rights are defined in [PRODUCT-SPEC.md](PRODUCT-SPEC.md); [release evidence](../evidence/agent-payment-hosted.md) and [deployment records](../../infra/near/testnet-deployment.json) identify exercised code and network artifacts. A design description is not execution evidence.
 
 ## 1. Selected architecture
 
@@ -13,13 +13,13 @@ Status: proposed interfaces and implementation design. No address, method or ser
 | Python inference/verifier helper | Fresh preflight, one exact-byte inference call, cryptographic checks and evidence report | Offchain verifier; Python chosen because `dcap-qvl` already worked in the real probe |
 | PostgreSQL | Sessions, private tasks, job leases, encrypted exact-byte artifacts, observational projections | Private application persistence, not a substitute for chain outcomes |
 
-Use a pnpm workspace for actual TypeScript modules, native Cargo tooling for the contract and an isolated Python 3.12 environment for the helper. Pin compatible dependencies during setup; avoid guessing future version numbers. Scaffold the contract with `cargo near new` when implementation starts, then adapt it inside the monorepo.
+The pnpm workspace contains the TypeScript modules; Cargo builds the contract and an isolated Python 3.12 environment runs the helper. Manifests and lockfiles pin the implementation's dependencies.
 
-NEAR Connect's maintained documentation explicitly supports `network: "testnet"` and wallet message signing. Select wallets with the signing features required by the flow. The exact browser/wallet combination is verified in the first slice.
+The app configures NEAR Connect for testnet. Wallet connection opens the workspace; signed NEP-413 sessions unlock private data. A wallet must support the message-signing and transaction features required by the chosen flow.
 
-The Python helper runs as a local subprocess of the worker with a versioned stdin/stdout protocol, not a new public microservice. It returns bounded results/evidence; it does not own wallet signing, database migrations or financial transitions. Shared cross-language schemas are language-neutral JSON Schema, with validation at both ends.
+The Python helper runs as a local subprocess of the worker with a JSON stdin/stdout protocol. It returns bounded results/evidence; it does not own wallet signing, database migrations or financial transitions. The helper and runner validate the result/evidence fields they consume; there is no separate published JSON Schema package.
 
-## 2. Planned source layout
+## 2. Source layout
 
 ```text
 apps/web/                     UI + private/server API
@@ -27,6 +27,7 @@ contracts/proofbill/          Rust contract, native tests, deployment source
 workers/agent/                TypeScript purchasing worker and chain reconciliation
 workers/inference/            Python inference + verification helper
 packages/shared/              public wire schemas, identifiers, contract client inputs
+packages/agent-client/        owner-operated agent authentication/reservation SDK
 packages/server/              DB/repository + encrypted artifact helpers for two server consumers
 docs/planning/                these planning documents
 docs/evidence/                reviewed proof of executed slices
@@ -37,7 +38,7 @@ research/                     existing research; review individually before publ
 deliverables/                 ignored working demo/pitch exports
 ```
 
-Only create modules when their slice begins. `packages/shared` is browser-safe and imports no service internals or credentials. `packages/server` is explicitly server-only. No extra indexer, API framework, Turbo layer, public SDK or UI package is necessary at the start. Chain reads use RPC and confirmed outcomes; a small reconciler is sufficient for this volume.
+`packages/shared` is browser-safe and imports no service internals or credentials. `packages/server` is explicitly server-only. `packages/agent-client` supplies the owner-operated agent SDK; `workers/agent/src/run-own-agent.ts` is its CLI. There is no extra indexer, API framework, Turbo layer or UI package. Chain reads use RPC and confirmed outcomes.
 
 ## 3. Contract records
 
@@ -85,16 +86,16 @@ Offchain Running and verifier error states are projections, clearly distinguishe
 
 These buckets are disjoint and exactly one holds the fixed service amount for a single-use pass. NFT transfer changes the entitlement owner, not the amount. Dashboard Reserved can aggregate reservation and pending buckets but must explain that those funds are unavailable. Refunds remain visible when reconciling lifetime funded totals.
 
-## 5. Proposed contract interface
+## 5. Contract interface
 
-Names below are design candidates to freeze against the compiled ABI before client integration; they are not live methods.
+The table summarizes methods in [the Rust source](../../contracts/proofbill/src/lib.rs). Optional payment policies default to Manual. Generate the ABI from the intended revision before integration; the repository's initial-build ABI snapshot predates those optional arguments. Exact argument types and guards belong to the source and matching build.
 
-| Proposed method | Caller / behavior |
+| Method | Caller / behavior |
 | --- | --- |
-| `create_purchase_pass(service_id, expires_at_ns)` | Holder; attach exact service amount plus required storage budget; mint to caller |
-| `assign_agent(token_id, expected_revision, agent_id)` | Current holder; only Available/unexpired; increment revision |
+| `create_purchase_pass(service_id, expires_at_ns, payment_mode?)` | Holder; attach exact service amount plus required storage budget; mint to caller |
+| `assign_agent(token_id, expected_revision, agent_id, payment_mode?)` | Current holder; only Available/unexpired; increment revision and optionally change policy |
 | `reserve_order(token_id, expected_revision, request_commitment)` | Assigned agent; zero attached service funds; snapshot buyer/terms and reserve once |
-| `publish_delivery(order_id, delivery)` | Configured publisher; exact bound order, policy/model and commitments; immutable delivery once accepted |
+| `publish_delivery(order_id, request_commitment, response_commitment, evidence_commitment, model_id, policy_id, signature_kind)` | Configured publisher; validate the bound request/model/policy and record delivery; Automatic mode starts the preauthorized payout |
 | `approve_and_pay(order_id, expected_delivery_commitment)` | Historical/current locked holder; before approval deadline; validate exact tuple and start one native transfer |
 | `cancel_and_refund(token_id, expected_revision)` | Entitlement holder; before seller payout starts or after a proven failed attempt; snapshot refund receiver and consume entitlement |
 | `retry_failed_payment(order_id, expected_attempt_nonce)` | Locked buyer; only after proven failure; identical recipient, amount and delivery |
@@ -115,7 +116,7 @@ Direct transfer is allowed for Available/unexpired passes and terminal zero-valu
 
 For `nft_transfer_call`, mark the entire pass as transfer-pending before the external call. No reservation, refund, assignment, spending or nested transfer can proceed until resolution. Use the current standard: receiver result **true returns the token to the prior owner**, false permits it to remain, and receiver failure invokes rollback. Check this against the selected SDK source/tests rather than relying on an older helper's return-value naming.
 
-On rollback restore financial entitlement with NFT ownership; keep app/agent delegation invalidated until the holder reassigns it. The core standard's relevant ownership/approval behavior must remain compliant. Reserve storage for the asynchronous path before it starts; unknown outcomes stay locked rather than being cleared by elapsed time alone.
+On rollback restore financial entitlement with NFT ownership; keep app/agent delegation and unused Automatic permission invalidated until the holder reauthorizes them. The asynchronous path holds 1,024 bytes of storage credit and settles actual storage deltas per receipt before releasing the unused hold. Unknown outcomes stay locked rather than being cleared by elapsed time alone. See [the storage regression evidence](../evidence/nft-transfer-storage.md).
 
 Storage charges must use actual SDK/network storage accounting. Preserve NFT/order history backing after completion; transferring or completing a pass does not release consumed mint storage into the service balance. Buyer UI shows service price and storage budget separately. Native payout retries cannot spend storage backing.
 
@@ -123,16 +124,18 @@ Metadata exposes public service/seller/value/status/receipt commitment only. Upd
 
 ## 7. Agent and inference flow
 
-1. Authenticated holder creates a private task for its pass/revision. The backend persists an idempotent job; it does not mark the order reserved.
-2. Worker leases the job, checks chain owner/revision/agent assignment, constructs unique order context and exact provider request bytes, then submits `reserve_order` using the configured agent identity.
+1. The authenticated holder creates a hosted task, or the assigned external agent prepares a buyer-bound request through the [own-agent protocol](../agent-integration.md). A persisted job alone does not establish a reservation.
+2. The hosted worker checks owner/revision/assignment and signs `reserve_order` using its restricted agent key. An external agent signs its own reservation and submits it for finalized-chain validation; the worker does not impersonate it.
 3. Wait for confirmed reservation and compare the recorded terms before inference. A timed-out reservation is reconciled, not sent again as a new order.
 4. Python helper fetches fresh gateway and all NEAR model preflight candidates, verifies required evidence, then makes at most one inference attempt for the order. It preserves exact request and uncompressed response bytes.
 5. Fetch signature with a short bounded retry, check supported `provider_tee`/ECDSA classification, hashes, recovered signer and unique preflight match. Validate result JSON for display separately from provenance.
-6. Required evidence policy passes -> encrypt and persist artifacts -> publisher submits the delivery statement -> confirm it -> expose Review and Pay. Fail/unavailable -> show the reason and refund action.
+6. Required evidence policy passes -> encrypt and persist artifacts -> publisher submits delivery. Manual mode exposes review/approval; Automatic mode starts the preauthorized payout. Paid requires a successful transfer callback. Fail/unavailable -> show the reason and any contract-permitted refund action.
 
-The request includes order ID, pass ID/revision, service version and fresh task nonce in a defined message context. Record the exact request commitment at reservation. Do not mutate/re-serialize the body after hashing or reconstruct the raw response from parsed JSON. Render structured output separately while preserving original bytes.
+The request includes order ID, pass ID/revision and a fresh task nonce in a defined message context. Service/model identifiers remain bound by the pass and request configuration. Record the exact request commitment at reservation. Do not mutate/re-serialize the body after hashing or reconstruct the raw response from parsed JSON. Render structured output separately while preserving original bytes.
 
 Provider API key is seller-side only. Maximum one completion attempt per order; do not retry completion on timeout. A saved successful response can be reverified/re-published without generating another response. Rate-limit by buyer and service, cap input/output, and preserve an ambiguous provider execution state without creating a second charge automatically.
+
+Worker claims continuously consider expired active leases, with a fenced UUID lease token and heartbeats. Saved verified artifacts can resume publication; an already matching delivery can reconcile without another publication. An attempted inference with an unknown outcome is not run again automatically. See [restart/recovery evidence](../evidence/worker-recovery.md).
 
 ## 8. Evidence policy and bridge trust
 
@@ -150,9 +153,11 @@ Private API groups: wallet challenge/session; pass-bound task creation; job stat
 
 Challenge/session: single-use random nonce, short expiry, account/public-key verification against the correct network, recipient/domain binding, secure HTTP-only session cookie and CSRF/origin checks on mutations. Session identity is immutable; changing browser accounts starts a new session. Private responses use no-store caching.
 
-PostgreSQL tables: `sessions`, `tasks`, `jobs`, `artifacts`, `verification_reports`, `chain_observations`. Jobs use unique order IDs and transactional leases. Both worker and API share server-only repositories. A failed HTTP response is not a reason to mint a new pass or order automatically.
+PostgreSQL has five application tables: `pb_accounts`, `pb_challenges`, `pb_sessions`, `pb_jobs` and `pb_chain_observations`. Jobs have UUID primary keys, scoped unique order/pass identities, agent binding, fenced transactional leases and encrypted input/result bundles. Artifacts and verification reports live inside those bundles rather than separate tables. The [ERD](../database/ERD.md) documents the five foreign keys and chain references. A failed HTTP response is not a reason to mint a new pass or order automatically.
 
-Encrypt private artifact bytes with authenticated encryption and server-only key material. Bind order/buyer/artifact type as authenticated context. Store exact bytes losslessly, including provider response whitespace. Public commitments are domain-separated and salted; plaintext hashes/evidence are revealed only in authorized exports. Neither database encryption nor TEE inference hides plaintext from this application's trusted processing components.
+Private artifact bundles use AES-256-GCM and server-only key material. Authenticated context binds network, contract, order and buyer. Exact provider bytes are retained losslessly, including response whitespace. Public commitments are domain-separated and salted; salts and raw verification artifacts remain private. Neither database encryption nor TEE inference hides plaintext from this application's trusted processing components.
+
+The public `/receipts/:orderId` route and API read allowlisted financial facts and commitments without a session. Workspace routes require wallet connection; private result/evidence access additionally requires a signed historical-buyer session. Terminal private payloads are erased seven days after their first confirmed terminal observation; public onchain history remains.
 
 ## 10. Network, operations and publication
 

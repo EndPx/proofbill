@@ -1,6 +1,6 @@
 # Recovery and NFT storage release
 
-Validated 13 November 2026. Functional fixes were committed separately: `2a5f072` for worker recovery and `a255b6e` for asynchronous NFT storage. Internal mock-judge reports are not part of this release.
+Validated 13 November 2026. Functional fixes were committed separately: `2a5f072` for worker recovery and `a255b6e` for asynchronous NFT storage.
 
 ## Reproduced regressions and checks
 

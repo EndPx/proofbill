@@ -1,8 +1,6 @@
 # ProofBill data model and ERD
 
-Design review: 13 November 2026. The initial review below preceded implementation. **The user subsequently authorized continuation; `relations.sql` has now been applied and Neon inspection confirmed five application tables with five foreign keys.**
-
-The user asked to make the ERD and ownership/PK/FK relationships clear before continuing implementation. This document records the observed initial schema separately from the recommended target. Source code and deployed database must not be described as already matching the target.
+Schema guide updated 14 November 2026. The relational migration was applied without resetting data; the recorded Neon inspection confirmed five application tables and five foreign keys. The diagram includes the later agent-binding and lease-fencing columns from [the migration](../../packages/server/src/relations.sql). Blockchain references are logical links, not SQL foreign keys.
 
 ## 1. Initial Neon schema: historical snapshot before the migration
 
@@ -17,9 +15,9 @@ The first `information_schema` inspection found four tables:
 
 At that initial point the identifier columns were not enforced foreign keys. The applied relational upgrade now implements the target below; its source is `packages/server/src/relations.sql`.
 
-## 2. Recommended target: five Neon tables
+## 2. Implemented relational model: five Neon tables
 
-Keep five application tables. Add a common public account identity table, give jobs a stable internal primary key, and distinguish a linked local job from an external chain reference. Do not add SQL replicas of contract balances just to draw more relationships.
+Five application tables share a public account identity table, a stable job primary key and optional job links on chain observations. Contract balances are not replicated as authoritative SQL balances.
 
 The first application operates on NEAR testnet only. Account IDs are NEAR public identities, never secrets. `pb_accounts.network` is constrained to `testnet` for this release; the same table must not silently mix mainnet accounts later. Supporting both networks requires explicitly scoping account identity and its foreign keys.
 
@@ -59,6 +57,7 @@ erDiagram
         text order_id "unique with network and contract_id"
         text token_id "unique with network and contract_id"
         text buyer_id FK
+        text agent_id "nullable bound account; not a SQL FK"
         integer revision
         text state
         text input_cipher "nullable after erasure"
@@ -66,6 +65,7 @@ erDiagram
         text request_commitment "nullable"
         timestamptz provider_attempted_at "nullable"
         timestamptz lease_until "nullable"
+        uuid lease_token "nullable fencing token"
         text error_code "nullable"
         timestamptz erased_at "nullable"
         timestamptz terminal_at "nullable observed terminal time"
@@ -111,15 +111,17 @@ One account can have multiple sessions. Session identity is fixed; switching bro
 
 ### `pb_jobs`: one private purchase execution
 
-Primary key: new internal `job_id` UUID. Foreign key: immutable `buyer_id -> pb_accounts.account_id`. This is the buyer at reservation, not a mutable current-NFT-owner field.
+Primary key: internal `job_id` UUID. Foreign key: `buyer_id -> pb_accounts.account_id`. This buyer binding is immutable once reserved/execution has started. An unreserved, unattempted stale request can be rebound only through the guarded fresh-task path after an ownership/revision change; a new holder's request never reuses the former holder's private input.
 
 External order identity is `(network, contract_id, order_id)` with a unique constraint. One Purchase Pass allows one job through `UNIQUE(network, contract_id, token_id)`. This avoids colliding `pass-1` or `pass-1-order` identifiers after deploying a different contract. The internal UUID stays stable for leases and DB relations.
 
 The row owns the worker lifecycle, encrypted input/result/evidence bundle, one provider-attempt marker and private retention. A queued row may exist before an onchain reservation, so a SQL row alone never proves an order was created onchain. `revision` snapshots authorization when the task is accepted.
 
+`agent_id` binds the accepted agent but is intentionally not another account FK. External preparation starts in `awaiting_reservation`; finalized reservation validation moves it into the executable queue. `lease_token` fences worker updates and heartbeats to the current claim. Expired active leases are reconsidered on each claim; a provider-attempt marker prevents automatic repeated inference after an unknown outcome.
+
 For this single-execution service, output and verification artifacts are one encrypted payload in `result_cipher`. Separate request, artifact and verification-history tables are not needed until the product actually supports multiple deliveries/versions. The exact-byte evidence remains lossless inside that encrypted bundle.
 
-After permitted erasure, clear ciphertext and record `erased_at`; retain the job's non-secret identity and payment references. Do not delete the relational history just to erase a private prompt. Default payload retention is seven days after a terminal outcome, as defined in the product specification; this policy still requires implementation.
+After permitted erasure, clear ciphertext and record `erased_at`; retain the job's non-secret identity and payment references. The worker records the first confirmed terminal observation in `terminal_at` and erases private payloads seven days later. Buyer-requested erasure requires a terminal order. Neither path deletes public chain history.
 
 ### `pb_chain_observations`: observed transaction evidence
 
@@ -127,7 +129,7 @@ Primary key: bigint `id`. Foreign keys: optional `job_id -> pb_jobs.job_id`, and
 
 `job_id` can be null for minting a pass, transferring it before an order, or observing a transaction that did not originate from a local job. The separate `order_id`/`token_id` fields preserve public chain references even when no local job exists. A matching local job is linked only after network/contract/order identity agrees.
 
-Many transactions can belong to one job: reservation, delivery publication, payment approval, and an explicit failed-payment retry. One observation links to at most one local job in the MVP. If future batches can affect multiple independent jobs, introduce a transaction-job junction at that time rather than overloading this relation.
+Many transactions can belong to one job: reservation, delivery publication, Manual payment approval and an explicit failed-payment retry. In Automatic mode the initial payout starts from delivery publication; there is no final buyer-approval transaction. One observation links to at most one local job in the MVP. If future batches affect multiple independent jobs, introduce a transaction-job junction.
 
 This table is a record of RPC evidence. Editing it cannot authorize a seller payout or change a pass owner. Actual receiver outcomes and contract state remain authoritative.
 
@@ -216,7 +218,7 @@ One pass has zero orders before reservation and one order after reservation. Tha
 
 Neon cannot enforce a foreign key against a blockchain map. The app reads the correct network and contract, verifies identifiers and commitments, and stores an observational link. A SQL `state='delivered'` or a recorded transaction hash cannot make a contract payment succeed.
 
-## 8. Concrete example
+## 8. Concrete Manual example
 
 1. Alice requests a challenge and establishes a session. Both rows point to Alice's account record.
 2. Alice mints `pass-1`; mint observation has no `job_id` because no order exists yet.
@@ -226,7 +228,7 @@ Neon cannot enforce a foreign key against a blockchain map. The app reads the co
 6. Bob approves payment. Its observation links to the job. Paid/Completed is displayed only after the contract's final transfer result agrees.
 7. A future transfer of the Completed NFT does not rewrite `pb_jobs.buyer_id`; private results remain Bob's until exported/erased under the retention policy.
 
-## 9. Changes required after this design review
+## 9. Relational migration history
 
 1. Add/backfill `pb_accounts` from public account identifier columns without treating those rows as authenticated sessions.
 2. Add job UUID and explicit network/contract scope; preserve existing order IDs and data.

@@ -1,6 +1,6 @@
 # Bring your own agent
 
-Choose the built-in Research assistant or a dedicated NEAR account controlled by your own agent. The NFT stays in the owner's wallet. Each pass binds one service, seller, amount and expiry.
+Choose the built-in ProofBill assistant or a dedicated NEAR account controlled by your own agent. The NFT stays in the owner's wallet. Each pass binds one service, seller, amount and expiry.
 
 ## Owner setup
 
@@ -38,6 +38,8 @@ Direct clients use the session cookie returned by `/api/auth/verify` and the app
 Manual mode requires an owner approval transaction. Automatic mode is advance authorization for this single pass. The contract starts payment after its configured publisher records delivery matching the reserved request and model/policy. It trusts the publisher to assert the offchain checks; it does not verify TEE signatures onchain. Evidence does not guarantee answer quality. Publisher compromise can trigger an Automatic pass's fixed payment without another owner approval. Manual remains the default.
 
 Both modes mark Paid only after a successful seller-transfer callback. Failed payouts become TransferFailed with owner retry/refund paths. Expired passes cannot start Automatic payment. Agents cannot redirect the seller, increase the amount or spend twice.
+
+Read-only public receipts at `/receipts/:orderId` need no wallet. They identify the historical buyer separately from the current NFT holder. Private results and verification bundles require that buyer's signed session; transferring a Completed NFT does not transfer private access. Failed-payment retries require the buyer's wallet approval even when the initial payment policy was Automatic.
 
 The current NEP-413 account-ownership verifier requires a FullAccess key for the dedicated agent account. Restricted-function-call-key login is not supported by this SDK version. This account is separate from the owner's wallet and its key stays in your runtime. Hosted agent and publisher operational keys remain method-restricted.
 

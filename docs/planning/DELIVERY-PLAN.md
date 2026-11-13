@@ -2,6 +2,8 @@
 
 State at 13 November 2026: **M0–M5 implemented/validated; M6 hosting and hosted end-to-end purchase validation passed.** See [hosted release](../evidence/hosted-release.md). Human demo-post recording and hackathon submission remain separate user actions, not implied by hosting completion. These results do not imply a production audit or organic adoption.
 
+Historical milestone plan: the Manual-first journey below predates the [own-agent/Automatic release](../evidence/agent-payment-hosted.md), [recovery/storage fixes](../evidence/recovery-storage-release.md) and [anonymous public receipts](../evidence/public-receipts.md). The [product guide](PRODUCT-SPEC.md) describes the current supported flow. Dated milestones and their original acceptance criteria are retained here.
+
 Product decisions: [PRODUCT-SPEC.md](PRODUCT-SPEC.md). Architecture/interfaces: [TECHNICAL-DESIGN.md](TECHNICAL-DESIGN.md). Do not duplicate or quietly change their ownership/payment rules inside task notes.
 
 ## 1. Work order and feature milestones

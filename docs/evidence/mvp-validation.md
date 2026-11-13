@@ -2,6 +2,8 @@
 
 Date: 13 November 2026, Asia/Jakarta. Network: NEAR testnet. These are project-owned scripted accounts, not customer traction. Hosting validation is tracked separately.
 
+This is the historical Manual-first validation matrix. Later scope is recorded in the [agent/payment release](agent-payment-hosted.md), [recovery/storage release](recovery-storage-release.md) and [public-receipt checks](public-receipts.md). Original outcomes below are retained as evidence of that baseline.
+
 ## Executed outcomes
 
 | Boundary | Outcome | Scope |

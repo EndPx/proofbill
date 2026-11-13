@@ -32,7 +32,7 @@ ProofBill puts that purchase into one lifecycle:
 
 The initial user is a developer or small team operating paid-API agents. The current service turns a short purchase brief into an item, quantity and requester. The agent has a bounded purchasing role; the holder chooses Manual approval or explicitly preauthorizes Automatic payment for that pass.
 
-**Current state:** a live NEAR testnet MVP, with a recorded hosted purchase through Vercel, Neon, the worker, actual NEAR AI inference and the contract. [Inspect that journey](docs/evidence/integration/pass-2-order.json).
+**Current state:** a hosted NEAR testnet MVP. Both the ProofBill assistant and owner-operated agents have completed Manual and Automatic purchases through Vercel, Neon, the worker, actual NEAR AI inference and the contract. [Inspect the four combinations](docs/evidence/agent-payment-hosted.md), [recovery/storage release](docs/evidence/recovery-storage-release.md) and [anonymous public receipts](docs/evidence/public-receipts.md).
 
 <p align="center">
   <img src=".github/assets/landing-desktop.webp" alt="The live ProofBill landing page with its Purchase Pass illustration, wallet entry action and testnet product preview." width="1200" />
@@ -56,7 +56,7 @@ The receipt image is a recorded testnet snapshot. The [public receipt](https://p
 1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), click through the sample workspace menus, switch through the three purchase steps, and try the clearly labelled handover illustration. The interactive workspace uses local mock records; it needs no wallet or credits and submits no transactions.
 2. **Inspect a real public receipt.** Open the [Manual example](https://proofbill-two.vercel.app/receipts/pass-2-order) or [Automatic example](https://proofbill-two.vercel.app/receipts/pass-10-order) without connecting a wallet. The [workspace](https://proofbill-two.vercel.app/app/purchases) remains wallet-gated; another wallet cannot unlock the buyer's private result.
 3. **Check the payment independently.** Compare the [successful seller payment](https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z), [duplicate-payment refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1), and [integration record](docs/evidence/integration/pass-2-order.json). Reading these does not require a new purchase.
-4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, assign Research assistant, enter a brief, run the agent, unlock the result, and approve payment or request a refund where permitted. Funding and policy changes require your wallet signature. Manual payments require another approval; Automatic settlement uses advance authorization after matching publisher delivery. See [own-agent and payment-mode setup](docs/agent-integration.md).
+4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, choose the ProofBill assistant or your own agent, and set the payment policy before ordering. With the ProofBill assistant, enter a brief and run the agent; for your own agent, follow the [SDK/CLI setup](docs/agent-integration.md). Sign a buyer session to unlock the result. Manual payment requires your approval after review; Automatic settlement starts after matching publisher delivery under your advance authorization. Refund actions depend on contract state. Funding and policy changes require a wallet transaction.
 5. **Review or reproduce the code.** Use the track/source map below, then run [local checks](#checks-and-reproduction). Browser tests use fixtures and need no signing or provider secrets.
 
 The fixed service allocation is **0.010 native testnet NEAR**. Minting also reserves a separate **0.030 NEAR storage budget**, plus transaction gas. Storage backing is retained while its NFT/history exists and is not part of the service refund. The seller/operator pays inference credits independently of the later payout.
@@ -65,10 +65,10 @@ The fixed service allocation is **0.010 native testnet NEAR**. Minting also rese
 
 | Track | What is implemented | Where to inspect it |
 | --- | --- | --- |
-| **Agent Economy** | A named, restricted agent reserves one bound service order; actual execution leads to a separately approved seller payout. | [Agent worker](workers/agent/src/index.ts), [reservation transaction](https://testnet.nearblocks.io/txns/7L5yX1XcyydLyYdgsApsajWqoPrPUTAjXuCBwv3BusLk), [paid order](docs/evidence/integration/pass-2-order.json) |
+| **Agent Economy** | The ProofBill assistant or an assigned external agent reserves one bound service order. Manual approval or explicit Automatic authorization controls the fixed seller payout. | [Agent worker](workers/agent/src/index.ts), [own-agent SDK](packages/agent-client/src/index.ts), [four hosted combinations](docs/evidence/agent-payment-hosted.md) |
 | **AI Security & Defense** | Fixed seller/amount/expiry, holder and revision checks, method-restricted operational keys, single-use order, explicit pending/failure states and callback-driven payment. | [Contract](contracts/proofbill/src/lib.rs), [Sandbox cases](contracts/proofbill/tests/test_basics.rs), [duplicate refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1) |
 | **Privacy & Private AI** | Buyer-authenticated private reads, encrypted artifacts, exact-byte response checks and scoped model-serving TEE evidence from NEAR AI Cloud. | [Authentication](packages/server/src/auth.ts), [private API](apps/web/src/app/api/%5B...path%5D/route.ts), [inference verifier](workers/inference/inference.py), [response-probe scope](docs/evidence/near-ai-response-probe.md) |
-| **NFTs That Do Something** | A funded NEP-171 purchase/refund entitlement follows ownership; unused transfer clears agent assignment, active orders lock transfer, and completion updates metadata. | [NFT and payment implementation](contracts/proofbill/src/lib.rs), [transfer transaction](https://testnet.nearblocks.io/txns/DcJ1hjcBDByvvY6SMgDNyBLBCYbeuYa4uxTaTqSfBt12), [receiver/ownership cases](contracts/proofbill/tests/test_basics.rs) |
+| **NFTs That Do Something** | A funded NEP-171 purchase/refund entitlement follows ownership; unused transfer clears agent assignment and Automatic permission, active orders lock transfer, and completion updates metadata. | [NFT and payment implementation](contracts/proofbill/src/lib.rs), [transfer transaction](https://testnet.nearblocks.io/txns/DcJ1hjcBDByvvY6SMgDNyBLBCYbeuYa4uxTaTqSfBt12), [receiver/ownership cases](contracts/proofbill/tests/test_basics.rs) |
 
 These are implementation claims, not awards or a security certification. [The official NEAR Hackathon rules](https://nearhackathon.com/HACKATHON.md) govern submission eligibility and final track selection.
 
@@ -76,6 +76,7 @@ These are implementation claims, not awards or a security certification. [The of
 
 | Evidence | What it establishes | Boundary |
 | --- | --- | --- |
+| [Agent/payment release](docs/evidence/agent-payment-hosted.md), [recovery/storage release](docs/evidence/recovery-storage-release.md) and [public receipts](docs/evidence/public-receipts.md) | Hosted agent/payment combinations, restart and storage regressions, and anonymous receipt access with private boundaries intact. | Each report separates local fixtures from real provider/testnet checks; no mainnet or independent customer claim. |
 | [Hosted release](docs/evidence/hosted-release.md) and [pass-2-order record](docs/evidence/integration/pass-2-order.json) | The hosted API, private persistence, worker, inference and NEAR testnet purchase were exercised together. | Project-owned test accounts and synthetic input; not customer traction. |
 | [Deployment identities](infra/near/testnet-deployment.json) | Public contract/operator IDs, deploy transaction, Wasm size and artifact hash. | A deployment record, not an audit or a claim that every later source commit was redeployed. |
 | [Response verification probe](docs/evidence/near-ai-response-probe.md) | One actual response, its signature/preflight checks and the verifier's explicit limits. | Response integrity and stated execution context do not establish answer accuracy. |
@@ -96,21 +97,26 @@ flowchart LR
   end
   subgraph Offchain["Offchain application and inference"]
     DB[("Neon<br/>Sessions · jobs · encrypted artifacts")]
-    W["Restricted agent worker"]
+    W["Worker · hosted agent and publisher keys"]
+    X["Owner-operated agent runtime"]
     V["Python inference verifier"]
     AI["NEAR AI Cloud<br/>Response and attestation evidence"]
   end
   H --> UI
-  H -->|"Fund · transfer · approve"| C
+  H -->|"Fund · transfer · set policy · Manual approval"| C
   UI --> API
   API --> DB
   API -->|"Read confirmed state"| C
   W <--> DB
   W -->|"Reserve · publish delivery"| C
+  X -->|"Authenticate · prepare · submit"| API
+  X -->|"Reserve assigned order"| C
   W --> V --> AI
 ```
 
 **Onchain state is the financial authority.** Neon holds private application state and observational references; a database row cannot authorize payment. The agent does not receive the holder's wallet key. Manual payment requires holder approval. Automatic payment uses explicit per-pass authorization after matching publisher delivery. Both modes require a successful seller-transfer callback before marking an order Paid.
+
+The **holder** is the current NFT owner and controls an unused pass. The **buyer** is recorded at reservation and retains private result access after a completed NFT transfers. Hosted operational keys are method-restricted; the external-agent SDK currently authenticates with its own dedicated account's FullAccess key, kept in that runtime. It never receives the holder's key. A failed seller transfer requires buyer approval to retry in either payment mode.
 
 **The evidence publisher remains trusted.** The contract accepts the application's offchain verification statement; it does not verify Intel/NVIDIA quotes onchain. The implemented verifier checks exact response bytes, the ECDSA signer and required Intel TDX/GPU preflight evidence. TLS connection binding and independent source/image allowlisting are **Not checked**; the NRAS JWT chain is not locally revalidated.
 
@@ -120,9 +126,10 @@ flowchart LR
 
 | Path | Responsibility |
 | --- | --- |
-| [`apps/web`](apps/web) | Next.js landing, wallet entry, purchase workspace and private HTTP API |
+| [`apps/web`](apps/web) | Next.js landing, anonymous public receipts, wallet entry, purchase workspace and private HTTP API |
 | [`contracts/proofbill`](contracts/proofbill) | Rust Purchase Pass contract, native payment lifecycle and Sandbox cases |
-| [`workers/agent`](workers/agent) | Restricted order execution, queue leasing and reconciliation |
+| [`workers/agent`](workers/agent) | Hosted order execution, own-agent CLI, queue leasing and reconciliation |
+| [`packages/agent-client`](packages/agent-client) | Owner-operated agent authentication and reservation SDK |
 | [`workers/inference`](workers/inference) | NEAR AI request, exact-byte signature and attestation checks |
 | [`packages/shared`](packages/shared) | Public types, integer amounts and pass-rights helpers |
 | [`packages/server`](packages/server) | Server-only auth, encryption, persistence and chain reads |
@@ -207,7 +214,7 @@ These cover receiver keep/return/failure, transferred refund rights, failed nati
 
 ProofBill is a **testnet MVP**, not an audited or mainnet-ready product. Demand and willingness to pay have not been established by an independent pilot. The current agent executes one fixed service/model/seller; it does not shop across a marketplace.
 
-The seller pays inference costs before buyer approval. A rejection/refund does not undo provider usage. Broader worker retry/ownership-race coverage and seller-accepted commercial terms remain work for a production version.
+In Manual mode, the seller pays inference costs before buyer approval; rejection/refund does not undo provider usage. Automatic mode uses advance authorization and has no final semantic-review gate. Broader fault coverage and seller-accepted commercial terms remain work for a production version.
 
 ## Provenance, team and license
 
