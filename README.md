@@ -84,7 +84,7 @@ These are implementation claims, not awards or a security certification. [The of
 | [Deployment identities](infra/near/testnet-deployment.json) | Public contract/operator IDs, deploy transaction, Wasm size and artifact hash. | A deployment record, not an audit or a claim that every later source commit was redeployed. |
 | [Response verification probe](docs/evidence/near-ai-response-probe.md) | One actual response, its signature/preflight checks and the verifier's explicit limits. | Response integrity and stated execution context do not establish answer accuracy. |
 | [MVP validation matrix](docs/evidence/mvp-validation.md) | Recorded auth, ownership, refusal, payment and local callback checks, with scope per row. | Local Sandbox uses a synthetic publisher; it is not provider-inference evidence. |
-| [GitHub Actions](https://github.com/EndPx/proofbill/actions/workflows/check.yml) | Fresh-run typechecks, unit tests, production build and browser/accessibility journeys. | No paid inference, wallet signing or chain writes; Rust/Sandbox checks run separately. |
+| [GitHub Actions](https://github.com/EndPx/proofbill/actions/workflows/check.yml) | Typechecks, application/retention tests, production build, browser journeys, Python evidence checks and pinned Rust/cargo-near/Wasm Sandbox checks. | No paid inference, real wallet signing or public-chain writes; Sandbox uses synthetic publisher data. |
 
 The hosted record contains a successful buyer read and denial for another authenticated account. Original private request/response artifacts are encrypted and are not made public through a receipt. Browser connection tests use an injected wallet fixture; the recorded integration exercised signatures through the SDK/API, not an automated human wallet confirmation.
 
@@ -196,12 +196,13 @@ Run `pnpm test:recovery` with the same isolated database to test actual killed/r
 
 Run `pnpm test:retention` against that isolated database for persistent fair scanning, RPC failure isolation, seven-day erasure and contract scoping. [Retention checks](docs/evidence/retention-fairness.md) cover a Paid job behind more than twenty unresolved records without accessing live private payloads.
 
-Contract tests require [the pinned Rust toolchain](contracts/proofbill/rust-toolchain.toml), cargo-near and Sandbox prerequisites. Windows contract validation was performed in WSL Ubuntu:
+Contract CI uses [Rust 1.99.1](contracts/proofbill/rust-toolchain.toml), checksum-pinned cargo-near 0.22.0 and Ubuntu 24.04. It checks formatting, runs native unit tests, builds the official NEAR Wasm, then passes that exact artifact to Sandbox. Wasm/ABI artifacts are retained in the workflow. Local Linux reproduction:
 
 ```sh
 cd contracts/proofbill
 cargo test --lib
-cargo test --test test_basics -- --nocapture
+cargo near build non-reproducible-wasm --locked
+PROOFBILL_WASM=target/near/proofbill.wasm cargo test --test test_basics --locked -- --nocapture
 ```
 
 These cover receiver keep/return/failure, transferred refund rights, failed native seller payout and the refund exit. `PROOFBILL_WASM` can select an already-built artifact; the default path builds with cargo-near.

@@ -37,7 +37,7 @@ cargo test --lib
 cargo test --test test_basics -- --nocapture
 ```
 
-Sandbox tests run separately from the GitHub web/browser workflow. Read [the validation record](docs/evidence/mvp-validation.md) for their scope and prerequisites. Do not describe tests you have not run as passing.
+The workflow has a separate financial-contract job using Rust 1.99.1, checksum-pinned cargo-near 0.22.0 and actual Wasm/Sandbox tests. It builds with the SDK's required NEAR configuration and checks refusal reasons, callback outcomes, budget conservation and NFT rights. The web, Python and PostgreSQL jobs do not substitute for that contract job. Sandbox publisher data remains synthetic; CI sends no transactions to a public chain and consumes no inference credits. Read [the contract guide](contracts/proofbill/README.md) for reproduction.
 
 ## Respect the boundaries
 
