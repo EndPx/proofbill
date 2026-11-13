@@ -7,19 +7,26 @@ import { Account, KeyPairSigner, actions } from "near-api-js";
 import { db, digest } from "@proofbill/server";
 import { contractId, provider, view } from "@proofbill/server/chain";
 import type { PurchasePass, PurchaseOrder } from "@proofbill/shared";
+import {checkOrderUpgrade} from "./upgrade-checks.ts";
 
 const root = "proofbill-endpx-2026.testnet";
 assert.equal(contractId(), root);
 const rpc = provider();
 assert.equal(await rpc.getNetworkId(), "testnet");
-const beforePasses = await view<PurchasePass[]>("list_passes", {
+const snapshotBlock=await rpc.viewBlock({finality:"final"});
+const snapshotQuery={blockId:snapshotBlock.header.hash};
+const beforePasses = await rpc.callFunction({contractId:root,method:"list_passes",blockQuery:snapshotQuery,args:{
   from_index: 0,
   limit: 100,
-});
-const beforeOrders = await view<PurchaseOrder[]>("list_orders", {
+}}) as PurchasePass[];
+const listedOrders = await rpc.callFunction({contractId:root,method:"list_orders",blockQuery:snapshotQuery,args:{
   from_index: 0,
   limit: 100,
-});
+}}) as PurchaseOrder[];
+const beforeOrders=await Promise.all(listedOrders.map(order=>rpc.callFunction({contractId:root,method:"get_order",args:{order_id:order.order_id},blockQuery:snapshotQuery}) as Promise<PurchaseOrder>));
+for(const order of beforeOrders){
+  if(!order.payment_mode)assert.ok(!beforePasses.find(p=>p.token_id===order.token_id)?.budget,"A reusable order requires its own policy snapshot before deployment");
+}
 const supply = await view<string>("nft_total_supply");
 assert.equal(
   BigInt(supply),
@@ -28,7 +35,7 @@ assert.equal(
 );
 const accountBefore = await rpc.viewAccount({
   accountId: root,
-  blockQuery: { finality: "final" },
+  blockQuery: snapshotQuery,
 });
 const active =
   await db()`select count(*)::int as count from pb_jobs where contract_id=${root} and (state in ('awaiting_reservation','queued','claimed','reserving','running','publishing') or (state='reconciliation_required' and lease_until is not null) or (state='failed' and result_cipher is not null))`;
@@ -101,6 +108,7 @@ if (process.env.CONFIRM_PROOFBILL_TESTNET_UPGRADE === "yes") {
     throwOnFailure: true,
     retries: 0,
   });
+  await writeFile(`${backupDir}/deployment.json`,JSON.stringify({deploy_transaction:deployed.transaction.hash,wasm_sha256:digest(wasm),snapshot_block_hash:snapshotBlock.header.hash},null,2));
   const code = await rpc.viewContractCode({
     contractId: root,
     blockQuery: { finality: "final" },
@@ -118,10 +126,7 @@ if (process.env.CONFIRM_PROOFBILL_TESTNET_UPGRADE === "yes") {
   }
   for (const old of beforeOrders) {
     const current = await view<PurchaseOrder>("get_order", { order_id: old.order_id });
-    for (const [field, value] of Object.entries(old))
-      assert.deepEqual((current as unknown as Record<string, unknown>)[field], value);
-    const previousMode = old.payment_mode ?? beforePasses.find(p => p.token_id === old.token_id)?.payment_mode ?? "Manual";
-    assert.equal(current.payment_mode ?? previousMode, previousMode);
+    checkOrderUpgrade(old,current,beforePasses.find(p=>p.token_id===old.token_id)?.payment_mode??"Manual");
   }
   const report = {
     tested_at: new Date().toISOString(),
