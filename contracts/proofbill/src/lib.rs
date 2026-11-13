@@ -78,6 +78,20 @@ pub struct PurchaseOrder {
     pub attempt: u32,
     pub created_at_ns: U64,
 }
+// Additional policy storage leaves the original Borsh pass/order layouts readable.
+#[near(serializers=[json])]
+#[derive(Clone, PartialEq, Debug, Default)]
+pub enum PaymentMode {
+    #[default]
+    Manual,
+    Automatic,
+}
+#[near(serializers=[json])]
+pub struct PassView {
+    #[serde(flatten)]
+    pub pass: PurchasePass,
+    pub payment_mode: PaymentMode,
+}
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Contract {
@@ -123,10 +137,15 @@ impl Contract {
         }
     }
     pub fn get_config(&self) -> near_sdk::serde_json::Value {
-        near_sdk::serde_json::json!({"service_id":SERVICE,"model_id":MODEL,"policy_id":POLICY,"price_yocto":PRICE.to_string(),"storage_budget_yocto":STORAGE.to_string(),"seller_id":self.seller,"publisher_id":self.publisher,"network":"testnet"})
+        near_sdk::serde_json::json!({"service_id":SERVICE,"model_id":MODEL,"policy_id":POLICY,"price_yocto":PRICE.to_string(),"storage_budget_yocto":STORAGE.to_string(),"seller_id":self.seller,"publisher_id":self.publisher,"network":"testnet","version":2,"agent_modes":true,"payment_modes":["Manual","Automatic"]})
     }
     #[payable]
-    pub fn create_purchase_pass(&mut self, service_id: String, expires_at_ns: U64) -> PurchasePass {
+    pub fn create_purchase_pass(
+        &mut self,
+        service_id: String,
+        expires_at_ns: U64,
+        payment_mode: Option<PaymentMode>,
+    ) -> PurchasePass {
         require!(service_id == SERVICE, "UNSUPPORTED_SERVICE");
         let now = env::block_timestamp();
         require!(
@@ -169,6 +188,7 @@ impl Contract {
             attempt: 0,
             refund_receiver: None,
         };
+        self.write_payment_mode(&id, &payment_mode.unwrap_or_default());
         self.store_charged(&mut p, before);
         NftMint {
             owner_id: &owner,
@@ -188,13 +208,24 @@ impl Contract {
         token_id: String,
         expected_revision: u32,
         agent_id: AccountId,
+        payment_mode: Option<PaymentMode>,
     ) -> PurchasePass {
         assert_one_yocto();
         let mut p = self.holder(&token_id, expected_revision);
         self.available(&p);
         let before = env::storage_usage();
         p.agent_id = Some(agent_id);
-        p.authorization_revision += 1;
+        if let Some(mode) = payment_mode {
+            self.write_payment_mode(&token_id, &mode);
+        }
+        p.authorization_revision = p
+            .authorization_revision
+            .checked_add(1)
+            .expect("REVISION_OVERFLOW");
+        event(
+            "pass_authorized",
+            near_sdk::serde_json::json!({"token_id":token_id,"owner_id":p.owner_id,"agent_id":p.agent_id,"revision":p.authorization_revision,"payment_mode":self.payment_mode(&token_id)}),
+        );
         self.store_charged(&mut p, before);
         p
     }
@@ -253,7 +284,7 @@ impl Contract {
         model_id: String,
         policy_id: String,
         signature_kind: String,
-    ) -> PurchaseOrder {
+    ) -> PromiseOrValue<PurchaseOrder> {
         require!(
             env::predecessor_account_id() == self.publisher,
             "PUBLISHER_ONLY"
@@ -278,6 +309,16 @@ impl Contract {
             model_id == p.model_id && policy_id == POLICY && signature_kind == "provider_tee",
             "POLICY_MISMATCH"
         );
+        require!(
+            p.owner_id == o.buyer_id
+                && p.authorization_revision == o.revision
+                && p.agent_id.as_ref() == Some(&o.agent_id),
+            "ORDER_AUTHORIZATION_MISMATCH"
+        );
+        let automatic = self.payment_mode(&p.token_id) == PaymentMode::Automatic;
+        if automatic {
+            require!(env::block_timestamp() < p.expires_at_ns.0, "PASS_EXPIRED");
+        }
         let before = env::storage_usage();
         o.response_commitment = Some(response_commitment);
         o.evidence_commitment = Some(evidence_commitment);
@@ -289,7 +330,11 @@ impl Contract {
             "delivery_published",
             near_sdk::serde_json::json!({"order_id":order_id}),
         );
-        o
+        if automatic {
+            PromiseOrValue::Promise(self.start_payment(&p, &mut o))
+        } else {
+            PromiseOrValue::Value(o)
+        }
     }
     #[payable]
     pub fn approve_and_pay(
@@ -433,8 +478,8 @@ impl Contract {
         );
         ok
     }
-    pub fn get_pass(&self, token_id: String) -> Option<PurchasePass> {
-        self.passes.get(&token_id)
+    pub fn get_pass(&self, token_id: String) -> Option<PassView> {
+        self.passes.get(&token_id).map(|pass| self.pass_view(pass))
     }
     pub fn get_order(&self, order_id: String) -> Option<PurchaseOrder> {
         self.orders.get(&order_id)
@@ -444,12 +489,13 @@ impl Contract {
         owner_id: Option<AccountId>,
         from_index: Option<u64>,
         limit: Option<u64>,
-    ) -> Vec<PurchasePass> {
+    ) -> Vec<PassView> {
         self.passes
             .values()
             .filter(|p| owner_id.as_ref().is_none_or(|a| &p.owner_id == a))
             .skip(from_index.unwrap_or(0) as usize)
             .take(limit.unwrap_or(50).min(100) as usize)
+            .map(|p| self.pass_view(p))
             .collect()
     }
     pub fn list_orders(
@@ -478,6 +524,33 @@ impl Contract {
     }
 }
 impl Contract {
+    fn payment_key(id: &str) -> Vec<u8> {
+        [b"pb:payment:".as_slice(), id.as_bytes()].concat()
+    }
+    fn payment_mode(&self, id: &str) -> PaymentMode {
+        match env::storage_read(&Self::payment_key(id)) {
+            None => PaymentMode::Manual,
+            Some(value) if value == [1] => PaymentMode::Automatic,
+            Some(_) => env::panic_str("INVALID_PAYMENT_POLICY"),
+        }
+    }
+    fn write_payment_mode(&self, id: &str, mode: &PaymentMode) {
+        let key = Self::payment_key(id);
+        match mode {
+            PaymentMode::Manual => {
+                env::storage_remove(&key);
+            }
+            PaymentMode::Automatic => {
+                env::storage_write(&key, &[1]);
+            }
+        }
+    }
+    fn pass_view(&self, pass: PurchasePass) -> PassView {
+        PassView {
+            payment_mode: self.payment_mode(&pass.token_id),
+            pass,
+        }
+    }
     fn pass(&self, id: &String) -> PurchasePass {
         self.passes.get(id).expect("PASS_NOT_FOUND")
     }
@@ -571,7 +644,13 @@ impl Contract {
             "ACTIVE_PASS_LOCKED"
         );
         p.agent_id = None;
-        p.authorization_revision += 1;
+        if p.phase == PassPhase::Available {
+            self.write_payment_mode(id, &PaymentMode::Manual);
+        }
+        p.authorization_revision = p
+            .authorization_revision
+            .checked_add(1)
+            .expect("REVISION_OVERFLOW");
         p.owner_id = receiver.clone();
         p.transfer_pending = pending;
         let reserve: u128 = if pending { 1024 } else { 256 };
@@ -644,7 +723,9 @@ impl NonFungibleTokenCore for Contract {
     fn nft_token(&self, token_id: TokenId) -> Option<Token> {
         self.tokens.nft_token(token_id.clone()).map(|mut t| {
             if let Some(ref mut m) = t.metadata {
-                m.extra = Some(near_sdk::serde_json::to_string(&self.pass(&token_id)).unwrap());
+                m.extra = Some(
+                    near_sdk::serde_json::to_string(&self.pass_view(self.pass(&token_id))).unwrap(),
+                );
             }
             t
         })
@@ -729,9 +810,9 @@ mod tests {
     #[test]
     fn transfer_moves_entitlement() {
         let mut c = setup();
-        c.create_purchase_pass(SERVICE.into(), U64(1_000_000));
+        c.create_purchase_pass(SERVICE.into(), U64(1_000_000), None);
         ctx("alice.testnet", 1);
-        c.assign_agent("pass-1".into(), 0, "agent.testnet".parse().unwrap());
+        c.assign_agent("pass-1".into(), 0, "agent.testnet".parse().unwrap(), None);
         c.nft_transfer("bob.testnet".parse().unwrap(), "pass-1".into(), None, None);
         let p = c.pass(&"pass-1".into());
         assert_eq!(p.owner_id, "bob.testnet");
@@ -743,7 +824,7 @@ mod tests {
     #[should_panic(expected = "HOLDER_ONLY")]
     fn old_owner_rejected() {
         let mut c = setup();
-        c.create_purchase_pass(SERVICE.into(), U64(1_000_000));
+        c.create_purchase_pass(SERVICE.into(), U64(1_000_000), None);
         ctx("alice.testnet", 1);
         c.nft_transfer("bob.testnet".parse().unwrap(), "pass-1".into(), None, None);
         c.cancel_and_refund("pass-1".into(), 1);
@@ -752,11 +833,93 @@ mod tests {
     #[should_panic(expected = "PASS_NOT_AVAILABLE")]
     fn single_order() {
         let mut c = setup();
-        c.create_purchase_pass(SERVICE.into(), U64(1_000_000));
+        c.create_purchase_pass(SERVICE.into(), U64(1_000_000), None);
         ctx("alice.testnet", 1);
-        c.assign_agent("pass-1".into(), 0, "agent.testnet".parse().unwrap());
+        c.assign_agent("pass-1".into(), 0, "agent.testnet".parse().unwrap(), None);
         ctx("agent.testnet", 0);
         c.reserve_order("pass-1".into(), 1, "a".repeat(64));
         c.reserve_order("pass-1".into(), 1, "b".repeat(64));
+    }
+    #[test]
+    fn legacy_pass_defaults_manual_and_policy_does_not_change_stored_layout() {
+        let mut c = setup();
+        let p = c.create_purchase_pass(SERVICE.into(), U64(1_000_000), None);
+        let original = near_sdk::borsh::to_vec(&p).unwrap();
+        assert_eq!(c.payment_mode(&p.token_id), PaymentMode::Manual);
+        ctx("alice.testnet", 1);
+        c.assign_agent(
+            p.token_id.clone(),
+            0,
+            "custom.testnet".parse().unwrap(),
+            Some(PaymentMode::Automatic),
+        );
+        assert_eq!(c.payment_mode(&p.token_id), PaymentMode::Automatic);
+        let restored: PurchasePass = near_sdk::borsh::from_slice(&original).unwrap();
+        assert_eq!(restored.owner_id, "alice.testnet");
+        c.nft_transfer(
+            "bob.testnet".parse().unwrap(),
+            p.token_id.clone(),
+            None,
+            None,
+        );
+        assert_eq!(c.payment_mode(&p.token_id), PaymentMode::Manual);
+        assert!(c.pass(&p.token_id).agent_id.is_none());
+    }
+    #[test]
+    #[should_panic(expected = "HOLDER_ONLY")]
+    fn agent_cannot_enable_automatic_payment() {
+        let mut c = setup();
+        c.create_purchase_pass(SERVICE.into(), U64(1_000_000), None);
+        ctx("custom.testnet", 1);
+        c.assign_agent(
+            "pass-1".into(),
+            0,
+            "custom.testnet".parse().unwrap(),
+            Some(PaymentMode::Automatic),
+        );
+    }
+    #[test]
+    fn automatic_delivery_starts_only_the_fixed_seller_payment() {
+        let mut c = setup();
+        c.create_purchase_pass(SERVICE.into(), U64(1_000_000), Some(PaymentMode::Automatic));
+        ctx("alice.testnet", 1);
+        c.assign_agent("pass-1".into(), 0, "custom.testnet".parse().unwrap(), None);
+        ctx("custom.testnet", 0);
+        c.reserve_order("pass-1".into(), 1, "a".repeat(64));
+        ctx("publisher.testnet", 0);
+        let result = c.publish_delivery(
+            "pass-1-order".into(),
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            MODEL.into(),
+            POLICY.into(),
+            "provider_tee".into(),
+        );
+        assert!(matches!(result, PromiseOrValue::Promise(_)));
+        let o = c.order(&"pass-1-order".into());
+        assert_eq!(o.phase, OrderPhase::PaymentPending);
+        assert_eq!(o.seller_id, "seller.testnet");
+        assert_eq!(o.price_yocto.0, PRICE);
+        assert_eq!(c.pass(&"pass-1".into()).owner_id, "alice.testnet");
+    }
+    #[test]
+    #[should_panic(expected = "PUBLISHER_ONLY")]
+    fn custom_agent_cannot_fabricate_delivery_or_payment() {
+        let mut c = setup();
+        c.create_purchase_pass(SERVICE.into(), U64(1_000_000), Some(PaymentMode::Automatic));
+        ctx("alice.testnet", 1);
+        c.assign_agent("pass-1".into(), 0, "custom.testnet".parse().unwrap(), None);
+        ctx("custom.testnet", 0);
+        c.reserve_order("pass-1".into(), 1, "a".repeat(64));
+        c.publish_delivery(
+            "pass-1-order".into(),
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            MODEL.into(),
+            POLICY.into(),
+            "provider_tee".into(),
+        );
     }
 }

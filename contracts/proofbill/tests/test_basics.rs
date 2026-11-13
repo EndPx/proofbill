@@ -187,5 +187,135 @@ async fn purchase_rights_callbacks_and_refund() -> testresult::TestResult<()> {
         1
     )
     .assert_failure();
+
+    // Manual default, custom signer restrictions, automatic failed transfer and refund exit.
+    for (mode, expected_phase) in [("Manual", "Delivered"), ("Automatic", "TransferFailed")] {
+        send!(&bob,"create_purchase_pass",json!({"service_id":"private-extraction-v1","expires_at_ns":expiry,"payment_mode":mode}),PRICE+30_000_000_000_000_000_000_000).assert_success();
+        let token = if mode == "Manual" { "pass-5" } else { "pass-6" };
+        let order = format!("{token}-order");
+        send!(&alice,"assign_agent",json!({"token_id":token,"expected_revision":0,"agent_id":alice.account_id(),"payment_mode":"Automatic"}),1).assert_failure();
+        send!(&bob,"assign_agent",json!({"token_id":token,"expected_revision":0,"agent_id":alice.account_id(),"payment_mode":mode}),1).assert_success();
+        send!(
+            &bob,
+            "reserve_order",
+            json!({"token_id":token,"expected_revision":1,"request_commitment":"a".repeat(64)}),
+            0
+        )
+        .assert_failure();
+        send!(
+            &alice,
+            "reserve_order",
+            json!({"token_id":token,"expected_revision":1,"request_commitment":"a".repeat(64)}),
+            0
+        )
+        .assert_success();
+        send!(&bob,"assign_agent",json!({"token_id":token,"expected_revision":1,"agent_id":bob.account_id(),"payment_mode":"Automatic"}),1).assert_failure();
+        send!(
+            &bob,
+            "nft_transfer",
+            json!({"token_id":token,"receiver_id":alice.account_id()}),
+            1
+        )
+        .assert_failure();
+        send!(&bob,"publish_delivery",json!({"order_id":order,"request_commitment":"a".repeat(64),"response_commitment":"b".repeat(64),"evidence_commitment":"c".repeat(64),"model_id":"Qwen/Qwen3.8-27B","policy_id":"near-tee-ecdsa-v1","signature_kind":"provider_tee"}),0).assert_failure();
+        send!(&alice,"publish_delivery",json!({"order_id":order,"request_commitment":"d".repeat(64),"response_commitment":"b".repeat(64),"evidence_commitment":"c".repeat(64),"model_id":"Qwen/Qwen3.8-27B","policy_id":"near-tee-ecdsa-v1","signature_kind":"provider_tee"}),0).assert_failure();
+        // Seller is deliberately missing: automatic payout must end TransferFailed, never Paid.
+        let _delivery = send!(
+            &alice,
+            "publish_delivery",
+            json!({"order_id":order,"request_commitment":"a".repeat(64),"response_commitment":"b".repeat(64),"evidence_commitment":"c".repeat(64),"model_id":"Qwen/Qwen3.8-27B","policy_id":"near-tee-ecdsa-v1","signature_kind":"provider_tee"}),
+            0
+        );
+        let o: Value = read!("get_order", json!({"order_id":order}));
+        assert_eq!(o["phase"], expected_phase);
+        let p: Value = read!("get_pass", json!({"token_id":token}));
+        assert_eq!(p["owner_id"], bob.account_id().as_str());
+        assert_eq!(p["payment_mode"], mode);
+        send!(
+            &alice,
+            "approve_and_pay",
+            json!({"order_id":order,"expected_delivery_commitment":"c".repeat(64)}),
+            1
+        )
+        .assert_failure();
+        send!(
+            &alice,
+            "on_payment_result",
+            json!({"order_id":order,"attempt":1}),
+            0
+        )
+        .assert_failure();
+        send!(
+            &bob,
+            "cancel_and_refund",
+            json!({"token_id":token,"expected_revision":1}),
+            1
+        )
+        .assert_success();
+        let refunded: Value = read!("get_order", json!({"order_id":order}));
+        assert_eq!(refunded["phase"], "Refunded");
+    }
+    // A real existing seller demonstrates successful automatic settlement without an owner pay call.
+    let deployed2 = account(&s, "autopay.sandbox").await?;
+    let contract2 = deployed2.as_contract();
+    near_api::Contract::deploy(contract2.account_id().clone())
+        .use_code(std::fs::read(match std::env::var("PROOFBILL_WASM") {
+            Ok(p) => std::path::PathBuf::from(p),
+            Err(_) => cargo_near_build::build_with_cli(Default::default())?.into(),
+        })?)
+        .with_init_call(
+            "init",
+            json!({"seller_id":alice.account_id(),"publisher_id":alice.account_id()}),
+        )?
+        .with_signer(signer.clone())
+        .send_to(&net)
+        .await?
+        .assert_success();
+    macro_rules! send2 {
+        ($who:expr,$method:expr,$args:expr,$deposit:expr) => {
+            contract2
+                .call_function($method, $args)
+                .transaction()
+                .deposit(NearToken::from_yoctonear($deposit))
+                .gas(NearGas::from_tgas(200))
+                .with_signer($who.account_id().clone(), signer.clone())
+                .send_to(&net)
+                .await?
+        };
+    }
+    send2!(&bob,"create_purchase_pass",json!({"service_id":"private-extraction-v1","expires_at_ns":expiry,"payment_mode":"Automatic"}),PRICE+30_000_000_000_000_000_000_000).assert_success();
+    send2!(
+        &bob,
+        "assign_agent",
+        json!({"token_id":"pass-1","expected_revision":0,"agent_id":alice.account_id()}),
+        1
+    )
+    .assert_success();
+    send2!(
+        &alice,
+        "reserve_order",
+        json!({"token_id":"pass-1","expected_revision":1,"request_commitment":"a".repeat(64)}),
+        0
+    )
+    .assert_success();
+    let publication = json!({"order_id":"pass-1-order","request_commitment":"a".repeat(64),"response_commitment":"b".repeat(64),"evidence_commitment":"c".repeat(64),"model_id":"Qwen/Qwen3.8-27B","policy_id":"near-tee-ecdsa-v1","signature_kind":"provider_tee"});
+    send2!(&alice, "publish_delivery", publication.clone(), 0).assert_success();
+    let paid: Value = contract2
+        .call_function("get_order", json!({"order_id":"pass-1-order"}))
+        .read_only()
+        .fetch_from(&net)
+        .await?
+        .data;
+    assert_eq!(paid["phase"], "Paid");
+    assert_eq!(paid["attempt"], 1);
+    assert_eq!(paid["buyer_id"], bob.account_id().as_str());
+    send2!(&alice, "publish_delivery", publication, 0).assert_failure();
+    send2!(
+        &bob,
+        "approve_and_pay",
+        json!({"order_id":"pass-1-order","expected_delivery_commitment":"c".repeat(64)}),
+        1
+    )
+    .assert_failure();
     Ok(())
 }
