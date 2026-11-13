@@ -875,10 +875,19 @@ impl Contract {
     }
     fn store_charged(&mut self, p: &mut PurchasePass, before: u64) {
         self.passes.insert(&p.token_id, p);
-        let cost = u128::from(env::storage_usage().saturating_sub(before))
-            * env::storage_byte_cost().as_yoctonear();
-        require!(p.storage_credit_yocto.0 >= cost, "STORAGE_CREDIT_EXHAUSTED");
-        p.storage_credit_yocto.0 -= cost;
+        let after = env::storage_usage();
+        let price = env::storage_byte_cost().as_yoctonear();
+        if after >= before {
+            let cost = u128::from(after - before) * price;
+            require!(p.storage_credit_yocto.0 >= cost, "STORAGE_CREDIT_EXHAUSTED");
+            p.storage_credit_yocto.0 -= cost;
+        } else {
+            p.storage_credit_yocto.0 = p
+                .storage_credit_yocto
+                .0
+                .checked_add(u128::from(before - after) * price)
+                .expect("STORAGE_CREDIT_OVERFLOW");
+        }
         self.passes.insert(&p.token_id, p);
     }
     fn start_payment(&mut self, p: &PurchasePass, o: &mut PurchaseOrder) -> Promise {
@@ -1531,6 +1540,41 @@ mod tests {
         callback(true);
         assert!(c.on_payment_result(order.order_id, 1));
         assert_eq!(c.budget(&id).unwrap().spent_yocto, U128(PRICE));
+    }
+    #[test]
+    fn repeated_limit_changes_release_unused_policy_storage_back_to_credit() {
+        let mut c = setup();
+        let id = flexible_pass(&mut c, PRICE * 100, None);
+        ctx("alice.testnet", 1);
+        c.configure_budget_agent(
+            id.clone(),
+            c.pass(&id).authorization_revision,
+            "agent.testnet".parse().unwrap(),
+            Some(PaymentMode::Manual),
+            None,
+        );
+        let original = c.pass(&id).storage_credit_yocto;
+        for _ in 0..5 {
+            ctx("alice.testnet", 1);
+            c.configure_budget_agent(
+                id.clone(),
+                c.pass(&id).authorization_revision,
+                "agent.testnet".parse().unwrap(),
+                Some(PaymentMode::Automatic),
+                Some(U128(PRICE * 10)),
+            );
+            assert!(c.pass(&id).storage_credit_yocto.0 < original.0);
+            ctx("alice.testnet", 1);
+            c.configure_budget_agent(
+                id.clone(),
+                c.pass(&id).authorization_revision,
+                "agent.testnet".parse().unwrap(),
+                Some(PaymentMode::Manual),
+                None,
+            );
+            assert_eq!(c.pass(&id).storage_credit_yocto, original);
+            assert_eq!(c.budget(&id).unwrap().available_yocto, U128(PRICE * 100));
+        }
     }
     #[test]
     fn transfer_moves_entitlement() {
