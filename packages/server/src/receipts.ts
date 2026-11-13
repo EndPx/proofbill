@@ -42,12 +42,15 @@ const actions = new Set([
   "assign_agent",
   "create_purchase_pass",
   "create_budget_pass",
+  "create_flexible_budget_pass",
+  "configure_budget_agent",
+  "top_up_storage",
 ]);
 const hash = (value: unknown) =>
   typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 const optionalHash = (value: unknown) => value === null || hash(value);
 export function validReceiptId(id: string) {
-  return /^pass-[1-9]\d{0,19}-order(?:-[1-9]\d{0,2})?$/.test(id);
+  return /^pass-[1-9]\d{0,19}-order(?:-[1-9]\d{0,9})?$/.test(id);
 }
 function validBudget(pass: PurchasePass, id: string): boolean {
   if (!pass.budget) return !/-order-\d+$/.test(id);
@@ -56,7 +59,7 @@ function validBudget(pass: PurchasePass, id: string): boolean {
     const amounts = [b.funded_yocto,b.available_yocto,b.reserved_yocto,b.spent_yocto,b.refunded_yocto];
     amounts.forEach(formatReceiptNear);
     const sequence = Number(id.match(/-order-(\d+)$/)?.[1]);
-    return Number.isSafeInteger(b.orders_created) && b.orders_created >= sequence && b.orders_created <= 100 && sequence > 0 &&
+    return Number.isSafeInteger(b.orders_created) && b.orders_created >= sequence && b.orders_created <= 4294967295 && sequence > 0 &&
       BigInt(b.funded_yocto) > 0n && BigInt(b.funded_yocto) === amounts.slice(1).reduce((sum,n)=>sum+BigInt(n),0n) &&
       BigInt(b.reserved_yocto) <= BigInt(pass.price_yocto);
   } catch { return false; }
@@ -110,6 +113,10 @@ export async function readPublicReceipt(
     throw new ReceiptUnavailable();
   try {
     formatReceiptNear(order.price_yocto);
+    if(order.max_order_price_yocto!=null){
+      formatReceiptNear(order.max_order_price_yocto);
+      if(BigInt(order.max_order_price_yocto)<BigInt(order.price_yocto))throw new Error("ORDER_PRICE_LIMIT_EXCEEDED");
+    }
   } catch {
     throw new ReceiptUnavailable();
   }
@@ -164,6 +171,7 @@ export async function readPublicReceipt(
     price_yocto: order.price_yocto,
     created_at_ns: order.created_at_ns,
     payment_mode: mode,
+    max_order_price_yocto: order.max_order_price_yocto??null,
     order_phase: order.phase,
     nft_phase: pass.phase,
     request_commitment: order.request_commitment,

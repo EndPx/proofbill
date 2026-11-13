@@ -140,6 +140,10 @@ async function preparePurchase(
       throw new QueueError("ASSIGN_AGENT_FIRST", 409);
     if (pass.budget && BigInt(pass.budget.available_yocto) < BigInt(pass.price_yocto))
       throw new QueueError("SERVICE_BUDGET_EXHAUSTED", 409);
+    if(pass.max_order_price_yocto && BigInt(pass.price_yocto)>BigInt(pass.max_order_price_yocto))
+      throw new QueueError("ORDER_PRICE_LIMIT_EXCEEDED",409);
+    if(BigInt(pass.storage_required_for_order_yocto??"0")>0n)
+      throw new QueueError("ORDER_STORAGE_REQUIRED",409);
     const id = nextOrderId(pass);
     const [old] = await tx.unsafe<JobRow[]>(
       "select * from pb_jobs where network='testnet' and contract_id=$1 and order_id=$2 for update",

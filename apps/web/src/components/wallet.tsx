@@ -31,6 +31,7 @@ interface Config {
   loaded?: boolean;
   advancedModes?: boolean;
   budgetPasses?: boolean;
+  flexibleBudgets?: boolean;
   sellerId?: string;
 }
 interface WalletState {

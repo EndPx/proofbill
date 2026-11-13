@@ -110,6 +110,18 @@ test("a budget agent must name the expected order rather than accidentally buyin
   await assert.rejects(runOwnAgent(f.options),/EXPECTED_ORDER_ID_REQUIRED/);
   await assert.rejects(runOwnAgent({...f.options,orderId:`${f.options.tokenId}-order-1`}),/PASS_AUTHORIZATION_CHANGED/);
 });
+test("agent refuses an excessive quote or missing storage before preparing a reservation",async()=>{
+  for(const [patch,reason] of [
+    [{max_order_price_yocto:"5000000000000000000000"},/ORDER_PRICE_LIMIT_EXCEEDED/],
+    [{max_order_price_yocto:null,storage_required_for_order_yocto:"1"},/ORDER_STORAGE_REQUIRED/],
+  ] as const){
+    const f=setup({network:"testnet",contractId:"proofbill.testnet",advancedModes:true});
+    f.options.provider={callFunction:async()=>({token_id:f.options.tokenId,owner_id:f.options.buyerId,agent_id:id,
+      authorization_revision:f.options.revision,transfer_pending:false,phase:"Available",price_yocto:"10000000000000000000000",
+      budget:{orders_created:0},order_id:null,...patch})} as unknown as JsonRpcProvider;
+    await assert.rejects(runOwnAgent({...f.options,orderId:`${f.options.tokenId}-order-1`}),reason);
+  }
+});
 
 test("saved request cannot cross to another NFT owner or authorization revision", async () => {
   for (const patch of [

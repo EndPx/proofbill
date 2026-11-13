@@ -13,22 +13,36 @@ export interface PassBudget {
   orders_created: number;
 }
 export function parseNearAmount(value: string): string {
+  if (value.length > 80) throw new Error("INVALID_SERVICE_BUDGET");
   const match = /^(0|[1-9]\d*)(?:\.(\d{1,24}))?$/.exec(value);
   if (!match) throw new Error("INVALID_SERVICE_BUDGET");
-  return (BigInt(match[1]) * 10n ** 24n + BigInt((match[2] ?? "").padEnd(24, "0"))).toString();
+  const amount=BigInt(match[1])*10n**24n+BigInt((match[2]??"").padEnd(24,"0"));
+  if(amount>(1n<<128n)-1n)throw new Error("INVALID_SERVICE_BUDGET");
+  return amount.toString();
 }
 export function nextOrderId(pass: Pick<PurchasePass, "token_id" | "budget">): string {
   return pass.budget
     ? `${pass.token_id}-order-${pass.budget.orders_created + 1}`
     : `${pass.token_id}-order`;
 }
-export function budgetFunding(amount: string) {
-  if (!/^(0|[1-9]\d*)$/.test(amount)) throw new Error("INVALID_SERVICE_BUDGET");
+export function parseOrderPriceLimit(value: string): string {
+  try {
+    const amount=parseNearAmount(value);
+    if(BigInt(amount)===0n)throw new Error("INVALID_PRICE_LIMIT");
+    return amount;
+  } catch { throw new Error("INVALID_PRICE_LIMIT"); }
+}
+export function budgetFunding(amount: string, options: {flexible?:boolean;storageBudget?:string} = {}) {
+  if (!/^(0|[1-9]\d{0,38})$/.test(amount)) throw new Error("INVALID_SERVICE_BUDGET");
   const budget = BigInt(amount), price = BigInt(SERVICE_PRICE);
-  if (budget < price || budget > price * 100n || budget % price !== 0n)
+  if (budget < price || (!options.flexible && (budget > price * 100n || budget % price !== 0n)))
     throw new Error("INVALID_SERVICE_BUDGET");
-  const storage = BigInt(STORAGE_BUDGET) + budget;
-  return { storage: storage.toString(), total: (budget + storage).toString(), orders: Number(budget / price) };
+  const backing=options.storageBudget??STORAGE_BUDGET;
+  if(!/^(0|[1-9]\d{0,38})$/.test(backing)||BigInt(backing)<BigInt(STORAGE_BUDGET))throw new Error("INVALID_STORAGE_BACKING");
+  const storage=options.flexible?BigInt(backing):BigInt(STORAGE_BUDGET)+budget;
+  const total=budget+storage;
+  if(total>(1n<<128n)-1n)throw new Error("INVALID_SERVICE_BUDGET");
+  return {storage:storage.toString(),total:total.toString(),orders:Number(budget/price>4294967295n?4294967295n:budget/price)};
 }
 export interface PublicReceipt {
   network: "testnet";
@@ -44,6 +58,7 @@ export interface PublicReceipt {
   price_yocto: string;
   created_at_ns: string;
   payment_mode: PaymentMode;
+  max_order_price_yocto?: string | null;
   order_phase: OrderPhase;
   nft_phase: PassPhase;
   request_commitment: string;
@@ -97,6 +112,9 @@ export interface PurchasePass {
   agent_id: string | null;
   payment_mode?: PaymentMode;
   budget?: PassBudget | null;
+  flexible_budget?: boolean;
+  max_order_price_yocto?: string | null;
+  storage_required_for_order_yocto?: string;
   phase: PassPhase;
   order_id: string | null;
   storage_credit_yocto: string;
@@ -106,6 +124,7 @@ export interface PurchasePass {
 export interface PurchaseOrder {
   order_id: string;
   payment_mode?: PaymentMode;
+  max_order_price_yocto?: string | null;
   token_id: string;
   buyer_id: string;
   agent_id: string;

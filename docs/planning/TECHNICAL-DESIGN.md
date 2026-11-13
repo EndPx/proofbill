@@ -95,6 +95,9 @@ The table summarizes [the Rust source](../../contracts/proofbill/src/lib.rs). Op
 | --- | --- |
 | `create_purchase_pass(service_id, expires_at_ns, payment_mode?)` | Holder; attach exact service amount plus required storage budget; mint to caller |
 | `create_budget_pass(service_id, expires_at_ns, payment_mode?, budget_yocto)` | Holder; 1–100 service-price increments, separate storage backing, exact per-pass budget conservation |
+| `create_flexible_budget_pass(service_id, expires_at_ns, payment_mode?, budget_yocto, max_order_price_yocto?)` | Holder; custom total, optional ceiling, independent initial backing; preserves legacy records |
+| `configure_budget_agent(token_id, expected_revision, agent_id, payment_mode?, max_order_price_yocto?)` | Holder; Available flexible pass only; update assignment/mode/ceiling and revision together |
+| `top_up_storage(token_id)` | Holder; attach separate backing; never change service allocation; refresh unreserved authorization only |
 | `assign_agent(token_id, expected_revision, agent_id, payment_mode?)` | Current holder; only Available/unexpired; increment revision and optionally change policy |
 | `reserve_order(token_id, expected_revision, request_commitment)` | Assigned agent; reserve one fixed-price allocation, snapshot buyer/policy and allocate a numbered order; no concurrent reservation |
 | `publish_delivery(order_id, request_commitment, response_commitment, evidence_commitment, model_id, policy_id, signature_kind)` | Configured publisher; validate the bound request/model/policy and record delivery; Automatic mode starts the preauthorized payout |
@@ -107,6 +110,8 @@ The table summarizes [the Rust source](../../contracts/proofbill/src/lib.rs). Op
 | Pass/order/receipt views and pagination | Public facts; no prompt, result plaintext or secret |
 
 Budget data and order policies occupy additional storage prefixes; existing Borsh root/pass/order records remain unchanged. Legacy IDs stay `pass-N-order`; new IDs are `pass-N-order-K`. Budget refunds close the pass and return remaining available/reserved service funds; earlier Paid orders and storage backing remain excluded.
+
+Flexible limits/flags use additional prefixes too. Reservation checks the owner ceiling, remaining service allocation and a conservative 1,400-byte backing allowance before execution. Actual receipt byte growth charges credit; released policy bytes return to credit. Storage top-ups are holder-signed deposits rather than silent deductions from service funds. A pass with a fractional balance below its quote remains refundable, and its public UI does not offer another unaffordable purchase.
 
 Holder-sensitive operations follow appropriate one-yocto authorization conventions where required; that authorization deposit is not seller revenue. Callback methods are private. Client-supplied seller, amount or ownership values cannot override the stored snapshot. A function-call gas allowance does not replace the pass's contract-enforced service amount.
 

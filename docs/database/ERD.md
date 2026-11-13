@@ -207,6 +207,8 @@ erDiagram
 
 The attempt entity describes the financial identity/invariant. The initial implementation may persist its nonce and state within pass/order records rather than as a separate iterable collection. A diagram entity does not imply a separate implemented map.
 
+Version 4 exposes optional per-order ceiling snapshots and a flexible-budget flag through contract views; these are onchain sidecar records, not extra Neon tables. Separate holder-funded storage credit and its next-order deficit are likewise contract-derived. SQL jobs never authorize a higher payment or convert service allocation into backing.
+
 A legacy pass has at most one order; a budget pass retains a sequence of orders with at most one active. Each order can have explicit retries after proven failure but only one successful seller payment. The contract's budget sidecar tracks funded, available, reserved, spent and refunded amounts with exact conservation. Transfer between orders moves the remaining allocation; it never rewrites earlier buyers or their private artifacts. Budget/policy sidecars preserve existing Borsh record layouts.
 
 ## 7. Joining the two layers

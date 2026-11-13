@@ -7,7 +7,7 @@
       "compiler": "rustc 1.99.1",
       "builder": "cargo-near cargo-near-build 0.11.5"
     },
-    "wasm_hash": "2KSFbn1ty3gWadRevfeuqauhNuvGLzUjyWTyXNqYs12i"
+    "wasm_hash": "5dq5tk4wJ3LYQipvHLxtMVKqN9S16ZiVVZqPy3KR2poZ"
   },
   "body": {
     "functions": [
@@ -126,6 +126,67 @@
         }
       },
       {
+        "name": "configure_budget_agent",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "token_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "expected_revision",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            },
+            {
+              "name": "agent_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "payment_mode",
+              "type_schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/PaymentMode"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "max_order_price_yocto",
+              "type_schema": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PassView"
+          }
+        }
+      },
+      {
         "name": "contract_source_metadata",
         "kind": "view"
       },
@@ -167,6 +228,64 @@
               "name": "budget_yocto",
               "type_schema": {
                 "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PassView"
+          }
+        }
+      },
+      {
+        "name": "create_flexible_budget_pass",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "service_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "expires_at_ns",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "payment_mode",
+              "type_schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/PaymentMode"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "budget_yocto",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "max_order_price_yocto",
+              "type_schema": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             }
           ]
@@ -937,6 +1056,30 @@
             "$ref": "#/definitions/Promise"
           }
         }
+      },
+      {
+        "name": "top_up_storage",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "token_id",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PassView"
+          }
+        }
       }
     ],
     "root_schema": {
@@ -1053,6 +1196,12 @@
                 "null"
               ]
             },
+            "max_order_price_yocto": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "order_id": {
               "type": "string"
             },
@@ -1144,6 +1293,7 @@
             "attempt",
             "authorization_revision",
             "expires_at_ns",
+            "flexible_budget",
             "model_id",
             "owner_id",
             "payment_mode",
@@ -1151,6 +1301,7 @@
             "price_yocto",
             "seller_id",
             "storage_credit_yocto",
+            "storage_required_for_order_yocto",
             "token_id",
             "transfer_pending"
           ],
@@ -1184,6 +1335,15 @@
             },
             "expires_at_ns": {
               "type": "string"
+            },
+            "flexible_budget": {
+              "type": "boolean"
+            },
+            "max_order_price_yocto": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "model_id": {
               "type": "string"
@@ -1219,6 +1379,9 @@
               "type": "string"
             },
             "storage_credit_yocto": {
+              "type": "string"
+            },
+            "storage_required_for_order_yocto": {
               "type": "string"
             },
             "token_id": {

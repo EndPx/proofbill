@@ -13,6 +13,8 @@ import {
   STORAGE_BUDGET,
   budgetFunding,
   nextOrderId,
+  parseNearAmount,
+  parseOrderPriceLimit,
   type PurchasePass,
   type PurchaseOrder,
 } from "@proofbill/shared";
@@ -23,6 +25,7 @@ assert.equal(
   root,
   "This script only targets the declared demo contract",
 );
+assert.equal(await provider().getNetworkId(),"testnet");
 const transferMode = process.env.E2E_TRANSFER_MODE ?? "unused";
 assert.ok(
   ["none", "unused"].includes(transferMode),
@@ -116,18 +119,24 @@ let token = process.env.E2E_TOKEN_ID ?? "";
 const budgetOrders = Number(process.env.E2E_BUDGET_ORDERS ?? "0");
 assert.ok(Number.isInteger(budgetOrders) && budgetOrders >= 0 && budgetOrders <= 100);
 const budgetAmount = (BigInt(SERVICE_PRICE) * BigInt(budgetOrders)).toString();
+const flexibleBudget = process.env.E2E_FLEXIBLE_BUDGET ? parseNearAmount(process.env.E2E_FLEXIBLE_BUDGET) : null;
+const priceLimit = process.env.E2E_MAX_ORDER_PRICE ? parseOrderPriceLimit(process.env.E2E_MAX_ORDER_PRICE) : null;
+assert.ok(!flexibleBudget||budgetOrders===0,"Choose either flexible total or legacy order count");
+assert.ok(token||!priceLimit||flexibleBudget,"A new order ceiling requires flexible-budget creation");
+if(flexibleBudget)assert.equal((await(await fetch(base+"/api/config")).json()).flexibleBudgets,true,"Hosted flexible-budget capability is not active");
 if (!token) {
   const initialHolder = transferMode === "none" ? bob : alice;
   const mint = await tx(
     initialHolder,
-    budgetOrders ? "create_budget_pass" : "create_purchase_pass",
+    flexibleBudget ? "create_flexible_budget_pass" : budgetOrders ? "create_budget_pass" : "create_purchase_pass",
     {
       service_id: SERVICE_ID,
       payment_mode: paymentMode,
       ...(budgetOrders ? {budget_yocto:budgetAmount} : {}),
+      ...(flexibleBudget?{budget_yocto:flexibleBudget,max_order_price_yocto:priceLimit}:{}),
       expires_at_ns: ((BigInt(Date.now()) + 86400000n) * 1000000n).toString(),
     },
-    budgetOrders ? BigInt(budgetFunding(budgetAmount).total) : BigInt(SERVICE_PRICE) + BigInt(STORAGE_BUDGET),
+    flexibleBudget?BigInt(budgetFunding(flexibleBudget,{flexible:true}).total):budgetOrders ? BigInt(budgetFunding(budgetAmount).total) : BigInt(SERVICE_PRICE) + BigInt(STORAGE_BUDGET),
   );
   const value = (mint.status as { SuccessValue?: string }).SuccessValue;
   assert.ok(value);
@@ -172,6 +181,7 @@ if (!token) {
   assert.ok(["Available", "InUse"].includes(resumed.phase));
   assert.equal(resumed.agent_id, assignedAgent);
   assert.equal(resumed.payment_mode ?? "Manual", paymentMode);
+  if(process.env.E2E_MAX_ORDER_PRICE)assert.equal(resumed.max_order_price_yocto,priceLimit);
   steps.push({
     check: "resumed_existing_funded_pass",
     token_id: token,
@@ -181,13 +191,18 @@ if (!token) {
 }
 const bobCookie = await login(bob),
   aliceCookie = await login(alice);
-const orderPass = await view<PurchasePass>("get_pass", {token_id:token});
+let orderPass = await view<PurchasePass>("get_pass", {token_id:token});
 if (process.env.E2E_TOKEN_ID && orderPass.budget)
   assert.ok(process.env.E2E_ORDER_ID, "Supply E2E_ORDER_ID explicitly when resuming a budget pass; never infer a new purchase from a rerun");
 const id = process.env.E2E_ORDER_ID ?? orderPass.order_id ?? nextOrderId(orderPass);
 const existingOrder = await view<PurchaseOrder | null>("get_order", {
   order_id: id,
 });
+if(!existingOrder && BigInt(orderPass.storage_required_for_order_yocto??"0")>0n){
+  assert.equal(process.env.E2E_STORAGE_TOP_UP,"yes","Explicitly allow a separate storage deposit before the next order");
+  await tx(bob,"top_up_storage",{token_id:token},BigInt(orderPass.storage_required_for_order_yocto!));
+  orderPass=await view<PurchasePass>("get_pass",{token_id:token});
+}
 if (!existingOrder && agentKind === "proofbill") {
   const queued = await post(
     "jobs",
@@ -393,6 +408,7 @@ const report = {
   order_id: id,
   pass_phase: completedPass.phase,
   service_budget: completedPass.budget ?? null,
+  recorded_order_ceiling_yocto: complete.max_order_price_yocto??null,
   passed: true,
   steps,
   limits: [

@@ -126,8 +126,8 @@ test("one demo NFT funds multiple purchases with current quotes and retained aut
   await demo.getByRole("button",{name:"New demo pass",exact:true}).click();
   await demo.getByRole("textbox",{name:"Pass name",exact:true}).fill("Reusable team budget");
   await demo.getByRole("textbox",{name:"Service budget (sample NEAR)",exact:true}).fill("0.030");
+  await expect(demo.getByText("0.030 NEAR",{exact:true})).toBeVisible();
   await expect(demo.getByText("0.060 NEAR",{exact:true})).toBeVisible();
-  await expect(demo.getByText("0.090 NEAR",{exact:true})).toBeVisible();
   await demo.getByRole("button",{name:"Create demo pass"}).click();
   const card=demo.getByRole("article").filter({has:page.getByRole("heading",{name:"Reusable team budget",exact:true})});
   await card.getByRole("button",{name:"New demo purchase"}).click();
@@ -135,7 +135,7 @@ test("one demo NFT funds multiple purchases with current quotes and retained aut
   await demo.getByRole("textbox",{name:"Agent NEAR account"}).fill("my-agent.testnet");
   await demo.getByRole("combobox",{name:"Payment approval"}).selectOption("Automatic");
   await expect(demo.getByRole("button",{name:"Run demo agent"})).toBeDisabled();
-  await demo.getByRole("checkbox").check();
+  await demo.getByRole("checkbox",{name:"Authorize sample Automatic purchases"}).check();
   for(let n=0;n<3;n++){
     await demo.getByRole("button",{name:"Run demo agent"}).click();
     await expect(demo.getByText("Automatic payment example",{exact:true})).toBeVisible();
@@ -144,7 +144,7 @@ test("one demo NFT funds multiple purchases with current quotes and retained aut
     await demo.getByRole("button",{name:"Simulate delivery and payment"}).click();
     if(n<2){
       await demo.getByRole("button",{name:"Buy again with this pass"}).click();
-      await expect(demo.getByRole("checkbox")).toBeChecked();
+      await expect(demo.getByRole("checkbox",{name:"Authorize sample Automatic purchases"})).toBeChecked();
     }
   }
   await expect(demo.getByRole("button",{name:"Buy again with this pass"})).toHaveCount(0);
@@ -152,6 +152,29 @@ test("one demo NFT funds multiple purchases with current quotes and retained aut
   await expect(card).toContainText("Completed");
   await expect(card.getByRole("button",{name:"New demo purchase"})).toHaveCount(0);
   await expect(page.getByRole("link",{name:"View a real public receipt"})).toHaveAttribute("href","/receipts/pass-12-order-1");
+});
+test("custom demo amounts preserve fractional refunds and an optional recorded ceiling",async({page})=>{
+  await page.goto("/");const demo=page.getByRole("region",{name:"Interactive workspace demo",exact:true});
+  await demo.getByRole("button",{name:"Purchase Passes",exact:true}).click();await demo.getByRole("button",{name:"New demo pass",exact:true}).click();
+  await demo.getByRole("textbox",{name:"Pass name",exact:true}).fill("Fractional budget");
+  await demo.getByRole("textbox",{name:"Service budget (sample NEAR)",exact:true}).fill("0.025");
+  await demo.getByRole("checkbox",{name:"Set a sample per-purchase limit"}).check();
+  await demo.getByRole("textbox",{name:"Maximum per demo purchase (sample NEAR)"}).fill("0.1");
+  await expect(demo.getByText("0.055 NEAR",{exact:true})).toBeVisible();
+  await demo.getByRole("button",{name:"Create demo pass"}).click();
+  const card=demo.getByRole("article").filter({has:page.getByRole("heading",{name:"Fractional budget",exact:true})});
+  await card.getByRole("button",{name:"New demo purchase"}).click();
+  for(let n=0;n<2;n++){
+    await demo.getByRole("button",{name:"Run demo agent"}).click();
+    await expect(demo.getByText("0.100 NEAR",{exact:true})).toBeVisible();
+    await demo.getByRole("button",{name:"Approve in demo"}).click();
+    if(n===0)await demo.getByRole("button",{name:"Buy again with this pass"}).click();
+  }
+  await demo.getByRole("button",{name:"Purchase Passes",exact:true}).click();
+  await expect(card.getByRole("button",{name:"New demo purchase"})).toHaveCount(0);
+  await card.getByRole("button",{name:"Refund remaining demo budget"}).click();
+  await expect(card).toContainText("Refunded");await expect(card).toContainText("0.005 NEAR");
+  await expect(card).toContainText("0.020 NEAR");
 });
 
 test("mobile demo keeps named menus, internal scrolling and accessible controls", async ({

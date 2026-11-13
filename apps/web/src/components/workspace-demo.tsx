@@ -15,7 +15,7 @@ import {
   Ticket,
   UserRound,
 } from "lucide-react";
-import { formatNear, SERVICE_PRICE, parseNearAmount, budgetFunding, validAccountId, type PaymentMode } from "@proofbill/shared";
+import { formatReceiptNear as formatNear, SERVICE_PRICE, parseNearAmount, parseOrderPriceLimit, budgetFunding, validAccountId, type PaymentMode } from "@proofbill/shared";
 import {
   demoOrders,
   demoPasses,
@@ -44,6 +44,8 @@ export function WorkspaceDemo() {
   const [ownAgent, setOwnAgent] = useState(false);
   const [agentAccount, setAgentAccount] = useState("");
   const [consent, setConsent] = useState(false);
+  const [limited,setLimited]=useState(false);
+  const [limitInput,setLimitInput]=useState("0.100");
   const [notice, setNotice] = useState("");
   const order = orders.find((record) => record.id === selected)!;
   const activeMenu =
@@ -57,7 +59,9 @@ export function WorkspaceDemo() {
   const available = passes.reduce((sum,pass)=>sum+demoLedger(pass,orders).available,0n);
   const taskPass = passes.find(pass=>pass.id===selectedPass)!;
   let budgetQuote: ReturnType<typeof budgetFunding> | null = null;
-  try { budgetQuote=budgetFunding(parseNearAmount(budget)); } catch { /* Show the invalid draft next to its input. */ }
+  try { budgetQuote=budgetFunding(parseNearAmount(budget),{flexible:true}); } catch { /* Show the invalid draft next to its input. */ }
+  let limitAmount:string|null=null,limitValid=true;
+  try{if(limited)limitAmount=parseOrderPriceLimit(limitInput)}catch{limitValid=false}
 
   function menu(next: View) {
     scroll.current?.scrollTo({ top: 0 });
@@ -82,12 +86,13 @@ export function WorkspaceDemo() {
     setName("My next purchase");
     setBudget("0.050");setPaymentMode("Manual");setConsent(false);setOwnAgent(false);setAgentAccount("");
     setSelectedPass("demo-pass-003");
+    setLimited(false);setLimitInput("0.100");
     setView("order");
     setNotice("Demo reset to its sample data.");
   }
   function createPass(event: FormEvent) {
     event.preventDefault();
-    if (!name.trim() || !budgetQuote) return;
+    if (!name.trim() || !budgetQuote || !limitValid || (limitAmount&&BigInt(limitAmount)<BigInt(SERVICE_PRICE))) return;
     scroll.current?.scrollTo({ top: 0 });
     setPasses((previous) => [
       ...previous,
@@ -97,6 +102,7 @@ export function WorkspaceDemo() {
         phase: "Available",
         budget:parseNearAmount(budget),
         paymentMode:"Manual",agent:"",
+        maxOrderPrice:limitAmount,
       },
     ]);
     setView("passes");
@@ -117,20 +123,34 @@ export function WorkspaceDemo() {
   function startTask(pass: DemoPass) {
     setSelectedPass(pass.id);setPaymentMode(pass.paymentMode);setConsent(pass.paymentMode==="Automatic");
     setOwnAgent(!!pass.agent&&pass.agent!=="ProofBill assistant");setAgentAccount(pass.agent==="ProofBill assistant"?"":pass.agent);
+    setLimited(pass.maxOrderPrice!=null);setLimitInput(pass.maxOrderPrice?formatNear(pass.maxOrderPrice):"0.100");
     menu("task");
   }
   function runDemoAgent(event: FormEvent) {
     event.preventDefault();
     if(taskPass.phase!=="Available" || demoLedger(taskPass,orders).available<BigInt(SERVICE_PRICE) ||
+       !limitValid || (limitAmount&&BigInt(SERVICE_PRICE)>BigInt(limitAmount)) ||
        (ownAgent&&!validAccountId(agentAccount)) || (paymentMode==="Automatic"&&!consent)) return;
     const next: DemoOrder={id:`demo-order-${String(orders.length+1).padStart(3,"0")}`,passId:taskPass.id,
       title:taskPass.name,phase:"Delivered",brief:"Order 12 workshop notebooks for Community team.",
       item:"workshop notebooks",quantity:12,requestedBy:"Community team",paymentMode,
-      agent:ownAgent?agentAccount:"ProofBill assistant"};
+      agent:ownAgent?agentAccount:"ProofBill assistant",maxOrderPrice:limitAmount};
     setOrders([...orders,next]);
-    setPasses(passes.map(pass=>pass.id===taskPass.id?{...pass,phase:"InUse",paymentMode,agent:next.agent}:pass));
+    setPasses(passes.map(pass=>pass.id===taskPass.id?{...pass,phase:"InUse",paymentMode,agent:next.agent,maxOrderPrice:limitAmount}:pass));
     open(next);setNotice("Sample result prepared locally. No AI request or transaction was made.");
   }
+  function refundDemo(pass: DemoPass){
+    if(pass.phase!=="Available")return;
+    const remaining=demoLedger(pass,orders).available;
+    setPasses(passes.map(p=>p.id===pass.id?{...p,phase:"Refunded",refunded:remaining.toString()}:p));
+    setNotice("Remaining sample service funds refunded locally. Earlier paid orders and storage backing are unchanged. No transaction.");
+  }
+  const limitControl=<>
+    <label className={styles.consent}><input type="checkbox" aria-label="Set a sample per-purchase limit" checked={limited} onChange={e=>{setLimited(e.target.checked);setConsent(false)}}/>Set a maximum service price per purchase (optional)</label>
+    {limited&&<label>Maximum per demo purchase (sample NEAR)<input aria-label="Maximum per demo purchase (sample NEAR)" inputMode="decimal" value={limitInput} aria-invalid={!limitValid} onChange={e=>{setLimitInput(e.target.value);setConsent(false)}}/>
+      <small>{limitValid?"The seller quote and remaining balance must also fit.":"Enter a positive maximum."}</small>
+    </label>}
+  </>;
   function tabKey(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const next =
       event.key === "ArrowRight"
@@ -153,6 +173,7 @@ export function WorkspaceDemo() {
       data-good={
         phase === "Paid" || phase === "Completed" || phase === "Available"
       }
+      data-neutral={phase==="Refunded"}
     >
       {phase === "Paid" && <Check size={11} />}
       {phase === "Delivered"
@@ -290,8 +311,9 @@ export function WorkspaceDemo() {
                   Service budget (sample NEAR)
                   <input aria-label="Service budget (sample NEAR)" inputMode="decimal" value={budget} aria-invalid={!budgetQuote} aria-describedby="demo-budget-help"
                     onChange={event=>setBudget(event.target.value)} />
-                  <small id="demo-budget-help" aria-live="polite">{budgetQuote?`${budgetQuote.orders} purchases at 0.010 NEAR each.`:"Use 0.010 to 1.000 NEAR in 0.010 increments."}</small>
+                  <small id="demo-budget-help" aria-live="polite">{budgetQuote?`Up to ${budgetQuote.orders} purchases at the current 0.010 NEAR quote.`:"Use an amount covering at least the current 0.010 NEAR service quote."}</small>
                 </label>
+                {limitControl}
                 <dl className={styles.facts}>
                   <div>
                     <dt>Service</dt>
@@ -302,16 +324,15 @@ export function WorkspaceDemo() {
                     <dd>{budgetQuote?`${formatNear(parseNearAmount(budget))} sample NEAR`:"Invalid budget"}</dd>
                   </div>
                   <div>
-                    <dt>Separate storage budget</dt>
+                    <dt>Separate initial storage backing</dt>
                     <dd>{budgetQuote?`${formatNear(budgetQuote.storage)} NEAR`:"—"}</dd>
                   </div>
                   <div><dt>Total funding before gas</dt><dd>{budgetQuote?`${formatNear(budgetQuote.total)} NEAR`:"—"}</dd></div>
                 </dl>
                 <p>
-                  Sample data only. Creating this pass does not connect a wallet
-                  or move funds.
+                  Sample data only. No wallet or funds are used. The starting storage quote is separate from service funds; actual retained history can need an owner top-up. This preview does not simulate byte growth.
                 </p>
-                <button className={styles.primary} type="submit" disabled={!budgetQuote||!name.trim()}>
+                <button className={styles.primary} type="submit" disabled={!budgetQuote||!name.trim()||!limitValid||!!(limitAmount&&BigInt(limitAmount)<BigInt(SERVICE_PRICE))}>
                   Create demo pass <ArrowRight size={14} />
                 </button>
               </form>
@@ -319,23 +340,24 @@ export function WorkspaceDemo() {
               <form className={styles.form} onSubmit={runDemoAgent}>
                 <p>{taskPass.name} · {formatNear(demoLedger(taskPass,orders).available.toString())} NEAR available</p>
                 <label>Purchasing agent
-                  <select value={ownAgent?"custom":"proofbill"} onChange={e=>setOwnAgent(e.target.value==="custom")}>
+                  <select value={ownAgent?"custom":"proofbill"} onChange={e=>{setOwnAgent(e.target.value==="custom");setConsent(false)}}>
                     <option value="proofbill">ProofBill assistant</option><option value="custom">My own agent</option>
                   </select>
                 </label>
-                {ownAgent&&<label>Agent NEAR account<input value={agentAccount} onChange={e=>setAgentAccount(e.target.value)} placeholder="my-agent.testnet" autoCapitalize="none" spellCheck={false}/></label>}
+                {ownAgent&&<label>Agent NEAR account<input value={agentAccount} onChange={e=>{setAgentAccount(e.target.value);setConsent(false)}} placeholder="my-agent.testnet" autoCapitalize="none" spellCheck={false}/></label>}
+                {limitControl}
                 <label>Payment approval
                   <select value={paymentMode} onChange={e=>{setPaymentMode(e.target.value as PaymentMode);setConsent(false)}}>
                     <option value="Manual">Manual approval</option><option value="Automatic">Automatic payment</option>
                   </select>
                 </label>
                 {paymentMode==="Automatic"&&<label className={styles.consent}>
-                  <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
-                  I authorize sample purchases up to {formatNear(demoLedger(taskPass,orders).available.toString())} NEAR, at 0.010 per order, after matching delivery. No final approval is requested.
+                  <input type="checkbox" aria-label="Authorize sample Automatic purchases" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
+                  I authorize sample purchases up to {formatNear(demoLedger(taskPass,orders).available.toString())} NEAR, at 0.010 per order, after matching delivery. No final approval is requested. {limitAmount?`Each purchase is capped at ${formatNear(limitAmount)} NEAR.`:"No separate per-purchase ceiling is set."}
                 </label>}
                 <label>Sample brief<textarea readOnly value="Order 12 workshop notebooks for Community team."/></label>
                 <p>This uses fixed sample data. No model runs, wallet connection or API request.</p>
-                <button type="submit" className={styles.primary} disabled={(ownAgent&&!validAccountId(agentAccount))||(paymentMode==="Automatic"&&!consent)}>
+                <button type="submit" className={styles.primary} disabled={demoLedger(taskPass,orders).available<BigInt(SERVICE_PRICE)||!limitValid||!!(limitAmount&&BigInt(SERVICE_PRICE)>BigInt(limitAmount))||(ownAgent&&!validAccountId(agentAccount))||(paymentMode==="Automatic"&&!consent)}>
                   Run demo agent <ArrowRight size={14}/>
                 </button>
               </form>
@@ -361,8 +383,10 @@ export function WorkspaceDemo() {
                       </div>
                       <div><dt>Spent</dt><dd>{formatNear(demoLedger(pass,orders).spent.toString())} NEAR</dd></div>
                       <div><dt>Reserved</dt><dd>{formatNear(demoLedger(pass,orders).reserved.toString())} NEAR</dd></div>
+                      <div><dt>Refunded</dt><dd>{formatNear(demoLedger(pass,orders).refunded.toString())} NEAR</dd></div>
                     </dl>
-                    {pass.phase==="Available"&&<button type="button" className={styles.secondary} onClick={()=>startTask(pass)}>New demo purchase <ArrowRight size={13}/></button>}
+                    {pass.phase==="Available"&&demoLedger(pass,orders).available>=BigInt(SERVICE_PRICE)&&<button type="button" className={styles.secondary} onClick={()=>startTask(pass)}>New demo purchase <ArrowRight size={13}/></button>}
+                    {pass.phase==="Available"&&demoLedger(pass,orders).available>0n&&<button type="button" className={styles.secondary} onClick={()=>refundDemo(pass)}>Refund remaining demo budget</button>}
                     {pass.phase === "InUse" && (
                       <button
                         type="button"
@@ -376,7 +400,7 @@ export function WorkspaceDemo() {
                         Review demo order <ArrowRight size={13} />
                       </button>
                     )}
-                    {pass.phase === "Completed" && (
+                    {["Completed","Refunded"].includes(pass.phase) && orders.some(record=>record.passId===pass.id&&record.phase==="Paid") && (
                       <button
                         type="button"
                         className={styles.secondary}
@@ -565,6 +589,7 @@ export function WorkspaceDemo() {
                       <dt>Agent</dt>
                       <dd>{order.agent}</dd>
                     </div>
+                    <div><dt>Recorded purchase ceiling</dt><dd>{order.maxOrderPrice?`${formatNear(order.maxOrderPrice)} NEAR`:"No separate ceiling"}</dd></div>
                   </dl>
                   <div className={styles.rule} />
                   <div className={styles.amount}>

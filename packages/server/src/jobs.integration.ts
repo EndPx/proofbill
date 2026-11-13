@@ -93,6 +93,19 @@ test("normal owner can queue without transferring NFT; duplicate is rejected", a
   assert.equal(job.revision, 1);
   await assert.rejects(f.queue(), /ORDER_ALREADY_QUEUED/);
 });
+test("owner price ceiling and separate storage requirements block new jobs before any work is queued",async()=>{
+  const f=fixture();
+  f.pass().flexible_budget=true;
+  f.pass().budget={funded_yocto:"1000000000000000000000000",available_yocto:"1000000000000000000000000",reserved_yocto:"0",spent_yocto:"0",refunded_yocto:"0",orders_created:0};
+  f.pass().max_order_price_yocto="5000000000000000000000";
+  await assert.rejects(f.queue(),/ORDER_PRICE_LIMIT_EXCEEDED/);
+  f.pass().max_order_price_yocto=null;
+  f.pass().storage_required_for_order_yocto="1";
+  await assert.rejects(f.queue(),/ORDER_STORAGE_REQUIRED/);
+  assert.equal((await sql`select count(*)::int as count from pb_jobs`)[0].count,0);
+  f.pass().storage_required_for_order_yocto="0";
+  assert.equal((await f.queue()).order_id,`${f.token}-order-1`);
+});
 test("reusable budget creates distinct jobs and preserves each historical buyer", async () => {
   const f=fixture();
   f.pass().budget={funded_yocto:"30000000000000000000000",available_yocto:"30000000000000000000000",reserved_yocto:"0",spent_yocto:"0",refunded_yocto:"0",orders_created:0};

@@ -70,6 +70,16 @@ test("a reusable pass preserves historical receipts and their authorization afte
   delete f.order.payment_mode;
   await assert.rejects(readPublicReceipt(f.order.order_id,f.reader),/RECEIPT_UNAVAILABLE/);
 });
+test("flexible receipts retain their own ceiling and accept sequence numbers beyond one hundred",async()=>{
+  const f=fixture();f.order.order_id="pass-2-order-101";f.order.payment_mode="Automatic";
+  f.order.max_order_price_yocto="100000000000000000000000";
+  f.pass.phase="Available";f.pass.order_id=null;f.pass.max_order_price_yocto=null;
+  f.pass.budget={funded_yocto:"2000000000000000000000000",available_yocto:"990000000000000000000000",reserved_yocto:"0",spent_yocto:"1010000000000000000000000",refunded_yocto:"0",orders_created:101};
+  const receipt=await readPublicReceipt(f.order.order_id,f.reader);
+  assert.equal(receipt?.max_order_price_yocto,f.order.max_order_price_yocto);
+  f.order.max_order_price_yocto="5000000000000000000000";
+  await assert.rejects(readPublicReceipt(f.order.order_id,f.reader),/RECEIPT_UNAVAILABLE/);
+});
 test("public receipt projects only allowlisted fields including references", async () => {
   const f = fixture();
   Object.assign(f.order, {

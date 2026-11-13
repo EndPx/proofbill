@@ -193,7 +193,7 @@ export function PurchaseObject({ phase: requestedPhase }: { phase: number }) {
                   </div>
                   <div>
                     <dt>Separate storage budget</dt>
-                    <dd>{formatNear(budgetFunding((BigInt(SERVICE_PRICE) * 5n).toString()).storage)} NEAR</dd>
+                    <dd>{formatNear(budgetFunding((BigInt(SERVICE_PRICE) * 5n).toString(),{flexible:true}).storage)} NEAR</dd>
                   </div>
                   <div>
                     <dt>Service</dt>

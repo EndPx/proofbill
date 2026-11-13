@@ -34,7 +34,7 @@ import {
   XCircle,
 } from "lucide-react";
 import {
-  formatNear,
+  formatReceiptNear as formatNear,
   humanPhase,
   validAccountId,
   canTransfer,
@@ -44,6 +44,7 @@ import {
   MODEL_ID,
   parseNearAmount,
   budgetFunding,
+  parseOrderPriceLimit,
   type PurchasePass,
   type PurchaseOrder,
   type PrivateResult,
@@ -60,6 +61,9 @@ type OrderDetail = {
   observations: { action: string; tx_hash: string; signer_id: string }[];
 };
 const errorCopy: Record<string, string> = {
+  ORDER_PRICE_LIMIT_EXCEEDED: "The service quote exceeds your per-purchase limit. Update the limit in your Purchase Pass settings before ordering.",
+  ORDER_STORAGE_REQUIRED: "Add storage backing on the Purchase Pass before starting another order. This does not use or increase your service budget.",
+  TRANSFER_STORAGE_REQUIRED: "Add storage backing on the Purchase Pass before transferring it. Your service budget is unchanged.",
   CONTRACT_NOT_CONFIGURED:
     "The testnet contract is being connected. Please check back shortly.",
   AUTHENTICATION_REQUIRED:
@@ -126,6 +130,16 @@ function budgetRefundCopy(budget: PassBudget) {
   const amount = formatNear((BigInt(budget.available_yocto) + BigInt(budget.reserved_yocto)).toString());
   return `Refund returns ${amount} testnet NEAR and closes this budget pass. Prior payments and storage backing are excluded.`;
 }
+function OrderLimitField({enabled,value,onToggle,onChange,disabled=false}:{enabled:boolean;value:string;onToggle:(v:boolean)=>void;onChange:(v:string)=>void;disabled?:boolean}) {
+  let valid=true;try{if(enabled)parseOrderPriceLimit(value)}catch{valid=false}
+  return <>
+    <div className="info"><label><input type="checkbox" aria-label="Set a per-purchase limit" checked={enabled} disabled={disabled} onChange={e=>onToggle(e.target.checked)}/> Set a maximum service price per purchase (optional)</label></div>
+    {enabled&&<label className="field">Maximum per purchase (testnet NEAR)
+      <input aria-label="Maximum per purchase (testnet NEAR)" inputMode="decimal" value={value} disabled={disabled} aria-invalid={!valid} aria-describedby="order-limit-help" onChange={e=>onChange(e.target.value)}/>
+      <small id="order-limit-help">{valid?"Each seller payment must fit this limit and the remaining service budget.":"Enter a positive NEAR amount; zero or an empty enabled limit is not accepted."}</small>
+    </label>}
+  </>;
+}
 function PaymentChoice({
   mode,
   onChange,
@@ -133,6 +147,8 @@ function PaymentChoice({
   onConsent,
   seller,
   budget,
+  orderLimit,
+  flexibleBudget=false,
   disabled = false,
 }: {
   mode: PaymentMode;
@@ -141,6 +157,8 @@ function PaymentChoice({
   onConsent: (value: boolean) => void;
   seller: string;
   budget?: string;
+  orderLimit?:string|null;
+  flexibleBudget?:boolean;
   disabled?: boolean;
 }) {
   return (
@@ -166,6 +184,7 @@ function PaymentChoice({
           <label>
             <input
               type="checkbox"
+              aria-label="Authorize Automatic payments"
               checked={consent}
               disabled={disabled}
               onChange={(e) => onConsent(e.target.checked)}
@@ -175,6 +194,8 @@ function PaymentChoice({
             configured publisher records matching delivery. No final wallet
             approval is requested. Evidence checks do not guarantee answer
             quality.
+            {flexibleBudget&&(orderLimit?` Each payment is also capped at ${formatNear(orderLimit)} NEAR.`:" No separate per-purchase ceiling is set; the fixed service quote and remaining budget still apply.")}
+            {flexibleBudget&&" Storage backing is separate and may need an owner top-up as history grows."}
           </label>
         </div>
       ) : (
@@ -196,7 +217,7 @@ function AgentSettings({
   hostedAgent: string;
   advanced: boolean;
   busy: boolean;
-  onSave: (agent: string, mode: PaymentMode) => void;
+  onSave: (agent: string, mode: PaymentMode, limit:string|null) => void;
 }) {
   const [kind, setKind] = useState(
     pass.agent_id && pass.agent_id !== hostedAgent ? "custom" : "proofbill",
@@ -206,6 +227,10 @@ function AgentSettings({
   );
   const [mode, setMode] = useState<PaymentMode>(pass.payment_mode ?? "Manual");
   const [consent, setConsent] = useState(false);
+  const [limited,setLimited]=useState(pass.max_order_price_yocto!=null);
+  const [limitInput,setLimitInput]=useState(pass.max_order_price_yocto?formatNear(pass.max_order_price_yocto):"0.100");
+  let limit:string|null=null,limitValid=true;
+  try{if(limited)limit=parseOrderPriceLimit(limitInput)}catch{limitValid=false}
   const agent = kind === "proofbill" ? hostedAgent : account.trim();
   return (
     <section className="form-panel" aria-label="Agent and payment settings">
@@ -215,7 +240,7 @@ function AgentSettings({
           aria-label="Purchasing agent"
           value={kind}
           disabled={busy}
-          onChange={(e) => setKind(e.target.value)}
+          onChange={(e) => {setKind(e.target.value);setConsent(false)}}
         >
           <option value="proofbill">ProofBill assistant</option>
           <option value="custom" disabled={!advanced}>
@@ -229,7 +254,7 @@ function AgentSettings({
           <input
             value={account}
             disabled={busy}
-            onChange={(e) => setAccount(e.target.value)}
+            onChange={(e) => {setAccount(e.target.value);setConsent(false)}}
             placeholder="assistant.your-account.testnet"
             autoCapitalize="none"
             spellCheck={false}
@@ -248,9 +273,12 @@ function AgentSettings({
           onConsent={setConsent}
           seller={pass.seller_id}
           budget={pass.budget?.available_yocto}
+          orderLimit={limit}
+          flexibleBudget={!!pass.flexible_budget}
           disabled={busy}
         />
       )}
+      {pass.flexible_budget&&<OrderLimitField enabled={limited} value={limitInput} disabled={busy} onToggle={v=>{setLimited(v);setConsent(false)}} onChange={v=>{setLimitInput(v);setConsent(false)}}/>}
       <p className="fine">
         The NFT stays in your wallet. Saving changes invalidates the previous
         agent authorization.
@@ -258,9 +286,9 @@ function AgentSettings({
       <button
         className="button primary"
         disabled={
-          busy || !validAccountId(agent) || (mode === "Automatic" && !consent)
+          busy || !validAccountId(agent) || !limitValid || (mode === "Automatic" && !consent)
         }
-        onClick={() => onSave(agent, mode)}
+        onClick={() => onSave(agent, mode, limit)}
       >
         {pass.agent_id
           ? "Save agent and payment settings"
@@ -293,6 +321,10 @@ export function Workspace() {
     [receiver, setReceiver] = useState(""),
     [hours, setHours] = useState("72"),
     [serviceBudget, setServiceBudget] = useState("0.050"),
+    [initialStorage,setInitialStorage]=useState("0.030"),
+    [limitEnabled,setLimitEnabled]=useState(false),
+    [limitInput,setLimitInput]=useState("0.100"),
+    [storageTopUp,setStorageTopUp]=useState("0.030"),
     [paymentMode, setPaymentMode] = useState<PaymentMode>("Manual"),
     [automaticConsent, setAutomaticConsent] = useState(false),
     [tab, setTab] = useState("Result");
@@ -361,7 +393,14 @@ export function Workspace() {
   }
   let budgetQuote: ReturnType<typeof budgetFunding> | null = null;
   let budgetAmount = SERVICE_PRICE;
-  try { budgetAmount = parseNearAmount(serviceBudget); budgetQuote = budgetFunding(budgetAmount); } catch { /* Invalid draft is explained next to the field. */ }
+  let limitAmount:string|null=null,limitValid=true,topUpAmount:string|null=null;
+  try { if(limitEnabled)limitAmount=parseOrderPriceLimit(limitInput); } catch { limitValid=false; }
+  try { topUpAmount=parseOrderPriceLimit(storageTopUp); } catch { /* Keep an invalid storage draft non-actionable. */ }
+  try {
+    budgetAmount=parseNearAmount(serviceBudget);
+    budgetQuote=budgetFunding(budgetAmount,{flexible:!!wallet.config.flexibleBudgets,
+      ...(wallet.config.flexibleBudgets?{storageBudget:parseNearAmount(initialStorage)}:{})});
+  } catch { /* Invalid draft is explained next to the field. */ }
   const available = passes
       .filter((p) => ["Available", "InUse"].includes(p.phase))
       .reduce((s, p) => s + BigInt(p.budget?.available_yocto ?? (p.phase === "Available" ? p.price_yocto : "0")), 0n),
@@ -458,10 +497,21 @@ export function Workspace() {
                   value={serviceBudget} disabled={!!busy}
                   onChange={(e) => { setServiceBudget(e.target.value); setAutomaticConsent(false); }} />
                 <small id="budget-help" aria-live="polite">
-                  {budgetQuote ? `${budgetQuote.orders} purchases at 0.010 NEAR each. Storage is separate.` : "Enter 0.010 to 1.000 NEAR in increments of 0.010."}
+                  {budgetQuote ? wallet.config.flexibleBudgets?`Up to ${budgetQuote.orders} purchases at the current 0.010 NEAR quote, subject to your limit and storage credit.`:`${budgetQuote.orders} purchases at 0.010 NEAR each. Storage is separate.` : wallet.config.flexibleBudgets?"Enter a budget covering at least one current 0.010 NEAR service quote and valid storage backing. Any higher atomic amount is accepted.":"Enter 0.010 to 1.000 NEAR in increments of 0.010."}
                 </small>
               </label>
             )}
+            {wallet.config.flexibleBudgets&&<>
+              <OrderLimitField enabled={limitEnabled} value={limitInput} disabled={!!busy}
+                onToggle={v=>{setLimitEnabled(v);setAutomaticConsent(false)}} onChange={v=>{setLimitInput(v);setAutomaticConsent(false)}}/>
+              {limitAmount&&BigInt(limitAmount)<BigInt(SERVICE_PRICE)&&<p className="fine">The current 0.010 NEAR service quote exceeds this limit. Increase it before buying this service.</p>}
+              <details className="panel"><summary>Initial storage backing</summary>
+                <label className="field">Storage backing (testnet NEAR)
+                  <input aria-label="Storage backing (testnet NEAR)" inputMode="decimal" value={initialStorage} disabled={!!busy} onChange={e=>{setInitialStorage(e.target.value);setAutomaticConsent(false)}}/>
+                  <small>At least 0.030 NEAR, independent of your service budget. Actual history growth uses this backing. You can add more separately later.</small>
+                </label>
+              </details>
+            </>}
             <label className="field">
               Pass expires after
               <select value={hours} onChange={(e) => setHours(e.target.value)}>
@@ -478,6 +528,8 @@ export function Workspace() {
                 onConsent={setAutomaticConsent}
                 seller={wallet.config.sellerId ?? ""}
                 budget={wallet.config.budgetPasses && budgetQuote ? budgetAmount : undefined}
+                orderLimit={limitAmount}
+                flexibleBudget={!!wallet.config.flexibleBudgets}
                 disabled={!!busy}
               />
             )}
@@ -536,16 +588,18 @@ export function Workspace() {
                 disabled={
                   !wallet.config.configured ||
                   (wallet.config.budgetPasses && !budgetQuote) ||
+                  (wallet.config.flexibleBudgets && (!limitValid || (limitAmount!==null && BigInt(limitAmount)<BigInt(SERVICE_PRICE)))) ||
                   (paymentMode === "Automatic" && !automaticConsent)
                 }
                 onClick={() =>
                   void run("Creating pass", async () => {
                     await wallet.transact(
-                      wallet.config.budgetPasses ? "create_budget_pass" : "create_purchase_pass",
+                      wallet.config.flexibleBudgets?"create_flexible_budget_pass":wallet.config.budgetPasses ? "create_budget_pass" : "create_purchase_pass",
                       {
                         service_id: SERVICE_ID,
                         payment_mode: paymentMode,
                         ...(wallet.config.budgetPasses ? { budget_yocto: budgetAmount } : {}),
+                        ...(wallet.config.flexibleBudgets?{max_order_price_yocto:limitAmount}:{}),
                         expires_at_ns: (
                           (BigInt(Date.now()) + BigInt(hours) * 3600000n) *
                           1000000n
@@ -624,18 +678,31 @@ export function Workspace() {
                 <dt>Payment approval</dt>
                 <dd>{pass.payment_mode ?? "Manual"}</dd>
               </div>
+              {pass.flexible_budget&&<div><dt>Maximum service price per purchase</dt><dd>{pass.max_order_price_yocto?`${formatNear(pass.max_order_price_yocto)} testnet NEAR`:"No separate ceiling"}</dd></div>}
             </dl>
             {pass.budget && pass.budget.orders_created > 0 && (
               <section className="panel section-gap">
                 <h3>Public purchase history</h3>
-                {Array.from({length:pass.budget.orders_created},(_,i)=>(
-                  <Link className="chain-link" key={i} href={`/receipts/${pass.token_id}-order-${i+1}`}>
-                    Order {i+1} receipt <ExternalLink size={14}/>
+                {pass.budget.orders_created>20&&<p className="fine">Showing the latest 20 of {pass.budget.orders_created} orders.</p>}
+                {Array.from({length:Math.min(pass.budget.orders_created,20)},(_,i)=>pass.budget!.orders_created-Math.min(pass.budget!.orders_created,20)+i+1).map(number=>(
+                  <Link className="chain-link" key={number} href={`/receipts/${pass.token_id}-order-${number}`}>
+                    Order {number} receipt <ExternalLink size={14}/>
                   </Link>
                 ))}
                 <p className="fine">Financial records are public. Private results stay with each order's historical buyer.</p>
               </section>
             )}
+            {isOwner&&pass.budget&&wallet.config.flexibleBudgets&&<details className="panel section-gap" open={BigInt(pass.storage_required_for_order_yocto??"0")>0n}>
+              <summary>Storage backing</summary>
+              <p className="fine">Remaining storage credit: {formatNear(pass.storage_credit_yocto)} NEAR. This is separate from your service budget and backs retained NFT/order records.</p>
+              {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<p className="fine">Add at least {formatNear(pass.storage_required_for_order_yocto!)} NEAR before another order. No service funds will be converted to storage.</p>}
+              <label className="field">Additional storage backing (testnet NEAR)
+                <input aria-label="Additional storage backing (testnet NEAR)" inputMode="decimal" value={storageTopUp} aria-invalid={!topUpAmount} disabled={!!busy} onChange={e=>setStorageTopUp(e.target.value)}/>
+              </label>
+              {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<Button secondary onClick={()=>setStorageTopUp(formatNear(pass.storage_required_for_order_yocto!))}>Use required amount</Button>}
+              <Button secondary disabled={!topUpAmount||pass.transfer_pending} onClick={()=>action("top_up_storage",{token_id:pass.token_id},topUpAmount!)}>Add storage backing</Button>
+              <p className="fine">Adding backing between orders refreshes authorization. Resubmit any unreserved task afterward; an active order keeps its existing authorization.</p>
+            </details>}
             {pass.order_id && (
               <Link
                 className="button secondary"
@@ -662,16 +729,20 @@ export function Workspace() {
                   pass={pass}
                   hostedAgent={wallet.config.agentId}
                   advanced={!!wallet.config.advancedModes}
-                  busy={!!busy}
-                  onSave={(agent, mode) =>
-                    void action("assign_agent", {
+                  busy={!!busy||pass.transfer_pending}
+                  onSave={(agent, mode, limit) =>
+                    void action(pass.flexible_budget?"configure_budget_agent":"assign_agent", {
                       token_id: pass.token_id,
                       expected_revision: pass.authorization_revision,
                       agent_id: agent,
                       payment_mode: mode,
+                      ...(pass.flexible_budget?{max_order_price_yocto:limit}:{}),
                     })
                   }
                 />
+                {pass.max_order_price_yocto&&BigInt(pass.price_yocto)>BigInt(pass.max_order_price_yocto)&&<p className="fine">The current service quote exceeds your limit. Update the per-purchase maximum before ordering.</p>}
+                {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<p className="fine">Add storage backing in the panel on this pass before starting another order.</p>}
+                {pass.budget&&BigInt(pass.budget.available_yocto)<BigInt(pass.price_yocto)&&<p className="fine">The remaining balance is below the current service quote. You can refund or transfer the remaining service funds.</p>}
                 {pass.agent_id && pass.agent_id !== wallet.config.agentId ? (
                   <div className="info">
                     <Bot size={18} />
@@ -726,7 +797,7 @@ export function Workspace() {
                       </Button>
                     ) : (
                       <Button
-                        disabled={brief.trim().length < 8}
+                        disabled={pass.transfer_pending||brief.trim().length < 8 || (pass.budget?BigInt(pass.budget.available_yocto)<BigInt(pass.price_yocto):false) || BigInt(pass.storage_required_for_order_yocto??"0")>0n || !!(pass.max_order_price_yocto&&BigInt(pass.price_yocto)>BigInt(pass.max_order_price_yocto))}
                         onClick={() =>
                           void run("Queuing order", async () => {
                             const r = await api<{ job: Job }>("jobs", {
@@ -1065,6 +1136,7 @@ export function Workspace() {
                     <dt>Agent</dt>
                     <dd>{o.agent_id}</dd>
                   </div>
+                  <div><dt>Recorded per-purchase ceiling</dt><dd>{o.max_order_price_yocto?`${formatNear(o.max_order_price_yocto)} NEAR`:"No separate ceiling recorded"}</dd></div>
                 </dl>
                 <div className="receipt-rule" />
                 <div className="amount">
@@ -1210,7 +1282,7 @@ export function Workspace() {
                     <span>testnet NEAR{p.budget ? " available" : " per order"}</span>
                   </div>
                   <small>
-                    {p.phase === "Available"
+                    {p.phase === "Available" && (!p.budget||BigInt(p.budget.available_yocto)>=BigInt(p.price_yocto))
                       ? "Ready to assign and use"
                       : "Open pass details"}
                   </small>

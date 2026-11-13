@@ -1,0 +1,11 @@
+# Flexible budget application and SDK checks
+
+Validated locally on 14 November 2026. These checks use production builds, injected wallets, read-only RPC fixtures and isolated PostgreSQL. They do not establish a real buyer signature, deployed version or provider request; hosted evidence is recorded separately.
+
+The owner enters a custom total and optionally enables a positive per-purchase ceiling. Leaving the control unchecked sends null; an enabled empty or zero draft is not silently treated as unlimited. Quotes preserve atomic precision. A 1 NEAR total starts with 0.030 separate backing and 1.030 funding plus gas; a 1.2345 total starts at 1.2645. The current service quote remains 0.010 regardless of the ceiling. Extra backing can be prepaid separately, and future byte growth can require holder-signed top-ups. Service balances never pay for that backing automatically.
+
+Changing total, ceiling, initial backing or agent clears pending Automatic consent. Existing flexible-pass settings can explicitly remove a ceiling in one owner transaction. A pass shows its quoted storage deficit and a separate deposit action. Top-ups preserve service allocation; unreserved requests need refreshed revision. SDK/API reject over-ceiling or under-backed requests before preparing a new reservation. Receipt projections preserve each order's recorded ceiling independently of later settings; sequence numbers beyond one hundred remain readable. Long amounts display full nonzero precision and the UI limits automatic receipt listings to the newest twenty.
+
+The marketing preview uses the same flexible quote helper and shows local repeated purchases, retained authorization, optional ceilings and exact fractional residual refund. It explicitly does not model actual storage-byte growth or run a model, wallet or application mutation.
+
+Checks passed: typechecking, twenty-two TypeScript unit tests, thirty-seven PostgreSQL queue/recovery/retention tests and forty production-build browser tests. New browser cases verify arbitrary totals, null/removed ceilings, changed-limit consent, exact native transaction arguments, separate storage deposits, a 360px layout, and a sample 0.025 budget that pays two 0.010 orders then refunds its 0.005 remainder. Earlier tests retain v3 compatibility. Contract behavior is checked separately by pinned Rust/cargo-near/Sandbox CI.

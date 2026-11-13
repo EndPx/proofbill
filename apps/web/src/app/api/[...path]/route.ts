@@ -51,6 +51,7 @@ export async function GET(req: NextRequest, ctx: Context) {
             agent_modes?: boolean;
             seller_id?: string;
             budget_passes?: boolean;
+            flexible_budgets?: boolean;
           }>("get_config").catch(() => null)
         : null;
       return json({
@@ -62,7 +63,8 @@ export async function GET(req: NextRequest, ctx: Context) {
           "",
         configured: !!contractId(),
         advancedModes: (features?.version ?? 0) >= 2 && features?.agent_modes === true,
-        budgetPasses: features?.version === 3 && features.budget_passes === true,
+        budgetPasses: (features?.version??0) >= 3 && features?.budget_passes === true,
+        flexibleBudgets: (features?.version??0) >= 4 && features?.flexible_budgets === true,
         sellerId: features?.seller_id ?? "",
       });
     }

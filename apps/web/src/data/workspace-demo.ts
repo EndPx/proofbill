@@ -11,20 +11,24 @@ export type DemoOrder = {
   requestedBy: string;
   paymentMode: PaymentMode;
   agent: string;
+  maxOrderPrice?: string | null;
 };
 export type DemoPass = {
   id: string;
   name: string;
-  phase: "Available" | "InUse" | "Completed";
+  phase: "Available" | "InUse" | "Completed" | "Refunded";
   budget: string;
   paymentMode: PaymentMode;
   agent: string;
+  maxOrderPrice?: string | null;
+  refunded?: string;
 };
 export function demoLedger(pass: DemoPass, orders: DemoOrder[]) {
   const own = orders.filter(order=>order.passId===pass.id);
   const spent = BigInt(own.filter(order=>order.phase==="Paid").length)*BigInt(SERVICE_PRICE);
   const reserved = BigInt(own.filter(order=>order.phase==="Delivered").length)*BigInt(SERVICE_PRICE);
-  return {spent,reserved,available:BigInt(pass.budget)-spent-reserved};
+  const refunded=BigInt(pass.refunded??"0");
+  return {spent,reserved,refunded,available:BigInt(pass.budget)-spent-reserved-refunded};
 }
 
 export const demoOrders: DemoOrder[] = [

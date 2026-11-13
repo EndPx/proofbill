@@ -2,7 +2,9 @@
 
 Choose the built-in ProofBill assistant or a dedicated NEAR account controlled by your own agent. The NFT stays in the owner's wallet. Each pass binds one service, seller, amount and expiry.
 
-Version 3 adds opt-in reusable budgets. The owner chooses a service budget in 0.010 testnet NEAR increments, up to 1.000. Each order costs 0.010; only one order is active at a time. The funding quote separates service budget from storage backing (`0.030 + service budget`) and wallet gas. Automatic authorizes purchases within the remaining budget, fixed seller/price and expiry; Manual asks for approval for each delivered order. Existing single-use passes keep their original behavior.
+Version 4 adds custom total budgets and an optional per-purchase ceiling. A total must cover the current 0.010 testnet NEAR quote, but need not be a price multiple and has no 1 NEAR ceiling. An absent ceiling means no extra price cap; every order must still fit the fixed quote and available allocation. `configure_budget_agent` lets the holder change assignment, mode and ceiling between orders, advancing revision. Mode/ceiling snapshots on earlier orders do not change. V3 and single-use passes retain their original behavior.
+
+Starting storage backing is at least 0.030 NEAR, independent of the chosen service total. More backing can be funded initially or through holder-signed `top_up_storage`. The public pass view quotes `storage_required_for_order_yocto`; API/SDK preparation refuses a new order until that deficit is covered. An owner top-up never consumes service budget. Between orders it refreshes revision, so archive/resubmit any unreserved saved request afterward; active-order backing does not change its authorization. Actual history growth can need further deposits. This is separate storage backing, not an additional price chosen by the agent.
 
 ## Owner setup
 
@@ -48,5 +50,7 @@ Both modes mark Paid only after a successful seller-transfer callback. Failed pa
 Read-only public receipts at `/receipts/:orderId` need no wallet. They identify the historical buyer separately from the current NFT holder. Private results and verification bundles require that buyer's signed session; transferring a Completed NFT does not transfer private access. Failed-payment retries require the buyer's wallet approval even when the initial payment policy was Automatic.
 
 The current NEP-413 account-ownership verifier requires a FullAccess key for the dedicated agent account. Restricted-function-call-key login is not supported by this SDK version. This account is separate from the owner's wallet and its key stays in your runtime. Hosted agent and publisher operational keys remain method-restricted.
+
+The operator integration runner accepts `E2E_FLEXIBLE_BUDGET` as a decimal NEAR total and optional `E2E_MAX_ORDER_PRICE`. It must target the declared project testnet accounts. `E2E_STORAGE_TOP_UP=yes` explicitly permits the buyer-side runner to add only the quoted storage deficit; no agent key receives permission to take storage funds from the owner's wallet. Budget resume still requires an explicit `E2E_ORDER_ID`. It signs real testnet transactions and consumes inference credits; it is not part of ordinary CI.
 
 Policy entries use an additional storage prefix without changing existing Borsh root/pass/order layouts. An absent entry means Manual, preserving existing passes on upgrade.

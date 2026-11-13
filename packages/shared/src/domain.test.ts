@@ -7,6 +7,7 @@ import {
   parseNearAmount,
   budgetFunding,
   nextOrderId,
+  parseOrderPriceLimit,
   type PurchasePass,
 } from "./index.js";
 test("budget quotes separate service allocation from storage with exact atomic amounts", () => {
@@ -19,6 +20,15 @@ test("budget quotes separate service allocation from storage with exact atomic a
     assert.throws(() => budgetFunding(parseNearAmount(value)));
   assert.equal(nextOrderId({token_id:"pass-1"}),"pass-1-order");
   assert.equal(nextOrderId({token_id:"pass-1",budget:{orders_created:2} as PurchasePass["budget"]}),"pass-1-order-3");
+});
+test("flexible budgets accept custom totals and decouple initial storage from spending authority",()=>{
+  assert.deepEqual(budgetFunding(parseNearAmount("1"),{flexible:true}),{orders:100,storage:"30000000000000000000000",total:"1030000000000000000000000"});
+  assert.deepEqual(budgetFunding(parseNearAmount("1.2345"),{flexible:true}),{orders:123,storage:"30000000000000000000000",total:"1264500000000000000000000"});
+  assert.equal(budgetFunding(parseNearAmount("1.2345"),{flexible:true,storageBudget:parseNearAmount("0.1")}).total,"1334500000000000000000000");
+  assert.equal(parseOrderPriceLimit("0.1"),"100000000000000000000000");
+  for(const raw of ["","0","-1","1e-2"])assert.throws(()=>parseOrderPriceLimit(raw),/INVALID_PRICE_LIMIT/);
+  assert.throws(()=>budgetFunding(((1n<<128n)-1n).toString(),{flexible:true}));
+  assert.throws(()=>budgetFunding(parseNearAmount("1"),{flexible:true,storageBudget:"1"}),/INVALID_STORAGE_BACKING/);
 });
 test("atomic amounts retain exact integer precision", () => {
   assert.equal(formatNear("12345678901234567890123456789", 6), "12345.678901");

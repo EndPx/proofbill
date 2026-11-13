@@ -58,6 +58,8 @@ const permanent = new Set([
   "ORDER_REFUNDED",
   "PROVIDER_OUTCOME_UNKNOWN",
   "PROVIDER_ATTEMPT_OR_DAILY_LIMIT",
+  "ORDER_STORAGE_REQUIRED",
+  "ORDER_PRICE_LIMIT_EXCEEDED",
 ]);
 function commitment(kind: string, salt: string, bytes: Uint8Array) {
   return digest(
@@ -206,6 +208,8 @@ async function execute(rt: WorkerRuntime, job: JobRow, signal: AbortSignal) {
     request_commitment: requestHash,
   });
   if (!order) {
+    if(pass.max_order_price_yocto && BigInt(pass.price_yocto)>BigInt(pass.max_order_price_yocto))throw new Error("ORDER_PRICE_LIMIT_EXCEEDED");
+    if(BigInt(pass.storage_required_for_order_yocto??"0")>0n)throw new Error("ORDER_STORAGE_REQUIRED");
     if (saved || pass.phase !== "Available")
       throw new Error("ORDER_RESERVATION_MISMATCH");
     if (pass.agent_id !== rt.agent)

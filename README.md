@@ -36,6 +36,8 @@ The initial user is a developer or small team operating paid-API agents. The cur
 
 Version 3 adds [reusable NFT budgets](docs/evidence/budget-pass-hosted.md) and [buyer-run private evidence verification](docs/verify-private-result.md). One real NFT funded Automatic and Manual purchases, transferred its remaining entitlement, and refunded only the unspent allocation to the new holder. A buyer export passed independent checking; a tampered copy was rejected. Earlier single-use passes keep their original behavior; dated reports identify which version was exercised.
 
+Version 4 adds [custom totals, optional per-purchase ceilings and independent storage backing](docs/evidence/flexible-budget-contract.md), with [application/SDK checks](docs/evidence/flexible-budget-application.md). A ceiling bounds an individual seller payment; it does not choose the merchant price. Deployment records identify which tested artifact is active.
+
 <p align="center">
   <img src=".github/assets/landing-desktop.webp" alt="The live ProofBill landing page with its Purchase Pass illustration, wallet entry action and testnet product preview." width="1200" />
 </p>
@@ -61,7 +63,7 @@ The receipt image is a recorded testnet snapshot. The [public receipt](https://p
 4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, choose the ProofBill assistant or your own agent, and set the payment policy before ordering. With the ProofBill assistant, enter a brief and run the agent; for your own agent, follow the [SDK/CLI setup](docs/agent-integration.md). Sign a buyer session to unlock the result. Manual payment requires your approval after review; Automatic settlement starts after matching publisher delivery under your advance authorization. Refund actions depend on contract state. Funding and policy changes require a wallet transaction.
 5. **Review or reproduce the code.** Use the track/source map below, then run [local checks](#checks-and-reproduction). Browser tests use fixtures and need no signing or provider secrets.
 
-Each service purchase costs **0.010 native testnet NEAR**. A new budget pass funds 1–100 purchases; separate storage backing is **0.030 NEAR + the chosen service budget**, plus wallet gas. For example, 0.050 service budget and 0.080 storage require 0.130 NEAR plus gas. Refund returns remaining service funds, excluding earlier seller payments and storage. Storage backing is retained while the NFT/history exists. Legacy single-use creation keeps its original 0.010 service/0.030 storage amounts. The seller/operator pays inference credits independently of the later payout.
+The current service quote is **0.010 native testnet NEAR**. Version 4 accepts a custom total covering that quote, without a price-step or 1 NEAR ceiling. An optional maximum limits each purchase; it does not set the seller's price. Initial storage backing starts at **0.030 NEAR independently of the service total**, with wallet gas separate. A 1 NEAR service budget and optional 0.1 ceiling therefore start at 1.030 NEAR plus gas, not 2.030. Actual retained history consumes backing and can require a separate owner top-up later; this is not a promise that 0.030 covers every future order. Service refund excludes prior seller payments and storage. Legacy v3/single-use passes retain their original rules. Operator inference credits are separate from these native amounts.
 
 ## Four track contributions
 

@@ -234,6 +234,9 @@ export default async function PublicReceiptPage({
                 ? "This order uses the owner's advance authorization. Matching publisher delivery starts its fixed seller payment without a final wallet approval."
                 : "The buyer approves the exact delivered result and seller payment in the wallet before settlement starts."}
             </p>
+            <p className="fine">{receipt.max_order_price_yocto
+              ? `Recorded maximum service price per purchase: ${formatReceiptNear(receipt.max_order_price_yocto)} testnet NEAR.`
+              : "No separate per-purchase ceiling was recorded; the service quote and funded allocation still apply."}</p>
             {automatic && (
               <p>
                 The configured publisher asserts that the delivery checks

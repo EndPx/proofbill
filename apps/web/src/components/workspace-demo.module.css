@@ -249,6 +249,7 @@
   background: #e2f9ec;
   color: #08623c;
 }
+.status[data-neutral="true"] { background:#f5f5f5; color:#666; }
 .notice {
   color: #08623c !important;
   font-size: 10px !important;

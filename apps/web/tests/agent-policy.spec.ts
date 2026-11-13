@@ -18,7 +18,7 @@ const pass = {
   transfer_pending: false,
   attempt: 0,
 };
-async function setup(page: Page, custom = false, budgetPasses = false) {
+async function setup(page: Page, custom = false, budgetPasses = false, flexibleBudgets = false) {
   await prepareWallet(page, true, false, true);
   const current = { ...pass, agent_id: custom ? "custom.testnet" : null };
   await page.route("**/api/**", (route) => {
@@ -32,6 +32,7 @@ async function setup(page: Page, custom = false, budgetPasses = false) {
               configured: true,
               advancedModes: true,
               budgetPasses,
+              flexibleBudgets,
               agentId: "agent.testnet",
               sellerId: "seller.testnet",
             }
@@ -84,6 +85,49 @@ test("remaining budget refund explains closure and prior public receipts stay re
   await expect(page.getByText(/Refund returns 0.010 testnet NEAR and closes this budget pass/)).toBeVisible();
   await expect(page.getByRole("link",{name:"Order 1 receipt"})).toHaveAttribute("href","/receipts/pass-99-order-1");
   await expect(page.getByRole("link",{name:"Order 2 receipt"})).toHaveAttribute("href","/receipts/pass-99-order-2");
+});
+test("owner inputs a custom total and optional ceiling independently of the service quote",async({page})=>{
+  await setup(page,false,true,true);await page.goto("/app/passes/new");
+  await page.getByRole("textbox",{name:"Service budget (testnet NEAR)"}).fill("1.2345");
+  await expect(page.locator(".amount")).toContainText("1.2645");
+  await page.getByRole("checkbox",{name:"Set a per-purchase limit"}).check();
+  const limit=page.getByRole("textbox",{name:"Maximum per purchase (testnet NEAR)"});
+  await limit.fill("0.1");
+  await page.getByRole("combobox",{name:"Payment approval"}).selectOption("Automatic");
+  const consent=page.getByRole("checkbox",{name:"Authorize Automatic payments"});await consent.check();
+  await limit.fill("0.2");await expect(consent).not.toBeChecked();await consent.check();
+  await page.getByRole("button",{name:"Confirm and mint pass"}).click();
+  await expect.poll(async()=>(await transactions(page)).length).toBe(1);
+  expect((await transactions(page))[0].actions[0].params).toMatchObject({methodName:"create_flexible_budget_pass",args:{budget_yocto:"1234500000000000000000000",max_order_price_yocto:"200000000000000000000000"},deposit:"1264500000000000000000000"});
+});
+test("an omitted ceiling stays null and does not require a price-step budget",async({page})=>{
+  await setup(page,false,true,true);await page.goto("/app/passes/new");
+  await page.getByRole("textbox",{name:"Service budget (testnet NEAR)"}).fill("2.015");
+  await expect(page.getByRole("textbox",{name:"Maximum per purchase (testnet NEAR)"})).toHaveCount(0);
+  await expect(page.locator(".amount")).toContainText("2.045");
+  await page.getByRole("button",{name:"Confirm and mint pass"}).click();
+  await expect.poll(async()=>(await transactions(page)).length).toBe(1);
+  expect((await transactions(page))[0].actions[0].params.args).toMatchObject({budget_yocto:"2015000000000000000000000",max_order_price_yocto:null});
+});
+test("storage backing is an explicit owner deposit and does not increase service funds",async({page})=>{
+  await page.setViewportSize({width:360,height:900});await setup(page,false,true,true);
+  await page.route("**/api/pass/**",r=>r.fulfill({json:{...pass,agent_id:"agent.testnet",flexible_budget:true,max_order_price_yocto:"100000000000000000000000",storage_credit_yocto:"5000000000000000000000",storage_required_for_order_yocto:"9000000000000000000000",budget:{funded_yocto:"1000000000000000000000000",available_yocto:"1000000000000000000000000",spent_yocto:"0",reserved_yocto:"0",refunded_yocto:"0",orders_created:0}}}));
+  await page.goto("/app/passes/pass-99");
+  await page.getByRole("button",{name:"Use required amount"}).click();
+  await expect(page.getByRole("textbox",{name:"Additional storage backing (testnet NEAR)"})).toHaveValue("0.009");
+  await page.getByRole("button",{name:"Add storage backing"}).click();
+  await expect.poll(async()=>(await transactions(page)).length).toBe(1);
+  expect((await transactions(page))[0].actions[0].params).toMatchObject({methodName:"top_up_storage",args:{token_id:"pass-99"},deposit:"9000000000000000000000"});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+test("flexible agent settings can explicitly remove a prior per-purchase ceiling",async({page})=>{
+  await setup(page,false,true,true);
+  await page.route("**/api/pass/**",r=>r.fulfill({json:{...pass,agent_id:"agent.testnet",flexible_budget:true,max_order_price_yocto:"100000000000000000000000",storage_required_for_order_yocto:"0",budget:{funded_yocto:"1000000000000000000000000",available_yocto:"1000000000000000000000000",spent_yocto:"0",reserved_yocto:"0",refunded_yocto:"0",orders_created:0}}}));
+  await page.goto("/app/passes/pass-99");
+  await page.getByRole("checkbox",{name:"Set a per-purchase limit"}).uncheck();
+  await page.getByRole("button",{name:"Save agent and payment settings"}).click();
+  await expect.poll(async()=>(await transactions(page)).length).toBe(1);
+  expect((await transactions(page))[0].actions[0].params).toMatchObject({methodName:"configure_budget_agent",args:{max_order_price_yocto:null,agent_id:"agent.testnet",payment_mode:"Manual"}});
 });
 async function transactions(page: Page) {
   return page.evaluate(

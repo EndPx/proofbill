@@ -625,6 +625,7 @@ textarea {
   border-right-color: transparent;
 }
 .amount {
+  overflow-wrap: anywhere;
   font-size: 42px;
   letter-spacing: -1.5px;
   font-weight: 650;

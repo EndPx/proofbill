@@ -30,14 +30,15 @@ The current service uses one seller, one service version, `Qwen/Qwen3.8-27B` and
 
 | Question | Decision for this build |
 | --- | --- |
-| What does one NFT buy? | A budget for 1–100 sequential service purchases at a fixed 0.010 testnet NEAR each. No subscriptions or top-ups. Legacy passes remain single-use. |
-| How much is funded? | Chosen service budget, plus separate storage backing of 0.030 NEAR + service budget; network gas is separate. Storage is excluded from the service refund. |
+| What does one NFT buy? | A custom service budget for sequential purchases at the current 0.010 testnet NEAR quote. No service-budget top-ups or subscriptions. V3/single-use passes remain supported. |
+| How much is funded? | Chosen total covering one quote, without price steps or a 1 NEAR ceiling, plus independent initial storage backing of at least 0.030 NEAR and wallet gas. Actual history can require a separate owner-approved storage top-up. |
+| Is there a limit per purchase? | Optional positive owner ceiling. Absence adds no separate cap; fixed quote, remaining allocation, assignment and expiry still apply. The limit does not set the merchant price. |
 | Who holds the service budget? | One ProofBill contract, with isolated per-pass liabilities. The NFT carries the right to use/refund its allocation. |
 | What follows transfer between orders? | The unspent service allocation and refund right follow the new owner. Prior payments stay recorded and prior buyers keep their private history. |
 | Can payment settle automatically? | Manual is the default. The owner can explicitly authorize Automatic settlement for one pass after matching publisher delivery; the agent cannot enable this policy or change the seller/amount. |
 | What is immutable in a pass? | Service version, seller, quoted amount, model policy and absolute expiry, snapshotted at mint. |
 | When can it transfer? | Available/unexpired between orders, or terminal with zero financial claim. Active orders, native payouts/refunds and unresolved transfer-calls lock transfer. |
-| What changes on transfer? | Current holder and authorization revision. Prior agent/task delegations and unused Automatic payment permission are invalidated. |
+| What changes on transfer? | Current holder and authorization revision. Between orders, prior agent/task delegations, Automatic permission and the prior holder's per-purchase ceiling are cleared. Earlier order snapshots remain unchanged. |
 | What happens after payment? | A budget pass with remaining funds returns to Available; an exhausted pass becomes Completed. Each numbered order keeps its receipt and recorded policy. Successful settlement increments authorization revision. |
 | Does transfer give private history? | No. Prior private inputs/results remain available only to the historical buyer session. Token ownership conveys public pass state, not past plaintext. |
 | Can rejection run another inference? | No. Cancel/refund closes the pass and returns available/reserved service funds. Paid orders are not refunded. A successful paid order can be followed by a new explicitly identified task using remaining budget. |

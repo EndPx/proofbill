@@ -20,7 +20,7 @@ export const landing = {
   steps: [
     {
       title: "Fund a Purchase Pass",
-      body: "Choose a service budget for repeated fixed-price purchases. Your NFT carries the remaining allocation and fixes the seller before your agent can order.",
+      body: "Choose your total service budget and an optional maximum per purchase. Your NFT carries the remaining allocation and fixes the seller before your agent can order.",
       detail:
         "One active order at a time. Unspent service funds can be refunded; storage is separate.",
     },
@@ -51,7 +51,7 @@ export const landing = {
     {
       question: "What does the Purchase Pass pay for?",
       answer:
-        "Each purchase costs 0.010 testnet NEAR. Choose a service budget from 0.010 to 1.000 NEAR in 0.010 increments. Storage backing is separate: 0.030 NEAR plus the chosen service budget, with wallet gas on top. For a 0.050 service budget, funding is 0.130 NEAR plus gas. Only unspent service funds are refundable; storage backs the NFT and retained history.",
+        "The current service quote is 0.010 testnet NEAR. Choose a total covering that quote, with no price-step or 1 NEAR ceiling, and optionally cap each purchase. Starting storage backing is separate, at least 0.030 NEAR regardless of your total. A 1 NEAR service budget therefore starts at 1.030 NEAR plus gas. Retained history can need an owner-approved storage top-up later. Refunds return unspent service funds; earlier payments and storage are excluded.",
     },
     {
       question: "Does verified evidence mean the AI answer is correct?",

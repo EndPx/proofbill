@@ -112,6 +112,10 @@ export async function runOwnAgent(options: {
     revision = options.revision;
   if (orderId !== (pass.order_id ?? nextOrderId(pass)))
     throw new Error("PASS_AUTHORIZATION_CHANGED");
+  if(pass.phase==="Available"){
+    if(pass.max_order_price_yocto && BigInt(pass.price_yocto)>BigInt(pass.max_order_price_yocto))throw new Error("ORDER_PRICE_LIMIT_EXCEEDED");
+    if(BigInt(pass.storage_required_for_order_yocto??"0")>0n)throw new Error("ORDER_STORAGE_REQUIRED");
+  }
   const requestCommitment = createHash("sha256")
     .update(
       Buffer.concat([
