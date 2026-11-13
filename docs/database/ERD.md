@@ -69,6 +69,7 @@ erDiagram
         text error_code "nullable"
         timestamptz erased_at "nullable"
         timestamptz terminal_at "nullable observed terminal time"
+        timestamptz retention_checked_at "nullable persistent scan turn"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -122,6 +123,8 @@ The row owns the worker lifecycle, encrypted input/result/evidence bundle, one p
 For this single-execution service, output and verification artifacts are one encrypted payload in `result_cipher`. Separate request, artifact and verification-history tables are not needed until the product actually supports multiple deliveries/versions. The exact-byte evidence remains lossless inside that encrypted bundle.
 
 After permitted erasure, clear ciphertext and record `erased_at`; retain the job's non-secret identity and payment references. The worker records the first confirmed terminal observation in `terminal_at` and erases private payloads seven days later. Buyer-requested erasure requires a terminal order. Neither path deletes public chain history.
+
+Retention batches persist `retention_checked_at` before chain reads and rotate by the oldest check/creation time. Unresolved jobs and individual RPC failures cannot monopolize the first twenty rows across worker restarts. The scan index and erasure are scoped to the configured testnet contract. See [the regression checks](../evidence/retention-fairness.md).
 
 ### `pb_chain_observations`: observed transaction evidence
 

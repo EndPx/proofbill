@@ -194,6 +194,8 @@ Queue ownership regression tests use real PostgreSQL row locks and controlled ch
 
 Run `pnpm test:recovery` with the same isolated database to test actual killed/restarted Node processes, lease fencing, saved-result publication and unknown-provider handling. Its RPC/provider/payment boundaries are durable fixtures, with no paid inference or live signing. See [worker recovery evidence](docs/evidence/worker-recovery.md).
 
+Run `pnpm test:retention` against that isolated database for persistent fair scanning, RPC failure isolation, seven-day erasure and contract scoping. [Retention checks](docs/evidence/retention-fairness.md) cover a Paid job behind more than twenty unresolved records without accessing live private payloads.
+
 Contract tests require [the pinned Rust toolchain](contracts/proofbill/rust-toolchain.toml), cargo-near and Sandbox prerequisites. Windows contract validation was performed in WSL Ubuntu:
 
 ```sh

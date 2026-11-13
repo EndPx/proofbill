@@ -17,6 +17,7 @@ ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS agent_id text;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS lease_token uuid;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS erased_at timestamptz;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS terminal_at timestamptz;
+ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS retention_checked_at timestamptz;
 ALTER TABLE pb_jobs ALTER COLUMN input_cipher DROP NOT NULL;
 ALTER TABLE pb_sessions ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE pb_chain_observations ADD COLUMN IF NOT EXISTS network text NOT NULL DEFAULT 'testnet';
@@ -53,6 +54,8 @@ CREATE INDEX IF NOT EXISTS pb_challenges_expiry ON pb_challenges(expires_at);
 CREATE INDEX IF NOT EXISTS pb_sessions_expiry ON pb_sessions(expires_at);
 CREATE INDEX IF NOT EXISTS pb_sessions_account ON pb_sessions(account_id);
 CREATE INDEX IF NOT EXISTS pb_jobs_buyer_created ON pb_jobs(buyer_id,created_at);
+CREATE INDEX IF NOT EXISTS pb_jobs_retention_scan ON pb_jobs(contract_id,(coalesce(retention_checked_at,created_at)),job_id)
+ WHERE terminal_at IS NULL AND erased_at IS NULL AND state IN ('awaiting_reservation','delivered','failed','reconciliation_required');
 CREATE INDEX IF NOT EXISTS pb_observations_job ON pb_chain_observations(job_id);
 CREATE INDEX IF NOT EXISTS pb_observations_token ON pb_chain_observations(contract_id,token_id);
 

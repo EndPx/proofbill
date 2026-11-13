@@ -11,7 +11,8 @@
     "env:web": "node tools/write-web-env.mjs",
     "test": "node --import tsx --test packages/shared/src/*.test.ts packages/server/src/*.test.ts packages/agent-client/src/*.test.ts",
     "test:queue": "node --import tsx --test packages/server/src/jobs.integration.ts",
-    "test:recovery": "node --import tsx --test packages/server/src/worker.integration.ts"
+    "test:recovery": "node --import tsx --test packages/server/src/worker.integration.ts",
+    "test:retention": "node --import tsx --test packages/server/src/retention.integration.ts"
   },
   "devDependencies": {
     "tsx": "4.21.0",
