@@ -16,10 +16,10 @@
 </p>
 
 <p align="center">
-  <a href="https://proofbill-two.vercel.app"><strong>Live app</strong></a> ·
-  <a href="#review-in-five-minutes"><strong>Reviewer walkthrough</strong></a> ·
-  <a href="docs/evidence/hosted-release.md"><strong>Execution evidence</strong></a> ·
-  <a href="#local-development"><strong>Run locally</strong></a>
+  <a href="https://proofbill-two.vercel.app"><img src=".github/assets/badges/live-app.svg" alt="Live app" height="34" /></a>
+  <a href="#review-in-five-minutes"><img src=".github/assets/badges/reviewer-walkthrough.svg" alt="Reviewer walkthrough" height="34" /></a>
+  <a href="docs/evidence/hosted-release.md"><img src=".github/assets/badges/execution-evidence.svg" alt="Execution evidence" height="34" /></a>
+  <a href="#local-development"><img src=".github/assets/badges/run-locally.svg" alt="Run locally" height="34" /></a>
 </p>
 
 ## Why ProofBill
