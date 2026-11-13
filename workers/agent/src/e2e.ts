@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { Account, KeyPairSigner, actions } from "near-api-js";
 import { provider, contractId, view, call } from "@proofbill/server/chain";
 import { db } from "@proofbill/server";
+import { runOwnAgent, makeAgentBrief } from "@proofbill/agent-client";
 import {
   SERVICE_ID,
   SERVICE_PRICE,
@@ -25,6 +26,10 @@ assert.ok(
   ["none", "unused"].includes(transferMode),
   "E2E_TRANSFER_MODE must be none or unused",
 );
+const agentKind = process.env.E2E_AGENT_KIND ?? "proofbill";
+const paymentMode = process.env.E2E_PAYMENT_MODE ?? "Manual";
+assert.ok(["proofbill", "external"].includes(agentKind));
+assert.ok(["Manual", "Automatic"].includes(paymentMode));
 const steps: unknown[] = [];
 async function identity(name: string) {
   const id = `${name}.${root}`,
@@ -39,6 +44,8 @@ async function identity(name: string) {
 }
 const alice = await identity("alice"),
   bob = await identity("bob");
+const assignedAgent =
+  agentKind === "external" ? alice.id : process.env.NEAR_AGENT_ID;
 async function tx(
   who: typeof alice,
   method: string,
@@ -111,6 +118,7 @@ if (!token) {
     "create_purchase_pass",
     {
       service_id: SERVICE_ID,
+      payment_mode: paymentMode,
       expires_at_ns: ((BigInt(Date.now()) + 86400000n) * 1000000n).toString(),
     },
     BigInt(SERVICE_PRICE) + BigInt(STORAGE_BUDGET),
@@ -122,7 +130,8 @@ if (!token) {
   await tx(initialHolder, "assign_agent", {
     token_id: token,
     expected_revision: 0,
-    agent_id: process.env.NEAR_AGENT_ID,
+    agent_id:
+      transferMode === "none" ? assignedAgent : process.env.NEAR_AGENT_ID,
   });
   if (transferMode === "unused") {
     await tx(alice, "nft_transfer", {
@@ -147,14 +156,16 @@ if (!token) {
     await tx(bob, "assign_agent", {
       token_id: token,
       expected_revision: 2,
-      agent_id: process.env.NEAR_AGENT_ID,
+      agent_id: assignedAgent,
+      payment_mode: paymentMode,
     });
   }
 } else {
   const resumed = await view<PurchasePass>("get_pass", { token_id: token });
   assert.equal(resumed.owner_id, bob.id);
-  assert.equal(resumed.phase, "Available");
-  assert.equal(resumed.agent_id, process.env.NEAR_AGENT_ID);
+  assert.ok(["Available", "InUse", "Completed"].includes(resumed.phase));
+  assert.equal(resumed.agent_id, assignedAgent);
+  assert.equal(resumed.payment_mode ?? "Manual", paymentMode);
   steps.push({
     check: "resumed_existing_funded_pass",
     token_id: token,
@@ -164,31 +175,114 @@ if (!token) {
 }
 const bobCookie = await login(bob),
   aliceCookie = await login(alice);
-const queued = await post(
-  "jobs",
-  {
-    tokenId: token,
-    input:
-      "We need 12 workshop notebooks for our community session. Requested by the Community team.",
-  },
-  bobCookie,
-);
-assert.equal(queued.status, 201, await queued.text());
 const id = `${token}-order`;
+const existingOrder = await view<PurchaseOrder | null>("get_order", {
+  order_id: id,
+});
+if (!existingOrder && agentKind === "proofbill") {
+  const queued = await post(
+    "jobs",
+    {
+      tokenId: token,
+      input:
+        "We need 12 workshop notebooks for our community session. Requested by the Community team.",
+    },
+    bobCookie,
+  );
+  assert.equal(queued.status, 201, await queued.text());
+} else if (agentKind === "external") {
+  await mkdir(".local/feature-check", { recursive: true });
+  const requestFile = `.local/feature-check/${token}-request.json`;
+  let brief: ReturnType<typeof makeAgentBrief>;
+  try {
+    brief = JSON.parse(await readFile(requestFile, "utf8"));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    brief = makeAgentBrief(
+      "We need 12 workshop notebooks for our community session. Requested by the Community team.",
+    );
+    await writeFile(requestFile, JSON.stringify(brief), { mode: 0o600 });
+  }
+  const external = await runOwnAgent({
+    baseUrl: base,
+    contractId: root,
+    agentId: alice.id,
+    signer: alice.signer,
+    provider: provider(),
+    tokenId: token,
+    brief,
+  });
+  steps.push({
+    check: "external_agent_reserved_and_submitted",
+    agent_id: alice.id,
+    ...external,
+    passed: true,
+  });
+  // Replaying the same signed agent submission must reuse the order, never run a second inference.
+  const repeated = await runOwnAgent({
+    baseUrl: base,
+    contractId: root,
+    agentId: alice.id,
+    signer: alice.signer,
+    provider: provider(),
+    tokenId: token,
+    brief,
+  });
+  assert.equal(repeated.orderId, id);
+  assert.equal(repeated.reservationTx, null);
+}
+const livePass = await view<PurchasePass>("get_pass", { token_id: token });
+assert.equal(livePass.owner_id, bob.id);
+assert.equal(livePass.payment_mode ?? "Manual", paymentMode);
+// The assigned agent cannot change owner-only payment authorization or approve a manual order.
+await tx(
+  alice,
+  "assign_agent",
+  {
+    token_id: token,
+    expected_revision: livePass.authorization_revision,
+    agent_id: alice.id,
+    payment_mode: "Automatic",
+  },
+  1n,
+  "HOLDER_ONLY",
+);
 console.log(
   JSON.stringify({ order_id: id, state: "waiting_for_real_inference" }),
 );
 let order: PurchaseOrder | null = null;
 for (let i = 0; i < 130; i++) {
   order = await view<PurchaseOrder | null>("get_order", { order_id: id });
-  if (order?.phase === "Delivered") break;
+  if (
+    paymentMode === "Automatic"
+      ? order?.phase === "Paid"
+      : order?.phase === "Delivered"
+  )
+    break;
   const jobs =
     await db()`select state,error_code from pb_jobs where contract_id=${root} and order_id=${id}`;
   if (jobs[0]?.state === "failed")
     throw new Error(`Worker stopped: ${jobs[0].error_code}`);
   await new Promise((r) => setTimeout(r, 2500));
 }
-assert.equal(order?.phase, "Delivered", "No verified delivery was confirmed");
+assert.equal(
+  order?.phase,
+  paymentMode === "Automatic" ? "Paid" : "Delivered",
+  "No verified delivery/settlement was confirmed",
+);
+let deliveredJob = false;
+for (let i = 0; i < 20; i++) {
+  const jobs =
+    await db()`select state,error_code from pb_jobs where contract_id=${root} and order_id=${id}`;
+  if (jobs[0]?.state === "failed")
+    throw new Error(`Worker stopped: ${jobs[0].error_code}`);
+  if (jobs[0]?.state === "delivered") {
+    deliveredJob = true;
+    break;
+  }
+  await new Promise((r) => setTimeout(r, 500));
+}
+assert.ok(deliveredJob, "Worker delivery acknowledgement not confirmed");
 const denied = await fetch(base + "/api/private/" + id, {
   headers: { Cookie: aliceCookie },
 });
@@ -212,15 +306,38 @@ steps.push({
   synthetic_output: result.result.output,
   evidence_checks: result.result.checks,
 });
-const paid = await tx(bob, "approve_and_pay", {
-  order_id: id,
-  expected_delivery_commitment: order!.evidence_commitment,
-});
-await post("observe", { hash: paid.transaction.hash }, bobCookie);
+let paymentTx: string;
+if (paymentMode === "Manual") {
+  await tx(
+    alice,
+    "approve_and_pay",
+    { order_id: id, expected_delivery_commitment: order!.evidence_commitment },
+    1n,
+    "HOLDER_ONLY",
+  );
+  const paid = await tx(bob, "approve_and_pay", {
+    order_id: id,
+    expected_delivery_commitment: order!.evidence_commitment,
+  });
+  paymentTx = paid.transaction.hash;
+  await post("observe", { hash: paymentTx }, bobCookie);
+} else {
+  const refs =
+    await db()`select tx_hash from pb_chain_observations where contract_id=${root} and order_id=${id} and action='publish_delivery' order by id desc limit 1`;
+  assert.ok(refs[0]?.tx_hash);
+  paymentTx = refs[0].tx_hash;
+  steps.push({
+    check: "automatic_payment_without_owner_approval",
+    delivery_and_payment_tx: paymentTx,
+    passed: true,
+  });
+}
 const complete = await view<PurchaseOrder>("get_order", { order_id: id });
 const completedPass = await view<PurchasePass>("get_pass", { token_id: token });
 assert.equal(complete.phase, "Paid");
 assert.equal(completedPass.phase, "Completed");
+assert.equal(completedPass.owner_id, bob.id);
+assert.equal(complete.agent_id, assignedAgent);
 await tx(
   bob,
   "approve_and_pay",
@@ -239,6 +356,9 @@ assert.equal(
 const report = {
   tested_at: new Date().toISOString(),
   transfer_mode: transferMode,
+  agent_kind: agentKind,
+  payment_mode: paymentMode,
+  app_origin: new URL(base).origin,
   network: "testnet",
   contract_id: root,
   token_id: token,
@@ -260,7 +380,7 @@ console.log(
     passed: true,
     order_id: id,
     token_id: token,
-    payment_tx: paid.transaction.hash,
+    payment_tx: paymentTx,
   }),
 );
 await db().end();

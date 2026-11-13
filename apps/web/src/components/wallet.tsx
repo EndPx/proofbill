@@ -29,6 +29,8 @@ interface Config {
   configured: boolean;
   network: string;
   loaded?: boolean;
+  advancedModes?: boolean;
+  sellerId?: string;
 }
 interface WalletState {
   account: string;

@@ -4,7 +4,12 @@ import { readFile } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { test, before, beforeEach, after } from "node:test";
 import postgres from "postgres";
-import { queuePurchase, claimNextJob } from "./jobs.ts";
+import {
+  queuePurchase,
+  claimNextJob,
+  prepareAgentPurchase,
+  submitAgentPurchase,
+} from "./jobs.ts";
 import { open, artifactContext } from "./index.ts";
 import type { PurchasePass, PurchaseOrder } from "@proofbill/shared";
 
@@ -268,5 +273,173 @@ test("recipient holds row lock: SKIP LOCKED worker waits for the new intent", as
       artifactContext(claimed.order_id, "bob.testnet", contract),
     ).input,
     "Order 7 pens for Bob.",
+  );
+});
+
+function externalFixture() {
+  const f = fixture();
+  f.pass().agent_id = "custom.testnet";
+  let order: PurchaseOrder | null = null;
+  const runtime = { ...f.runtime, readOrder: async () => order };
+  const brief = {
+    input: "Order 7 pens for Bob.",
+    salt: "a".repeat(64),
+    nonce: "b".repeat(32),
+  };
+  const prepare = () =>
+    prepareAgentPurchase(
+      "custom.testnet",
+      f.token,
+      brief,
+      f.pass().authorization_revision,
+      runtime,
+    );
+  const reserve = (commitment: string) => {
+    f.pass().phase = "InUse";
+    f.pass().order_id = `${f.token}-order`;
+    order = {
+      order_id: `${f.token}-order`,
+      token_id: f.token,
+      buyer_id: f.pass().owner_id,
+      agent_id: "custom.testnet",
+      seller_id: f.pass().seller_id,
+      price_yocto: f.pass().price_yocto,
+      revision: f.pass().authorization_revision,
+      request_commitment: commitment,
+      response_commitment: null,
+      evidence_commitment: null,
+      policy_id: null,
+      phase: "Reserved",
+      attempt: 0,
+      created_at_ns: "1",
+    };
+    return order;
+  };
+  return { ...f, runtime, brief, prepare, reserve };
+}
+
+test("own-agent preparation is agent-authenticated and encrypted for the buyer", async () => {
+  const f = externalFixture();
+  await assert.rejects(
+    prepareAgentPurchase("outsider.testnet", f.token, f.brief, 1, f.runtime),
+    /ASSIGNED_AGENT_ONLY/,
+  );
+  await assert.rejects(f.queue(), /ASSIGN_AGENT_FIRST/);
+  const prepared = await f.prepare();
+  assert.equal(prepared.state, "awaiting_reservation");
+  assert.equal(prepared.buyer_id, "alice.testnet");
+  assert.equal(prepared.agent_id, "custom.testnet");
+  assert.equal(await claimNextJob(sql, contract), undefined);
+  assert.equal(
+    open<{ input: string }>(
+      prepared.input_cipher!,
+      artifactContext(prepared.order_id, "alice.testnet", contract),
+    ).input,
+    f.brief.input,
+  );
+  assert.throws(() =>
+    open(
+      prepared.input_cipher!,
+      artifactContext(prepared.order_id, "custom.testnet", contract),
+    ),
+  );
+  const duplicate = await f.prepare();
+  assert.equal(duplicate.job_id, prepared.job_id);
+  await assert.rejects(
+    submitAgentPurchase("custom.testnet", f.token, f.runtime),
+    /ORDER_RESERVATION_MISMATCH/,
+  );
+});
+
+test("own-agent submission requires the exact onchain reservation and queues once", async () => {
+  const f = externalFixture(),
+    prepared = await f.prepare();
+  const order = f.reserve(prepared.request_commitment!);
+  for (const patch of [
+    { buyer_id: "outsider.testnet" },
+    { agent_id: "outsider.testnet" },
+    { seller_id: "outsider.testnet" },
+    { price_yocto: "1" },
+    { revision: 0 },
+    { request_commitment: "c".repeat(64) },
+    { token_id: "wrong-pass" },
+  ]) {
+    const previous = { ...order };
+    Object.assign(order, patch);
+    await assert.rejects(
+      submitAgentPurchase("custom.testnet", f.token, f.runtime),
+      /ORDER_RESERVATION_MISMATCH/,
+    );
+    Object.assign(order, previous);
+  }
+  const jobs = await Promise.all([
+    submitAgentPurchase("custom.testnet", f.token, f.runtime),
+    submitAgentPurchase("custom.testnet", f.token, f.runtime),
+  ]);
+  assert.ok(jobs.every((j) => j.state === "queued"));
+  const claimed = await Promise.all([
+    claimNextJob(sql, contract),
+    claimNextJob(sql, contract),
+  ]);
+  assert.equal(claimed.filter(Boolean).length, 1);
+  await assert.rejects(
+    submitAgentPurchase("alice.testnet", f.token, f.runtime),
+    /ASSIGNED_AGENT_ONLY/,
+  );
+});
+
+test("unused transferred pass can replace an unbroadcast external intent", async () => {
+  const f = externalFixture();
+  const old = await f.prepare();
+  f.handover();
+  const rebound = await f.queue();
+  assert.equal(rebound.buyer_id, "bob.testnet");
+  assert.equal(rebound.agent_id, agent);
+  assert.equal(rebound.request_commitment, null);
+  assert.equal(rebound.job_id, old.job_id);
+  await assert.rejects(
+    submitAgentPurchase("custom.testnet", f.token, f.runtime),
+    /ASSIGNED_AGENT_ONLY/,
+  );
+});
+
+test("own-agent request rejects stale revisions and malformed private context", async () => {
+  const f = externalFixture();
+  await assert.rejects(
+    prepareAgentPurchase("custom.testnet", f.token, f.brief, 0, f.runtime),
+    /PASS_AUTHORIZATION_CHANGED/,
+  );
+  await assert.rejects(
+    prepareAgentPurchase(
+      "custom.testnet",
+      f.token,
+      { ...f.brief, salt: "invalid" },
+      1,
+      f.runtime,
+    ),
+    /INVALID_AGENT_REQUEST/,
+  );
+  await assert.rejects(
+    prepareAgentPurchase(
+      "custom.testnet",
+      f.token,
+      { ...f.brief, input: " ".repeat(8001) },
+      1,
+      f.runtime,
+    ),
+    /INVALID_PRIVATE_BRIEF/,
+  );
+});
+
+test("a refunded external reservation cannot be resubmitted as queued", async () => {
+  const f = externalFixture(),
+    prepared = await f.prepare();
+  const order = f.reserve(prepared.request_commitment!);
+  await submitAgentPurchase("custom.testnet", f.token, f.runtime);
+  order.phase = "Refunded";
+  f.pass().phase = "Refunded";
+  await assert.rejects(
+    submitAgentPurchase("custom.testnet", f.token, f.runtime),
+    /PASS_NOT_AVAILABLE/,
   );
 });

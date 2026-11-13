@@ -17,7 +17,7 @@ Problem hypothesis: spending permission, delivered bytes and payment status are 
 | Wallet/session | Connect a testnet wallet, authenticate private requests, show the active account/network |
 | Purchase Pass | Mint and fund a real NEP-171 NFT for one fixed-price service purchase |
 | Transfer | Transfer an unused pass and its remaining service/refund entitlement to another holder |
-| Purchasing agent | An explicitly assigned server-side agent account reserves an order within the pass rules |
+| Purchasing agent | An explicitly assigned hosted or owner-operated agent account reserves an order within the pass rules |
 | Private AI result | Call the supported NEAR AI model, retain exact evidence and keep input/output access-controlled |
 | Review | Show result, scoped evidence and exact proposed seller/amount before owner approval |
 | Payment | Contract-enforced payout, final-outcome confirmation and duplicate-payment refusal |
@@ -34,10 +34,10 @@ One seller, one service version, one canonical model and native testnet NEAR are
 | How much is funded? | Exactly the fixed service quote. Storage and network gas are separate. A 0.010 testnet NEAR quote is an illustrative starting demo configuration. |
 | Who holds the service budget? | One ProofBill contract, with isolated per-pass liabilities. The NFT carries the right to use/refund its allocation. |
 | What follows an unused transfer? | The entire unspent service allocation and its refund right follow the new token owner. The previous funder has no residual claim on it. This is shown before transfer confirmation. |
-| Can an agent pay automatically? | No. The agent may create the bound order; the holder explicitly approves payment. |
+| Can payment settle automatically? | Manual is the default. The owner can explicitly authorize Automatic settlement for one pass after matching publisher delivery; the agent cannot enable this policy or change the seller/amount. |
 | What is immutable in a pass? | Service version, seller, quoted amount, model policy and absolute expiry, snapshotted at mint. |
 | When can it transfer? | Unused/unexpired with no reservation, or terminal with zero financial claim. Active orders, native payouts/refunds and unresolved transfer-calls lock transfer. |
-| What changes on transfer? | Current holder and authorization revision. Prior agent/task delegations are invalidated. |
+| What changes on transfer? | Current holder and authorization revision. Prior agent/task delegations and unused Automatic payment permission are invalidated. |
 | What happens after use? | The NFT remains as a Completed pass referencing the receipt; it has no remaining purchase value. |
 | Does transfer give private history? | No. Prior private inputs/results remain available only to the historical buyer session. Token ownership conveys public pass state, not past plaintext. |
 | Can rejection run another inference? | No. Cancellation/rejection ends this one-order entitlement through refund. A new purchase needs a new pass. Re-verifying saved evidence does not run inference again. |
@@ -70,7 +70,7 @@ Before use, the holder can transfer it to a second account. The confirmation say
 
 ### C. Give the agent a task
 
-The current holder selects **Research assistant**, assigns its public testnet agent identity to the pass, and submits a private extraction brief. Assignment uses a holder transaction; private task submission uses an authenticated session bound to that holder and pass revision.
+The holder selects **Research assistant** or **My own agent**, assigns the chosen testnet account, and chooses Manual or explicitly consents to Automatic payment. Hosted task submission uses a holder session. An external agent authenticates its own account, prepares the buyer-bound request, signs the reservation and submits it through the [own-agent protocol](../agent-integration.md). The NFT remains with the holder.
 
 The worker checks the assignment and submits a real reservation transaction as the agent. Only after that reservation is confirmed does service execution begin. The interface shows **Agent ordering** then **Running** from actual job/chain evidence. This is a bounded purchasing agent, not a claim of a general autonomous business.
 
@@ -86,11 +86,13 @@ The buyer sees pass/order IDs, result, seller, exact native testnet amount and e
 
 The contract enters Payout pending first. It marks Paid only when the native transfer result succeeds through its callback. A refresh reconnects to the same order. Unknown outcomes remain pending/reconciliation-required rather than causing another transfer.
 
+In Automatic mode, the owner's prior per-pass authorization starts the fixed seller payment when matching publisher delivery is recorded. There is no final owner approval transaction or semantic-review gate. Failed payout, expiry and callback safeguards still apply; the configured publisher remains a disclosed trust boundary.
+
 ### F. Receipt and Completed pass
 
 After confirmed payment, show the receipt, seller payment reference, historical approving buyer, commitments and evidence summary. The pass becomes Completed, its service allocation is zero, and its metadata reflects the terminal state. The buyer may download/reverify private evidence explicitly; a public receipt link excludes private content.
 
-## 6. Adjusted flow
+## 6. Manual payment journey (default)
 
 ```mermaid
 flowchart TD

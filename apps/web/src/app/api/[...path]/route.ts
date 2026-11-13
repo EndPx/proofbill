@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { queuePurchase, QueueError } from "@proofbill/server/jobs";
+import {
+  queuePurchase,
+  prepareAgentPurchase,
+  submitAgentPurchase,
+  QueueError,
+} from "@proofbill/server/jobs";
 import {
   db,
   open,
@@ -38,7 +43,14 @@ type Context = { params: Promise<{ path: string[] }> };
 export async function GET(req: NextRequest, ctx: Context) {
   try {
     const route = (await ctx.params).path.join("/");
-    if (route === "config")
+    if (route === "config") {
+      const features = contractId()
+        ? await view<{
+            version?: number;
+            agent_modes?: boolean;
+            seller_id?: string;
+          }>("get_config").catch(() => null)
+        : null;
       return json({
         network: "testnet",
         contractId: contractId(),
@@ -47,7 +59,10 @@ export async function GET(req: NextRequest, ctx: Context) {
           process.env.NEXT_PUBLIC_NEAR_AGENT_ID ??
           "",
         configured: !!contractId(),
+        advancedModes: features?.version === 2 && features.agent_modes === true,
+        sellerId: features?.seller_id ?? "",
       });
+    }
     if (route === "session") return json({ accountId: await session(req) });
     if (route === "workspace") {
       const account = req.nextUrl.searchParams.get("account");
@@ -86,8 +101,14 @@ export async function GET(req: NextRequest, ctx: Context) {
           ? await jobForBuyer(id, buyer)
           : null;
       if (!order && !job) return json({ error: "ORDER_NOT_FOUND" }, 404);
+      const orderPass = order
+        ? await view<PurchasePass | null>("get_pass", {
+            token_id: order.token_id,
+          })
+        : null;
       return json({
         order,
+        payment_mode: orderPass?.payment_mode ?? "Manual",
         observations: refs,
         job: job ? publicJob(job) : null,
       });
@@ -180,6 +201,56 @@ export async function POST(req: NextRequest, ctx: Context) {
           view<PurchaseOrder | null>("get_order", { order_id: order }),
       });
       return json({ job: publicJob(job) }, 201);
+    }
+    if (route === "agent/prepare" || route === "agent/submit") {
+      if (typeof body.tokenId !== "string")
+        return json({ error: "INVALID_AGENT_REQUEST" }, 400);
+      const runtime = {
+        sql: db(),
+        contract: contractId(),
+        agent:
+          process.env.NEAR_AGENT_ID ??
+          process.env.NEXT_PUBLIC_NEAR_AGENT_ID ??
+          "",
+        readPass: (token: string) =>
+          view<PurchasePass | null>("get_pass", { token_id: token }),
+        readOrder: (order: string) =>
+          view<PurchaseOrder | null>("get_order", { order_id: order }),
+      };
+      if (route === "agent/submit")
+        return json(
+          {
+            job: publicJob(
+              await submitAgentPurchase(buyer, body.tokenId, runtime),
+            ),
+          },
+          202,
+        );
+      if (
+        typeof body.input !== "string" ||
+        typeof body.salt !== "string" ||
+        typeof body.nonce !== "string" ||
+        typeof body.revision !== "number"
+      )
+        return json({ error: "INVALID_AGENT_REQUEST" }, 400);
+      const job = await prepareAgentPurchase(
+        buyer,
+        body.tokenId,
+        { input: body.input, salt: body.salt, nonce: body.nonce },
+        body.revision,
+        runtime,
+      );
+      return json(
+        {
+          job: publicJob(job),
+          reservation: {
+            token_id: job.token_id,
+            expected_revision: job.revision,
+            request_commitment: job.request_commitment,
+          },
+        },
+        201,
+      );
     }
     if (route === "observe") {
       if (

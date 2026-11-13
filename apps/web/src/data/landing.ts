@@ -14,7 +14,7 @@ export const landing = {
   hero: {
     first: "Agents order.",
     second: "You approve.",
-    body: "Give your AI agent a funded Purchase Pass. Review what comes back, inspect the evidence, and approve the exact payment. All in one place.",
+    body: "Choose ProofBill’s assistant or your own agent. Fund one Purchase Pass, inspect what comes back, and choose manual approval or preauthorized payment.",
     note: "Built on NEAR testnet. Start with your wallet.",
   },
   steps: [
@@ -34,19 +34,19 @@ export const landing = {
       title: "Review it. Then approve payment.",
       body: "Inspect the result before your wallet approves the seller payment. The receipt becomes Paid after the contract confirms the transfer.",
       detail:
-        "The recorded demo payment can be checked directly on NEAR testnet.",
+        "Manual is the default. Automatic payment is an explicit per-pass choice.",
     },
   ],
   faqs: [
     {
       question: "What can I try today?",
       answer:
-        "The testnet MVP offers one service: extracting an item, quantity and requester from a short purchase brief. You can fund a pass, assign the agent, run a task, review its result and evidence, then approve payment or request a refund where the contract permits it.",
+        "The testnet MVP extracts an item, quantity and requester from a purchase brief. Assign ProofBill’s assistant or your own agent. Manual payment lets you review before approving; Automatic payment settles after matching publisher delivery. Refunds follow contract state.",
     },
     {
       question: "Do I need a NEAR wallet?",
       answer:
-        "Yes. Connect a testnet wallet before entering the workspace. A separate signed message unlocks private data. Funding and payment actions ask for your wallet approval; connecting alone does not move funds.",
+        "Yes. Connect a testnet wallet before entering the workspace. A separate signed message unlocks private data. Funding and policy changes require a wallet signature. Manual payment asks again; Automatic payment uses explicit advance authorization. Connecting alone does not move funds.",
     },
     {
       question: "What does the Purchase Pass pay for?",
@@ -61,7 +61,7 @@ export const landing = {
     {
       question: "Can I transfer or refund a pass?",
       answer:
-        "An unused pass can move to another holder with its use and refund rights. Transfer clears the previous agent assignment. An active order locks transfer. Refund availability follows the contract state; a completed pass keeps its receipt and has no remaining service allocation.",
+        "An unused pass can move to another holder with its use and refund rights. Transfer clears the previous agent assignment and automatic-payment permission. An active order locks transfer. Refund availability follows the contract state; a completed pass keeps its receipt and has no remaining service allocation.",
     },
   ],
 } as const;

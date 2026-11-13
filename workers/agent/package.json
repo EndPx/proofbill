@@ -11,7 +11,8 @@
     "@proofbill/server": "workspace:*",
     "@proofbill/shared": "workspace:*",
     "near-api-js": "7.2.0",
-    "tsx": "4.21.0"
+    "tsx": "4.21.0",
+    "@proofbill/agent-client": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3",

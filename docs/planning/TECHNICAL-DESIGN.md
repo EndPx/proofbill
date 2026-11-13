@@ -142,7 +142,7 @@ Model unavailability is checked again at implementation. Failure does not silent
 
 TLS peer-SPKI binding and independent source/image provenance are initially **Not checked**, matching the known probe scope. NRAS result is obtained over authenticated HTTPS; a local JWT chain verifier is not implied. Required-check success does not become a blanket 'fully verified/secure AI' label. Semantic accuracy is a buyer review decision.
 
-The contract trusts its initialized publisher to assert that this offchain policy passed. Owner approval additionally authorizes the exact payment. This is a disclosed application-verifier bridge, not onchain Intel/NVIDIA verification, a decentralized oracle or a TEE-signed NEAR payment. Publisher compromise is a trust risk; it cannot redirect an existing order's seller/amount or spend without holder approval.
+The contract trusts its initialized publisher to assert that this offchain policy passed. Manual mode additionally requires owner approval; Automatic mode uses the owner's advance per-pass authorization. This is a disclosed application-verifier bridge, not onchain Intel/NVIDIA verification, a decentralized oracle or a TEE-signed NEAR payment. Publisher compromise is a trust risk; it cannot redirect an existing order's seller/amount; in Automatic mode, a compromised publisher can trigger the preauthorized payment without another owner approval.
 
 ## 9. Private state and API boundaries
 
@@ -172,3 +172,7 @@ No production server, existing CommitPass service, ShowStake contract or Keyfoli
 - https://docs.near.ai/cloud/verification/cloud-api/response-signatures
 - https://docs.near.org/smart-contracts/security/checklist
 - https://nearhackathon.com/HACKATHON.md
+
+## External agent and payment policy extension
+
+The implemented protocol, defaults, sidecar policy storage and trust limits are in [the own-agent guide](../agent-integration.md). Existing Borsh root/pass/order layouts are unchanged; missing policy entries mean Manual.

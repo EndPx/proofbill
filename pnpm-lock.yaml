@@ -97,6 +97,22 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/agent-client:
+    dependencies:
+      '@proofbill/shared':
+        specifier: workspace:*
+        version: link:../shared
+      near-api-js:
+        specifier: 7.2.0
+        version: 7.2.0
+    devDependencies:
+      '@types/node':
+        specifier: 24.10.1
+        version: 24.10.1
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   packages/server:
     dependencies:
       '@proofbill/shared':
@@ -124,6 +140,9 @@ importers:
 
   workers/agent:
     dependencies:
+      '@proofbill/agent-client':
+        specifier: workspace:*
+        version: link:../../packages/agent-client
       '@proofbill/server':
         specifier: workspace:*
         version: link:../../packages/server

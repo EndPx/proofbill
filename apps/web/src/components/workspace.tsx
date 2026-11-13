@@ -45,12 +45,14 @@ import {
   type PurchasePass,
   type PurchaseOrder,
   type PrivateResult,
+  type PaymentMode,
 } from "@proofbill/shared";
 import { api, useWallet } from "./wallet";
 type Job = { order_id: string; state: string; error_code: string | null };
 type OrderDetail = {
   order: PurchaseOrder | null;
   job: Job | null;
+  payment_mode?: PaymentMode;
   observations: { action: string; tx_hash: string; signer_id: string }[];
 };
 const errorCopy: Record<string, string> = {
@@ -112,6 +114,149 @@ function Empty({
   );
 }
 const explorer = (hash: string) => `https://testnet.nearblocks.io/txns/${hash}`;
+function PaymentChoice({
+  mode,
+  onChange,
+  consent,
+  onConsent,
+  seller,
+  disabled = false,
+}: {
+  mode: PaymentMode;
+  onChange: (value: PaymentMode) => void;
+  consent: boolean;
+  onConsent: (value: boolean) => void;
+  seller: string;
+  disabled?: boolean;
+}) {
+  return (
+    <>
+      <label className="field">
+        Payment approval
+        <select
+          aria-label="Payment approval"
+          value={mode}
+          disabled={disabled}
+          onChange={(e) => {
+            onChange(e.target.value as PaymentMode);
+            onConsent(false);
+          }}
+        >
+          <option value="Manual">Manual — owner approval</option>
+          <option value="Automatic">Automatic — pay on delivery</option>
+        </select>
+      </label>
+      {mode === "Automatic" ? (
+        <div className="info">
+          <ShieldCheck size={18} />
+          <label>
+            <input
+              type="checkbox"
+              checked={consent}
+              disabled={disabled}
+              onChange={(e) => onConsent(e.target.checked)}
+            />{" "}
+            I authorize one automatic payment of {formatNear(SERVICE_PRICE)}{" "}
+            testnet NEAR to {seller || "the fixed service seller"} after the
+            configured publisher records matching delivery. No final wallet
+            approval is requested. Evidence checks do not guarantee answer
+            quality.
+          </label>
+        </div>
+      ) : (
+        <p className="fine">
+          You inspect the result and approve the payment in your wallet.
+        </p>
+      )}
+    </>
+  );
+}
+function AgentSettings({
+  pass,
+  hostedAgent,
+  advanced,
+  busy,
+  onSave,
+}: {
+  pass: PurchasePass;
+  hostedAgent: string;
+  advanced: boolean;
+  busy: boolean;
+  onSave: (agent: string, mode: PaymentMode) => void;
+}) {
+  const [kind, setKind] = useState(
+    pass.agent_id && pass.agent_id !== hostedAgent ? "custom" : "proofbill",
+  );
+  const [account, setAccount] = useState(
+    pass.agent_id && pass.agent_id !== hostedAgent ? pass.agent_id : "",
+  );
+  const [mode, setMode] = useState<PaymentMode>(pass.payment_mode ?? "Manual");
+  const [consent, setConsent] = useState(false);
+  const agent = kind === "proofbill" ? hostedAgent : account.trim();
+  return (
+    <section className="form-panel" aria-label="Agent and payment settings">
+      <label className="field">
+        Purchasing agent
+        <select
+          aria-label="Purchasing agent"
+          value={kind}
+          disabled={busy}
+          onChange={(e) => setKind(e.target.value)}
+        >
+          <option value="proofbill">ProofBill Research assistant</option>
+          <option value="custom" disabled={!advanced}>
+            My own agent
+          </option>
+        </select>
+      </label>
+      {kind === "custom" && (
+        <label className="field">
+          Agent NEAR account
+          <input
+            value={account}
+            disabled={busy}
+            onChange={(e) => setAccount(e.target.value)}
+            placeholder="assistant.your-account.testnet"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+          <small>
+            Your agent signs reservations with its own account. Keep its private
+            key in your agent runtime.
+          </small>
+        </label>
+      )}
+      {advanced && (
+        <PaymentChoice
+          mode={mode}
+          onChange={setMode}
+          consent={consent}
+          onConsent={setConsent}
+          seller={pass.seller_id}
+          disabled={busy}
+        />
+      )}
+      <p className="fine">
+        The NFT stays in your wallet. Saving changes invalidates the previous
+        agent authorization.
+      </p>
+      <button
+        className="button primary"
+        disabled={
+          busy || !validAccountId(agent) || (mode === "Automatic" && !consent)
+        }
+        onClick={() => onSave(agent, mode)}
+      >
+        {pass.agent_id
+          ? "Save agent and payment settings"
+          : kind === "custom"
+            ? "Assign my agent"
+            : "Assign Research assistant"}{" "}
+        <Bot size={17} />
+      </button>
+    </section>
+  );
+}
 export function Workspace() {
   const wallet = useWallet(),
     router = useRouter(),
@@ -132,6 +277,8 @@ export function Workspace() {
     [brief, setBrief] = useState(""),
     [receiver, setReceiver] = useState(""),
     [hours, setHours] = useState("72"),
+    [paymentMode, setPaymentMode] = useState<PaymentMode>("Manual"),
+    [automaticConsent, setAutomaticConsent] = useState(false),
     [tab, setTab] = useState("Result");
   const refresh = useCallback(async () => {
     if (!wallet.config.configured) return;
@@ -293,12 +440,21 @@ export function Workspace() {
                 <option value="168">7 days</option>
               </select>
             </label>
+            {wallet.config.advancedModes && (
+              <PaymentChoice
+                mode={paymentMode}
+                onChange={setPaymentMode}
+                consent={automaticConsent}
+                onConsent={setAutomaticConsent}
+                seller={wallet.config.sellerId ?? ""}
+                disabled={!!busy}
+              />
+            )}
             <div className="info">
               <ShieldCheck size={18} />
               <p>
-                You choose the agent and review the result before paying. An
-                unused pass can be transferred with its service and refund
-                rights.
+                You choose the agent and payment policy. An unused pass can be
+                transferred with its service and refund rights.
               </p>
             </div>
             <dl className="facts">
@@ -319,8 +475,8 @@ export function Workspace() {
           <aside className="receipt">
             <h2>Fund your pass</h2>
             <p>
-              The service allocation stays in the contract until you approve
-              payment or request a refund.
+              The service allocation stays in the contract until the selected
+              payment policy settles the order or a refund is confirmed.
             </p>
             <div className="receipt-rule" />
             <dl className="facts">
@@ -345,13 +501,17 @@ export function Workspace() {
             </p>
             {wallet.account ? (
               <Button
-                disabled={!wallet.config.configured}
+                disabled={
+                  !wallet.config.configured ||
+                  (paymentMode === "Automatic" && !automaticConsent)
+                }
                 onClick={() =>
                   void run("Creating pass", async () => {
                     await wallet.transact(
                       "create_purchase_pass",
                       {
                         service_id: SERVICE_ID,
+                        payment_mode: paymentMode,
                         expires_at_ns: (
                           (BigInt(Date.now()) + BigInt(hours) * 3600000n) *
                           1000000n
@@ -423,6 +583,10 @@ export function Workspace() {
                 <dt>Purchasing agent</dt>
                 <dd>{pass.agent_id ?? "Not assigned"}</dd>
               </div>
+              <div>
+                <dt>Payment approval</dt>
+                <dd>{pass.payment_mode ?? "Manual"}</dd>
+              </div>
             </dl>
             {pass.order_id && (
               <Link
@@ -445,26 +609,41 @@ export function Workspace() {
               </p>
             ) : pass.phase === "Available" ? (
               <>
-                {!pass.agent_id ? (
-                  <>
-                    <p>
-                      Assign Research assistant to reserve this exact service.
-                      Your agent cannot approve the final payment.
-                    </p>
-                    <Button
-                      disabled={!wallet.config.agentId}
-                      onClick={() =>
-                        action("assign_agent", {
-                          token_id: pass.token_id,
-                          expected_revision: pass.authorization_revision,
-                          agent_id: wallet.config.agentId,
-                        })
-                      }
-                    >
-                      Assign Research assistant <Bot size={17} />
-                    </Button>
-                  </>
-                ) : (
+                <AgentSettings
+                  key={`${pass.token_id}:${pass.authorization_revision}`}
+                  pass={pass}
+                  hostedAgent={wallet.config.agentId}
+                  advanced={!!wallet.config.advancedModes}
+                  busy={!!busy}
+                  onSave={(agent, mode) =>
+                    void action("assign_agent", {
+                      token_id: pass.token_id,
+                      expected_revision: pass.authorization_revision,
+                      agent_id: agent,
+                      payment_mode: mode,
+                    })
+                  }
+                />
+                {pass.agent_id && pass.agent_id !== wallet.config.agentId ? (
+                  <div className="info">
+                    <Bot size={18} />
+                    <div>
+                      <strong>Your agent is assigned</strong>
+                      <p>
+                        Give your agent pass ID <code>{pass.token_id}</code>. It
+                        signs the reservation and submits its own request; the
+                        NFT remains yours.
+                      </p>
+                      <a
+                        href="https://github.com/EndPx/proofbill/blob/main/docs/agent-integration.md"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Own-agent SDK and setup guide <ArrowUpRight size={14} />
+                      </a>
+                    </div>
+                  </div>
+                ) : pass.agent_id ? (
                   <>
                     <div className="trust-line">
                       <Bot size={17} /> Research assistant is assigned
@@ -519,12 +698,13 @@ export function Workspace() {
                       AI.
                     </p>
                   </>
-                )}
+                ) : null}
                 <hr />
                 <h3>Transfer unused pass</h3>
                 <p className="fine">
-                  The receiver gets the service allocation and refund right.
-                  Your previous agent assignment is cleared.
+                  The receiver gets the service allocation and refund right. The
+                  previous agent assignment and automatic payment permission are
+                  cleared.
                 </p>
                 <label className="field">
                   Receiver account
@@ -800,9 +980,18 @@ export function Workspace() {
             <aside>
               <div className="receipt">
                 <h2>
-                  {o.phase === "Paid" ? "Payment receipt" : "Payment approval"}
+                  {o.phase === "Paid"
+                    ? "Payment receipt"
+                    : detail?.payment_mode === "Automatic"
+                      ? "Automatic payment"
+                      : "Payment approval"}
                 </h2>
                 <p>{o.order_id}</p>
+                <p className="fine">
+                  {detail?.payment_mode === "Automatic"
+                    ? "Owner preauthorized one payment after matching publisher delivery."
+                    : "Owner approval required before payment."}
+                </p>
                 <dl className="facts">
                   <div>
                     <dt>Seller</dt>
@@ -810,7 +999,7 @@ export function Workspace() {
                   </div>
                   <div>
                     <dt>Agent</dt>
-                    <dd>Research assistant</dd>
+                    <dd>{o.agent_id}</dd>
                   </div>
                 </dl>
                 <div className="receipt-rule" />
@@ -1058,7 +1247,10 @@ export function Workspace() {
                         </span>
                       </span>
                       <span className="agent-name">
-                        <Bot size={17} /> Research assistant
+                        <Bot size={17} />{" "}
+                        {o.agent_id === wallet.config.agentId
+                          ? "Research assistant"
+                          : o.agent_id}
                       </span>
                       <span>
                         <strong>{formatNear(o.price_yocto)}</strong>

@@ -13,6 +13,7 @@ ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS network text NOT NULL DEFAULT 'test
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS contract_id text;
 UPDATE pb_jobs SET contract_id=NULLIF(current_setting('proofbill.contract_id',true),'') WHERE contract_id IS NULL;
 ALTER TABLE pb_jobs ALTER COLUMN contract_id SET NOT NULL;
+ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS agent_id text;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS erased_at timestamptz;
 ALTER TABLE pb_jobs ADD COLUMN IF NOT EXISTS terminal_at timestamptz;
 ALTER TABLE pb_jobs ALTER COLUMN input_cipher DROP NOT NULL;
@@ -52,3 +53,6 @@ CREATE INDEX IF NOT EXISTS pb_sessions_account ON pb_sessions(account_id);
 CREATE INDEX IF NOT EXISTS pb_jobs_buyer_created ON pb_jobs(buyer_id,created_at);
 CREATE INDEX IF NOT EXISTS pb_observations_job ON pb_chain_observations(job_id);
 CREATE INDEX IF NOT EXISTS pb_observations_token ON pb_chain_observations(contract_id,token_id);
+
+ALTER TABLE pb_jobs DROP CONSTRAINT IF EXISTS pb_jobs_worker_state;
+ALTER TABLE pb_jobs ADD CONSTRAINT pb_jobs_worker_state CHECK(state IN ('awaiting_reservation','queued','claimed','reserving','running','publishing','delivered','failed','reconciliation_required','erased'));

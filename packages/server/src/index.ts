@@ -60,6 +60,7 @@ export interface JobRow {
   order_id: string;
   token_id: string;
   buyer_id: string;
+  agent_id: string | null;
   revision: number;
   state: string;
   input_cipher: string | null;
