@@ -15,6 +15,10 @@ test("purchase card blends materials and replaces its print without stale rapid 
   });
   const card = detail.locator("[data-stage]");
   const print = detail.locator("[data-text-phase]");
+  await expect(detail.locator("[data-story-object]")).toHaveAttribute(
+    "style",
+    /transform/,
+  );
   await expect(print).toHaveAttribute("data-text-phase", "0");
   await expect(card).toHaveCSS("background-color", "rgb(81, 231, 156)");
   const transform = await card.evaluate(
