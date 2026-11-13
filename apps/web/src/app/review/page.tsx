@@ -46,7 +46,7 @@ export default function ReviewPage() {
           </li>
           <li>
             <h3>Buy with an assigned external agent</h3>
-            <p><Link href="/receipts/pass-13-order-1" prefetch={false}>Order 1 · Automatic · 0.010 NEAR</Link> paid under advance authorization. An attempted new order below the service-price ceiling was refused. The owner then removed the ceiling and chose Manual.</p>
+            <p><Link href="/receipts/pass-13-order-1" prefetch={false}>Order 1 · Automatic · 0.010 NEAR</Link> paid under advance authorization. With the per-purchase ceiling set below the 0.010 NEAR service quote, a new order was refused. The owner then removed the ceiling and chose Manual.</p>
           </li>
           <li>
             <h3>Review and pay for another order</h3>
