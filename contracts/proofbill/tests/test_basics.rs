@@ -90,6 +90,7 @@ async fn reusable_budget_purchases_handover_and_remaining_refund() -> testresult
                 1
             );
             assert!(!denied.is_success());
+            assert!(format!("{denied:?}").contains("HOLDER_ONLY"));
             send!(&bob,"assign_agent",json!({"token_id":"pass-1","expected_revision":transferred["authorization_revision"],"agent_id":alice.account_id(),"payment_mode":"Manual"}),1).assert_success();
         }
         let pass: Value = read!("get_pass", json!({"token_id":"pass-1"}));
