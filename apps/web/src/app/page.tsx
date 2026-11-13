@@ -11,12 +11,13 @@ import {
   KeyRound,
   ReceiptText,
   ShieldCheck,
-  Ticket,
 } from "lucide-react";
 import { landing } from "@/data/landing";
 import { PurchaseStory } from "@/components/purchase-story";
 import { LandingMotion } from "@/components/landing-motion";
 import { PassHandover } from "@/components/pass-handover";
+import { ParticlePass } from "@/components/landing/particle-pass";
+import "@fontsource-variable/archivo/wdth.css";
 import styles from "./home.module.css";
 
 export const metadata: Metadata = {
@@ -90,20 +91,7 @@ export default function Home() {
             </div>
             <small>{landing.hero.note}</small>
           </div>
-          <div className={styles.heroArt} data-pass-art>
-            <Image
-              src="/art/purchase-pass.webp"
-              alt=""
-              width={1200}
-              height={800}
-              sizes="(max-width: 760px) 100vw, 52vw"
-              priority
-            />
-            <div className={styles.artCaption}>
-              <Ticket size={16} />
-              <span>A purchase pass. A clear permission.</span>
-            </div>
-          </div>
+          <ParticlePass />
         </section>
 
         <section
@@ -120,7 +108,7 @@ export default function Home() {
             <div className={styles.previewViewport}>
               <Image
                 src="/art/testnet-receipt.webp"
-              unoptimized
+                unoptimized
                 alt="Recorded ProofBill testnet receipt showing a private brief result locked to the buyer and a confirmed 0.010 NEAR seller payment."
                 width={1280}
                 height={720}

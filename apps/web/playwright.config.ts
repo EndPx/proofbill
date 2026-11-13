@@ -7,6 +7,7 @@ export default defineConfig({
   use: {
     baseURL,
     channel: process.env.PLAYWRIGHT_CHANNEL,
+    launchOptions: { args: ["--enable-unsafe-swiftshader"] },
   },
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined

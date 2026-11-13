@@ -5,11 +5,14 @@ test("purchase explanation changes and its example stays labelled", async ({
   page,
 }) => {
   await page.goto("/");
+  const detail = page.getByRole("region", {
+    name: "Purchase lifecycle illustration",
+  });
   await page.getByRole("button", { name: /Give your agent the brief/ }).click();
   await expect(
-    page.getByText("Illustrative extraction example", { exact: true }),
+    detail.getByText("Illustrative extraction example", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("notebooks", { exact: true })).toBeVisible();
+  await expect(detail.getByText("notebooks", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: /Review it. Then approve payment/ })
     .click();
@@ -18,7 +21,7 @@ test("purchase explanation changes and its example stays labelled", async ({
   ).toHaveAttribute("href", /nearblocks.io\/txns\//);
   await page.getByRole("button", { name: /Fund a Purchase Pass/ }).click();
   await expect(
-    page.getByText("Separate storage budget", { exact: true }),
+    detail.getByText("Separate storage budget", { exact: true }),
   ).toBeVisible();
 });
 
@@ -68,10 +71,10 @@ test("landing is readable without JavaScript", async ({ browser, baseURL }) => {
   const page = await context.newPage();
   await page.goto(baseURL!);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Your agent orders.",
+    "Agents order.",
   );
   await expect(
-    page.getByText("One pass. One purchase.", { exact: true }),
+    page.getByRole("heading", { name: /One pass.*One purchase/ }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Open ProofBill", exact: true }).first(),

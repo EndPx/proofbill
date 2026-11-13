@@ -203,7 +203,7 @@ The seller pays inference costs before buyer approval. A rejection/refund does n
 
 ## Provenance, team and license
 
-Conceptual inspiration: [Assay](https://github.com/trudransh/Assay), [MoneySwitch](https://github.com/dongsheng123132/moneyswitch) and [Kanmani](https://github.com/zkasuran/kanmani). ProofBill does not claim to invent evidence-linked payments; its focus is a transferable bounded purchase right and private AI service flow on NEAR. No source from those projects is included.
+Conceptual inspiration: [Assay](https://github.com/trudransh/Assay), [MoneySwitch](https://github.com/dongsheng123132/moneyswitch) and [Kanmani](https://github.com/zkasuran/kanmani). ProofBill does not claim to invent evidence-linked payments; its focus is a transferable bounded purchase right and private AI service flow on NEAR. The landing point-morph shaders are adapted from Assay under MIT; see [third-party notices](THIRD_PARTY_NOTICES.md) for the pinned source and full license. Purchase geometry, content, scene behavior and React/GSAP integration are specific to ProofBill.
 
 The build uses official Next.js/cargo-near scaffolds, NEAR SDK/contract standards, NEAR Connect and the libraries declared in the manifests and lockfiles. Development used AI coding assistance. Original logo/bitmap concepts and the selected landing illustration were generated with ChatGPT Image; screenshots depict the actual product. Public source and curated evidence are tracked; credentials, raw operational logs, working exports and internal review notes stay local.
 

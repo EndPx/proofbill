@@ -1,8 +1,8 @@
-// Original generated pass artwork; product image is the recorded public testnet receipt.
+// Original generated materials and fallback pass artwork; product image is a recorded testnet receipt.
 // Extraction and handover illustrations explain behavior without claiming a new inference or transfer.
 export const landing = {
   url: "https://proofbill-two.vercel.app",
-  title: "ProofBill | Your agent orders. You stay in control.",
+  title: "ProofBill | Permission before payment.",
   description:
     "Give your AI agent a funded Purchase Pass on NEAR. Review the private result and its evidence, then approve the exact seller payment.",
   github: "https://github.com/EndPx/proofbill",
@@ -12,8 +12,8 @@ export const landing = {
   payment:
     "https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z",
   hero: {
-    first: "Your agent orders.",
-    second: "You stay in control.",
+    first: "Agents order.",
+    second: "You approve.",
     body: "Give your AI agent a funded Purchase Pass. Review what comes back, inspect the evidence, and approve the exact payment. All in one place.",
     note: "Built on NEAR testnet. Start with your wallet.",
   },

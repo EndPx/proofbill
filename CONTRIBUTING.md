@@ -27,6 +27,8 @@ On Linux, install browser system dependencies with `playwright install --with-de
 
 Browser wallet fixtures exercise connector events, cancellation, restoration and disconnect without real signatures or chain writes. They also cover the landing workflow, handover illustration, keyboard FAQ, no-JavaScript rendering, reduced motion and accessibility. Passing them does not establish a real provider call or onchain settlement.
 
+Motion cases initialize real WebGL with a software-renderer fallback, exercise pause and manual shape changes, reverse the scroll chapters, inspect pointer tilt, and simulate GPU-context loss/restoration. The test runner's SwiftShader flag is confined to automated browser launches; it is not an application setting.
+
 Contract checks use the toolchain pinned in `contracts/proofbill/rust-toolchain.toml`:
 
 ```sh
