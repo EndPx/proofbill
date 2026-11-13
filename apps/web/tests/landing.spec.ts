@@ -14,7 +14,7 @@ test("purchase explanation changes and its example stays labelled", async ({
   ).toBeVisible();
   await expect(detail.getByText("notebooks", { exact: true })).toBeVisible();
   await page
-    .getByRole("button", { name: /Review it. Then approve payment/ })
+    .getByRole("button", { name: /Your policy. Your payment/ })
     .click();
   await expect(
     page.getByRole("link", { name: "View transaction" }),
@@ -38,7 +38,7 @@ test("FAQ works from the keyboard and the CTA reaches the wallet gate", async ({
   await question.focus();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByText(/Yes. Connect a testnet wallet before entering/),
+    page.getByText(/Public receipts need no wallet. Connect a testnet wallet/),
   ).toBeVisible();
   await page
     .getByRole("link", { name: "Open ProofBill", exact: true })

@@ -118,7 +118,7 @@ export default function Home() {
           </figure>
           <div className={styles.previewFoot}>
             <span>
-              <KeyRound size={16} /> Wallet-approved payments
+              <KeyRound size={16} /> Owner-authorized payments
             </span>
             <span>
               <FileKey2 size={16} /> Buyer-only private results
@@ -290,8 +290,8 @@ export default function Home() {
                 <span>Keep the final say.</span>
               </h2>
               <p>
-                One clear permission for your next AI purchase. Your wallet
-                approves the payment.
+                One clear permission for your next AI purchase. Approve after
+                review, or authorize Automatic payment in advance.
               </p>
               <div className={styles.finaleActions}>
                 <Link className={styles.cta} href="/app/purchases">

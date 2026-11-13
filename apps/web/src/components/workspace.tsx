@@ -72,7 +72,7 @@ const errorCopy: Record<string, string> = {
   PRIVATE_RESULT_UNAVAILABLE:
     "The chain recorded delivery, but its private result is unavailable. No new inference will start. Contact support to reconcile this order.",
   SERVICE_UNAVAILABLE:
-    "The service could not be reached. Your funds have not been marked as paid.",
+    "The service could not be reached. Refresh to check the latest contract state before retrying.",
   CHALLENGE_EXPIRED:
     "Your sign-in challenge expired. Please unlock your session again.",
 };
@@ -207,7 +207,7 @@ function AgentSettings({
           disabled={busy}
           onChange={(e) => setKind(e.target.value)}
         >
-          <option value="proofbill">ProofBill Research assistant</option>
+          <option value="proofbill">ProofBill assistant</option>
           <option value="custom" disabled={!advanced}>
             My own agent
           </option>
@@ -255,7 +255,7 @@ function AgentSettings({
           ? "Save agent and payment settings"
           : kind === "custom"
             ? "Assign my agent"
-            : "Assign Research assistant"}{" "}
+            : "Assign ProofBill assistant"}{" "}
         <Bot size={17} />
       </button>
     </section>
@@ -650,7 +650,7 @@ export function Workspace() {
                 ) : pass.agent_id ? (
                   <>
                     <div className="trust-line">
-                      <Bot size={17} /> Research assistant is assigned
+                      <Bot size={17} /> ProofBill assistant is assigned
                     </div>
                     <label className="field">
                       Your private purchase brief
@@ -792,6 +792,19 @@ export function Workspace() {
   } else if ((section === "orders" || section === "receipts") && id) {
     const o = detail?.order;
     const receiptMode = section === "receipts";
+    const paymentSummary = {
+      Reserved:
+        detail?.payment_mode === "Automatic"
+          ? "Waiting for matching publisher delivery. Your advance authorization starts the initial seller payment."
+          : "Waiting for delivery. You can review the result before authorizing payment.",
+      Delivered: "Review the result before approving this exact order and seller payment.",
+      PaymentPending: "The seller transfer is pending. Paid appears only after the contract confirms success.",
+      Paid: "The contract confirmed the seller transfer. Your Purchase Pass is Completed.",
+      TransferFailed: "The seller transfer failed. The buyer can approve a retry or request a service refund.",
+      Refunded: "The contract confirmed the service refund to the buyer. Storage backing is separate.",
+      RefundFailed: "The service refund failed. Open the Purchase Pass to retry the confirmed failed refund.",
+      RefundPending: "The service refund is pending. Its outcome has not been confirmed.",
+    };
     content = (
       <>
         <Link className="back-link" href="/app/purchases">
@@ -799,7 +812,9 @@ export function Workspace() {
         </Link>
         {pageHeader(
           receiptMode ? "Purchase receipt" : "Private brief extraction",
-          o ? `${o.order_id} · Requested by Research assistant` : id,
+          o
+            ? `${o.order_id} · Agent: ${o.agent_id === wallet.config.agentId ? "ProofBill assistant" : o.agent_id}`
+            : id,
           o && <Status value={o.phase} />,
         )}
         {o ? (
@@ -988,13 +1003,13 @@ export function Workspace() {
                     ? "Payment receipt"
                     : detail?.payment_mode === "Automatic"
                       ? "Automatic payment"
-                      : "Payment approval"}
+                      : "Payment status"}
                 </h2>
                 <p>{o.order_id}</p>
                 <p className="fine">
                   {detail?.payment_mode === "Automatic"
                     ? "Owner preauthorized one payment after matching publisher delivery."
-                    : "Owner approval required before payment."}
+                    : "The buyer authorizes payment in the wallet after delivery."}
                 </p>
                 <dl className="facts">
                   <div>
@@ -1012,11 +1027,7 @@ export function Workspace() {
                   <small>testnet NEAR</small>
                 </div>
                 <Status value={o.phase} />
-                <p className="fine">
-                  {o.phase === "Paid"
-                    ? "The contract confirmed the seller transfer. Your Purchase Pass is Completed."
-                    : "Review the result before approving this exact order and seller payment."}
-                </p>
+                <p className="fine">{paymentSummary[o.phase]}</p>
                 {wallet.account === o.buyer_id && (
                   <>
                     {o.phase === "Delivered" && (
@@ -1055,7 +1066,7 @@ export function Workspace() {
                           })
                         }
                       >
-                        Reject and refund
+                        Request service refund
                       </Button>
                     )}
                   </>
@@ -1073,10 +1084,13 @@ export function Workspace() {
                 <h2>Order timeline</h2>
                 {[
                   { label: "Order reserved", done: true },
-                  { label: "Result delivered", done: o.phase !== "Reserved" },
+                  { label: "Result delivered", done: !!o.response_commitment },
                   {
-                    label: "Owner payment approval",
-                    done: ["PaymentPending", "Paid"].includes(o.phase),
+                    label:
+                      detail?.payment_mode === "Automatic"
+                        ? "Automatic payment authorized in advance"
+                        : "Buyer payment approval",
+                    done: detail?.payment_mode === "Automatic" || o.attempt > 0,
                   },
                   { label: "Payment confirmed", done: o.phase === "Paid" },
                 ].map((s, i) => (
@@ -1091,7 +1105,11 @@ export function Workspace() {
                     )}
                     <span>{s.label}</span>
                     {!s.done && (
-                      <small>{i === 3 ? "Pending" : "Awaiting action"}</small>
+                      <small>
+                        {i === 2 && o.phase === "Delivered"
+                          ? "Awaiting approval"
+                          : "Not confirmed"}
+                      </small>
                     )}
                   </div>
                 ))}
@@ -1253,7 +1271,7 @@ export function Workspace() {
                       <span className="agent-name">
                         <Bot size={17} />{" "}
                         {o.agent_id === wallet.config.agentId
-                          ? "Research assistant"
+                          ? "ProofBill assistant"
                           : o.agent_id}
                       </span>
                       <span>
@@ -1274,7 +1292,7 @@ export function Workspace() {
               >
                 {wallet.account
                   ? "Create a Purchase Pass and give your agent its first task."
-                  : "Connect a testnet wallet to see your passes, review private results and approve payments."}
+                  : "Connect a testnet wallet to manage passes and payment policies. Sign a separate message to unlock private results."}
                 {!wallet.account && (
                   <div className="empty-action">{connectButton}</div>
                 )}

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prepareWallet } from "./helpers/wallet";
+import type { OrderPhase, PaymentMode } from "@proofbill/shared";
 const owner = "wallet-entry-test.testnet";
 const pass = {
   token_id: "pass-99",
@@ -57,6 +58,45 @@ async function transactions(page: Page) {
       ).proofbillTransactions ?? [],
   );
 }
+test("order copy identifies the actual agent and follows payment mode and outcome", async ({ page }) => {
+  await setup(page);
+  let phase: OrderPhase = "Reserved";
+  let mode: PaymentMode = "Automatic";
+  await page.route("**/api/order/**", (route) => route.fulfill({ json: {
+    order: {
+      order_id: "pass-99-order", token_id: "pass-99", buyer_id: owner,
+      agent_id: "custom.testnet", seller_id: "seller.testnet", price_yocto: pass.price_yocto,
+      revision: 0, phase, attempt: ["Paid", "PaymentPending", "TransferFailed"].includes(phase) ? 1 : 0,
+      response_commitment: phase === "Reserved" || phase === "Refunded" ? null : "response",
+      evidence_commitment: "evidence", request_commitment: "request", policy_id: "policy",
+      created_at_ns: "1794610000000000000",
+    }, payment_mode: mode, job: null, observations: [],
+  } }));
+  const visit = () => page.goto("/app/orders/pass-99-order");
+  await visit();
+  await expect(page.getByText("pass-99-order · Agent: custom.testnet", { exact: true })).toBeVisible();
+  await expect(page.getByText(/advance authorization starts the initial seller payment/)).toBeVisible();
+  await expect(page.getByText("Automatic payment authorized in advance", { exact: true })).toBeVisible();
+  await expect(page.getByText("Buyer payment approval", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve payment" })).toHaveCount(0);
+  phase = "PaymentPending";
+  await visit();
+  await expect(page.getByText(/Paid appears only after the contract confirms success/)).toBeVisible();
+  phase = "TransferFailed";
+  await visit();
+  await expect(page.getByText(/buyer can approve a retry or request a service refund/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry failed payment" })).toBeVisible();
+  phase = "Delivered";
+  mode = "Manual";
+  await visit();
+  await expect(page.getByText("Buyer payment approval", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve payment" })).toBeVisible();
+  phase = "Refunded";
+  await visit();
+  await expect(page.getByText(/confirmed the service refund to the buyer/)).toBeVisible();
+  await expect(page.getByText("Result delivered", { exact: true }).locator("..")).not.toHaveClass(/done/);
+  await expect(page.getByRole("button", { name: "Approve payment" })).toHaveCount(0);
+});
 test("owner selects own agent and explicitly consents to automatic payment", async ({
   page,
 }) => {

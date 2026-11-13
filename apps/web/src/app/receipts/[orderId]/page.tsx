@@ -10,6 +10,7 @@ import {
 import { loadPublicReceipt } from "@proofbill/server/receipts";
 import {
   formatReceiptNear,
+  humanPhase,
   type OrderPhase,
   type PublicReceipt,
 } from "@proofbill/shared";
@@ -74,7 +75,7 @@ const states: Record<
 const actionLabels: Record<string, string> = {
   reserve_order: "Order reservation",
   publish_delivery: "Delivery publication",
-  approve_and_pay: "Owner-approved payment",
+  approve_and_pay: "Buyer-approved payment",
   retry_failed_payment: "Payment retry",
   cancel_and_refund: "Refund request",
   retry_failed_refund: "Refund retry",
@@ -156,7 +157,7 @@ export default async function PublicReceiptPage({
             className={`receipt ${styles.receipt}`}
             aria-label="Onchain financial record"
           >
-            <span className={`badge ${state.tone}`}>{receipt.order_phase}</span>
+            <span className={`badge ${state.tone}`}>{humanPhase(receipt.order_phase)}</span>
             <h2>{state.title}</h2>
             <p>{state.detail}</p>
             <div className={styles.amount}>
@@ -231,7 +232,7 @@ export default async function PublicReceiptPage({
             <p>
               {automatic
                 ? "The owner authorized one fixed payment in advance. Matching publisher delivery starts settlement without a final wallet approval."
-                : "The owner approves the exact delivered result and seller payment in the wallet before settlement starts."}
+                : "The buyer approves the exact delivered result and seller payment in the wallet before settlement starts."}
             </p>
             {automatic && (
               <p>
@@ -249,7 +250,7 @@ export default async function PublicReceiptPage({
               </div>
               <div>
                 <dt>NFT state</dt>
-                <dd>{receipt.nft_phase}</dd>
+                <dd>{humanPhase(receipt.nft_phase)}</dd>
               </div>
               <div>
                 <dt>Current NFT holder</dt>

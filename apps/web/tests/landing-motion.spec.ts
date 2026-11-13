@@ -39,7 +39,7 @@ test("purchase card blends materials and replaces its print without stale rapid 
     .dispatchEvent("click");
   await page.waitForTimeout(35);
   await steps
-    .getByRole("button", { name: /Review it. Then approve payment/ })
+    .getByRole("button", { name: /Your policy. Your payment/ })
     .dispatchEvent("click");
   await page.waitForTimeout(35);
   await steps
@@ -99,10 +99,10 @@ test("mobile stages place the matching illustration beside the selected chapter"
     "PRIVATE DELIVERY",
   );
   await page
-    .getByRole("button", { name: /Review it. Then approve payment/ })
+    .getByRole("button", { name: /Your policy. Your payment/ })
     .click();
   const receipt = page.getByRole("region", {
-    name: "Review it. Then approve payment. illustration",
+    name: "Your policy. Your payment. illustration",
   });
   await expect(
     receipt.getByRole("link", { name: "View transaction" }),
@@ -143,7 +143,7 @@ test("scroll chapters reverse correctly and the physical pass responds to pointe
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   const review = page.getByRole("button", {
-    name: /Review it. Then approve payment/,
+    name: /Your policy. Your payment/,
   });
   await review.scrollIntoViewIfNeeded();
   await expect(review).toHaveAttribute("aria-pressed", "true");

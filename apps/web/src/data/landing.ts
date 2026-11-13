@@ -14,7 +14,7 @@ export const landing = {
   hero: {
     first: "Agents order.",
     second: "You decide.",
-    body: "Choose ProofBill’s assistant or your own agent. Fund one Purchase Pass, inspect what comes back, and choose manual approval or preauthorized payment.",
+    body: "Fund one Purchase Pass, choose the ProofBill assistant or your own agent, and set your payment policy. Review before paying in Manual mode, or authorize Automatic payment in advance.",
     note: "Built on NEAR testnet. Start with your wallet.",
   },
   steps: [
@@ -31,7 +31,7 @@ export const landing = {
         "Sign a wallet message to open your private result and evidence report.",
     },
     {
-      title: "Review it. Then approve payment.",
+      title: "Your policy. Your payment.",
       body: "Manual mode lets you inspect the result before approving. Automatic mode uses your advance authorization after matching delivery. Paid appears after the transfer is confirmed.",
       detail:
         "Manual is the default. Automatic payment is an explicit per-pass choice.",
@@ -41,12 +41,12 @@ export const landing = {
     {
       question: "What can I try today?",
       answer:
-        "The testnet MVP extracts an item, quantity and requester from a purchase brief. Assign ProofBill’s assistant or your own agent. Manual payment lets you review before approving; Automatic payment settles after matching publisher delivery. Refunds follow contract state.",
+        "The testnet MVP extracts an item, quantity and requester from a purchase brief. Assign the ProofBill assistant or your own agent. Manual payment lets you review before approving; Automatic payment starts after matching publisher delivery. Paid appears only after the seller transfer succeeds. Refunds follow contract state.",
     },
     {
       question: "Do I need a NEAR wallet?",
       answer:
-        "Yes. Connect a testnet wallet before entering the workspace. A separate signed message unlocks private data. Funding and policy changes require a wallet signature. Manual payment asks again; Automatic payment uses explicit advance authorization. Connecting alone does not move funds.",
+        "Public receipts need no wallet. Connect a testnet wallet to enter the workspace, then sign a separate message to unlock private data. Funding and policy changes require a wallet transaction. Manual payment asks again; Automatic payment uses explicit advance authorization. Connecting alone does not move funds.",
     },
     {
       question: "What does the Purchase Pass pay for?",

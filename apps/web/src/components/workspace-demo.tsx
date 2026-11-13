@@ -235,7 +235,7 @@ export function WorkspaceDemo() {
                 <h3>{title}</h3>
                 <p>
                   {view === "order" || view === "receipt"
-                    ? `${order.id} · Research assistant`
+                    ? `${order.id} · ProofBill assistant`
                     : view === "new"
                       ? "Create a sample pass to explore the interface."
                       : "Explore the workspace with local example records."}
@@ -492,6 +492,7 @@ export function WorkspaceDemo() {
                 <aside className={styles.receipt}>
                   <ReceiptText size={21} />
                   <h4>Sample payment receipt</h4>
+                  <p>Manual payment example</p>
                   <p>{order.id}</p>
                   <dl className={styles.facts}>
                     <div>
@@ -500,7 +501,7 @@ export function WorkspaceDemo() {
                     </div>
                     <div>
                       <dt>Agent</dt>
-                      <dd>Research assistant</dd>
+                      <dd>ProofBill assistant</dd>
                     </div>
                   </dl>
                   <div className={styles.rule} />

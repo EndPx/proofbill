@@ -137,7 +137,7 @@ export function ParticlePass() {
             [
               "One permission, fixed before your agent orders.",
               "Your result is opened with a signed buyer session.",
-              "Your wallet approves. The chain confirms.",
+              "Your policy authorizes. The chain confirms.",
             ][selected]
           }
         </p>
