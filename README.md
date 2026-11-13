@@ -53,7 +53,7 @@ The receipt image is a recorded testnet snapshot. The [current app](https://proo
 
 ## Review in five minutes
 
-1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), switch through the three purchase steps, and try the clearly labelled handover illustration. This needs no wallet or credits.
+1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), click through the sample workspace menus, switch through the three purchase steps, and try the clearly labelled handover illustration. The interactive workspace uses local mock records; it needs no wallet or credits and submits no transactions.
 2. **Inspect the working workspace.** [Connect a NEAR testnet wallet](https://proofbill-two.vercel.app/app/purchases). Open the [recorded receipt](https://proofbill-two.vercel.app/app/receipts/pass-2-order) to inspect public financial facts. Another wallet cannot unlock the buyer's private result.
 3. **Check the payment independently.** Compare the [successful seller payment](https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z), [duplicate-payment refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1), and [integration record](docs/evidence/integration/pass-2-order.json). Reading these does not require a new purchase.
 4. **Try your own purchase.** Use your own funded testnet wallet: create a pass, assign Research assistant, enter a brief, run the agent, unlock the result, and approve payment or request a refund where permitted. All financial actions require your wallet approval.

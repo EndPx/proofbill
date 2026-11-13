@@ -19,7 +19,10 @@ test("purchase explanation changes and its example stays labelled", async ({
   await expect(
     page.getByRole("link", { name: "View transaction" }),
   ).toHaveAttribute("href", /nearblocks.io\/txns\//);
-  await page.getByRole("button", { name: /Fund a Purchase Pass/ }).click();
+  await page
+    .getByRole("group", { name: "Purchase workflow steps" })
+    .getByRole("button", { name: /Fund a Purchase Pass/ })
+    .click();
   await expect(
     detail.getByText("Separate storage budget", { exact: true }),
   ).toBeVisible();

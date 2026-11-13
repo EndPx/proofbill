@@ -86,7 +86,9 @@ test("scroll chapters reverse correctly and the physical pass responds to pointe
   await expect
     .poll(() => card.evaluate((el) => getComputedStyle(el).transform))
     .not.toBe(before);
-  const first = page.getByRole("button", { name: /Fund a Purchase Pass/ });
+  const first = page
+    .getByRole("group", { name: "Purchase workflow steps" })
+    .getByRole("button", { name: /Fund a Purchase Pass/ });
   await first.scrollIntoViewIfNeeded();
   await expect(first).toHaveAttribute("aria-pressed", "true");
   await expect(detail).toContainText("Separate storage budget");

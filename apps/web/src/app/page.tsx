@@ -17,6 +17,7 @@ import { PurchaseStory } from "@/components/purchase-story";
 import { LandingMotion } from "@/components/landing-motion";
 import { PassHandover } from "@/components/pass-handover";
 import { ParticlePass } from "@/components/landing/particle-pass";
+import { WorkspaceDemo } from "@/components/workspace-demo";
 import "@fontsource-variable/archivo/wdth.css";
 import styles from "./home.module.css";
 
@@ -99,31 +100,18 @@ export default function Home() {
           aria-label="ProofBill product preview"
         >
           <div className={styles.previewHeading}>
-            <p>From an agent request to a payment you can trace.</p>
+            <h2>Explore the workspace. Try the menus.</h2>
             <span>
-              <span className={styles.statusDot} /> Working testnet MVP
+              <span className={styles.statusDot} /> Interactive demo · Sample
+              data
             </span>
           </div>
           <figure className={styles.preview} data-product-preview>
-            <div className={styles.previewViewport}>
-              <Image
-                src="/art/testnet-receipt.webp"
-                unoptimized
-                alt="Recorded ProofBill testnet receipt showing a private brief result locked to the buyer and a confirmed 0.010 NEAR seller payment."
-                width={1280}
-                height={720}
-                sizes="(max-width: 760px) 100vw, 90vw"
-              />
-            </div>
+            <WorkspaceDemo />
             <figcaption>
-              <span>
-                Actual testnet receipt{" "}
-                <span className={styles.captionMeta}>
-                  / pass-2-order / snapshot
-                </span>
-              </span>
-              <Link href={landing.receipt} prefetch={false}>
-                Open receipt <ArrowUpRight size={15} />
+              <span>Sample data only. No wallet or payment required.</span>
+              <Link href="/app/purchases" prefetch={false}>
+                Open live app <ArrowUpRight size={15} />
               </Link>
             </figcaption>
           </figure>
