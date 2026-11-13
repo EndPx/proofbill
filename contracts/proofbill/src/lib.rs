@@ -16,6 +16,7 @@ use near_sdk::{
 use std::collections::HashMap;
 const PRICE: u128 = 10_000_000_000_000_000_000_000;
 const STORAGE: u128 = 30_000_000_000_000_000_000_000;
+const ORDER_STORAGE_BYTES: u128 = 1400;
 const SERVICE: &str = "private-extraction-v1";
 const MODEL: &str = "Qwen/Qwen3.8-27B";
 const POLICY: &str = "near-tee-ecdsa-v1";
@@ -92,6 +93,9 @@ pub struct PassView {
     pub pass: PurchasePass,
     pub payment_mode: PaymentMode,
     pub budget: Option<PassBudget>,
+    pub flexible_budget: bool,
+    pub max_order_price_yocto: Option<U128>,
+    pub storage_required_for_order_yocto: U128,
 }
 #[near(serializers=[json,borsh])]
 #[derive(Clone, Debug)]
@@ -108,6 +112,7 @@ pub struct OrderView {
     #[serde(flatten)]
     pub order: PurchaseOrder,
     pub payment_mode: PaymentMode,
+    pub max_order_price_yocto: Option<U128>,
 }
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
@@ -154,7 +159,7 @@ impl Contract {
         }
     }
     pub fn get_config(&self) -> near_sdk::serde_json::Value {
-        near_sdk::serde_json::json!({"service_id":SERVICE,"model_id":MODEL,"policy_id":POLICY,"price_yocto":PRICE.to_string(),"storage_budget_yocto":STORAGE.to_string(),"seller_id":self.seller,"publisher_id":self.publisher,"network":"testnet","version":3,"agent_modes":true,"budget_passes":true,"max_budget_orders":100,"storage_per_order_yocto":PRICE.to_string(),"payment_modes":["Manual","Automatic"]})
+        near_sdk::serde_json::json!({"service_id":SERVICE,"model_id":MODEL,"policy_id":POLICY,"price_yocto":PRICE.to_string(),"storage_budget_yocto":STORAGE.to_string(),"seller_id":self.seller,"publisher_id":self.publisher,"network":"testnet","version":4,"agent_modes":true,"budget_passes":true,"flexible_budgets":true,"initial_storage_budget_yocto":STORAGE.to_string(),"payment_modes":["Manual","Automatic"]})
     }
     #[payable]
     pub fn create_purchase_pass(
@@ -238,24 +243,80 @@ impl Contract {
             env::attached_deposit().as_yoctonear() >= amount + storage,
             "INSUFFICIENT_FUNDING_AND_STORAGE"
         );
-        let mut p = self.create_purchase_pass(service_id, expires_at_ns, payment_mode);
-        p.storage_credit_yocto.0 -= amount - PRICE;
-        let before = env::storage_usage();
-        self.write_budget(
-            &p.token_id,
-            &PassBudget {
-                funded_yocto: budget_yocto,
-                available_yocto: budget_yocto,
-                reserved_yocto: U128(0),
-                spent_yocto: U128(0),
-                refunded_yocto: U128(0),
-                orders_created: 0,
-            },
+        self.mint_budget(
+            service_id,
+            expires_at_ns,
+            payment_mode,
+            budget_yocto,
+            false,
+            None,
+        )
+    }
+    #[payable]
+    pub fn create_flexible_budget_pass(
+        &mut self,
+        service_id: String,
+        expires_at_ns: U64,
+        payment_mode: Option<PaymentMode>,
+        budget_yocto: U128,
+        max_order_price_yocto: Option<U128>,
+    ) -> PassView {
+        require!(budget_yocto.0 >= PRICE, "INVALID_SERVICE_BUDGET");
+        let required = budget_yocto
+            .0
+            .checked_add(STORAGE)
+            .expect("INVALID_SERVICE_BUDGET");
+        require!(
+            env::attached_deposit().as_yoctonear() >= required,
+            "INSUFFICIENT_FUNDING_AND_STORAGE"
         );
+        self.mint_budget(
+            service_id,
+            expires_at_ns,
+            payment_mode,
+            budget_yocto,
+            true,
+            max_order_price_yocto,
+        )
+    }
+    #[payable]
+    pub fn configure_budget_agent(
+        &mut self,
+        token_id: String,
+        expected_revision: u32,
+        agent_id: AccountId,
+        payment_mode: Option<PaymentMode>,
+        max_order_price_yocto: Option<U128>,
+    ) -> PassView {
+        require!(self.flexible(&token_id), "FLEXIBLE_BUDGET_REQUIRED");
+        let mut p = self.assign_agent(token_id.clone(), expected_revision, agent_id, payment_mode);
+        let before = env::storage_usage();
+        self.write_limit(&Self::limit_key(&token_id), max_order_price_yocto);
         self.store_charged(&mut p, before);
+        self.pass_view(p)
+    }
+    #[payable]
+    pub fn top_up_storage(&mut self, token_id: String) -> PassView {
+        let mut p = self.pass(&token_id);
+        require!(p.owner_id == env::predecessor_account_id(), "HOLDER_ONLY");
+        require!(!p.transfer_pending, "TRANSFER_PENDING");
+        let amount = env::attached_deposit().as_yoctonear();
+        require!(amount > 0, "STORAGE_DEPOSIT_REQUIRED");
+        p.storage_credit_yocto.0 = p
+            .storage_credit_yocto
+            .0
+            .checked_add(amount)
+            .expect("STORAGE_CREDIT_OVERFLOW");
+        if p.phase == PassPhase::Available {
+            p.authorization_revision = p
+                .authorization_revision
+                .checked_add(1)
+                .expect("REVISION_OVERFLOW");
+        }
+        self.passes.insert(&token_id, &p);
         event(
-            "budget_funded",
-            near_sdk::serde_json::json!({"token_id":p.token_id,"amount_yocto":amount.to_string()}),
+            "storage_backing_added",
+            near_sdk::serde_json::json!({"token_id":token_id,"amount_yocto":amount.to_string(),"revision":p.authorization_revision}),
         );
         self.pass_view(p)
     }
@@ -303,6 +364,15 @@ impl Contract {
             p.agent_id.as_ref() == Some(&env::predecessor_account_id()),
             "AGENT_NOT_AUTHORIZED"
         );
+        if let Some(limit) = self.order_limit(&token_id) {
+            require!(p.price_yocto.0 <= limit.0, "ORDER_PRICE_LIMIT_EXCEEDED");
+        }
+        if self.flexible(&token_id) {
+            require!(
+                self.order_storage_required(&p) == 0,
+                "ORDER_STORAGE_REQUIRED"
+            );
+        }
         let before = env::storage_usage();
         let id = if let Some(mut budget) = self.budget(&token_id) {
             require!(
@@ -318,6 +388,7 @@ impl Contract {
             let id = format!("{}-order-{}", token_id, budget.orders_created);
             self.write_budget(&token_id, &budget);
             self.write_order_mode(&id, &self.payment_mode(&token_id));
+            self.write_limit(&Self::order_limit_key(&id), self.order_limit(&token_id));
             id
         } else {
             format!("{}-order", token_id)
@@ -591,6 +662,7 @@ impl Contract {
     pub fn get_order(&self, order_id: String) -> Option<OrderView> {
         self.orders.get(&order_id).map(|order| OrderView {
             payment_mode: self.order_mode(&order),
+            max_order_price_yocto: self.read_limit(&Self::order_limit_key(&order.order_id)),
             order,
         })
     }
@@ -634,6 +706,74 @@ impl Contract {
     }
 }
 impl Contract {
+    fn flexible_key(id: &str) -> Vec<u8> {
+        [b"pb:flexible:v1:".as_slice(), id.as_bytes()].concat()
+    }
+    fn flexible(&self, id: &str) -> bool {
+        env::storage_has_key(&Self::flexible_key(id))
+    }
+    fn limit_key(id: &str) -> Vec<u8> {
+        [b"pb:price-cap:v1:".as_slice(), id.as_bytes()].concat()
+    }
+    fn order_limit_key(id: &str) -> Vec<u8> {
+        [b"pb:order-cap:v1:".as_slice(), id.as_bytes()].concat()
+    }
+    fn read_limit(&self, key: &[u8]) -> Option<U128> {
+        env::storage_read(key).map(|v| {
+            U128(u128::from_le_bytes(
+                v.try_into().expect("INVALID_PRICE_LIMIT"),
+            ))
+        })
+    }
+    fn order_limit(&self, id: &str) -> Option<U128> {
+        self.read_limit(&Self::limit_key(id))
+    }
+    fn write_limit(&self, key: &[u8], value: Option<U128>) {
+        if let Some(value) = value {
+            require!(value.0 > 0, "INVALID_PRICE_LIMIT");
+            env::storage_write(key, &value.0.to_le_bytes());
+        } else {
+            env::storage_remove(key);
+        }
+    }
+    fn order_storage_required(&self, p: &PurchasePass) -> u128 {
+        (ORDER_STORAGE_BYTES * env::storage_byte_cost().as_yoctonear())
+            .saturating_sub(p.storage_credit_yocto.0)
+    }
+    fn mint_budget(
+        &mut self,
+        service: String,
+        expiry: U64,
+        mode: Option<PaymentMode>,
+        amount: U128,
+        flexible: bool,
+        limit: Option<U128>,
+    ) -> PassView {
+        let mut p = self.create_purchase_pass(service, expiry, mode);
+        p.storage_credit_yocto.0 -= amount.0 - PRICE;
+        let before = env::storage_usage();
+        self.write_budget(
+            &p.token_id,
+            &PassBudget {
+                funded_yocto: amount,
+                available_yocto: amount,
+                reserved_yocto: U128(0),
+                spent_yocto: U128(0),
+                refunded_yocto: U128(0),
+                orders_created: 0,
+            },
+        );
+        if flexible {
+            env::storage_write(&Self::flexible_key(&p.token_id), &[1]);
+            self.write_limit(&Self::limit_key(&p.token_id), limit);
+        }
+        self.store_charged(&mut p, before);
+        event(
+            "budget_funded",
+            near_sdk::serde_json::json!({"token_id":p.token_id,"amount_yocto":amount.0.to_string()}),
+        );
+        self.pass_view(p)
+    }
     fn budget_key(id: &str) -> Vec<u8> {
         [b"pb:budget:v1:".as_slice(), id.as_bytes()].concat()
     }
@@ -702,6 +842,15 @@ impl Contract {
         PassView {
             payment_mode: self.payment_mode(&pass.token_id),
             budget: self.budget(&pass.token_id),
+            flexible_budget: self.flexible(&pass.token_id),
+            max_order_price_yocto: self.order_limit(&pass.token_id),
+            storage_required_for_order_yocto: U128(
+                if self.flexible(&pass.token_id) && pass.phase == PassPhase::Available {
+                    self.order_storage_required(&pass)
+                } else {
+                    0
+                },
+            ),
             pass,
         }
     }
@@ -836,6 +985,7 @@ impl Contract {
         p.agent_id = None;
         if p.phase == PassPhase::Available {
             self.write_payment_mode(id, &PaymentMode::Manual);
+            self.write_limit(&Self::limit_key(id), None);
         }
         p.authorization_revision = p
             .authorization_revision
@@ -1180,6 +1330,207 @@ mod tests {
         assert_eq!(c.budget(&id).unwrap().available_yocto.0, 0);
         ctx("agent.testnet", 0);
         c.reserve_order(id, 2, "d".repeat(64));
+    }
+    fn flexible_pass(c: &mut Contract, amount: u128, limit: Option<U128>) -> String {
+        ctx("alice.testnet", amount + STORAGE);
+        let p = c
+            .create_flexible_budget_pass(
+                SERVICE.into(),
+                U64(1_000_000),
+                Some(PaymentMode::Automatic),
+                U128(amount),
+                limit,
+            )
+            .pass;
+        ctx("alice.testnet", 1);
+        c.assign_agent(
+            p.token_id.clone(),
+            0,
+            "agent.testnet".parse().unwrap(),
+            None,
+        );
+        p.token_id
+    }
+    fn flexible_payment(c: &mut Contract, id: &String) -> String {
+        let required = c
+            .get_pass(id.clone())
+            .unwrap()
+            .storage_required_for_order_yocto
+            .0;
+        if required > 0 {
+            ctx("alice.testnet", required);
+            c.top_up_storage(id.clone());
+        }
+        let revision = c.pass(id).authorization_revision;
+        ctx("agent.testnet", 0);
+        let order = c.reserve_order(id.clone(), revision, "a".repeat(64));
+        ctx("publisher.testnet", 0);
+        let _ = c.publish_delivery(
+            order.order_id.clone(),
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            MODEL.into(),
+            POLICY.into(),
+            "provider_tee".into(),
+        );
+        callback(true);
+        assert!(c.on_payment_result(order.order_id.clone(), 1));
+        order.order_id
+    }
+    #[test]
+    fn flexible_budget_keeps_custom_amount_limit_and_storage_separate() {
+        let mut c = setup();
+        let amount = PRICE * 123 + 12345;
+        let id = flexible_pass(&mut c, amount, Some(U128(PRICE * 10)));
+        assert_eq!(c.budget(&id).unwrap().funded_yocto.0, amount);
+        assert!(c.pass(&id).storage_credit_yocto.0 < STORAGE);
+        let first = flexible_payment(&mut c, &id);
+        ctx("alice.testnet", 1);
+        let revision = c.pass(&id).authorization_revision;
+        c.configure_budget_agent(
+            id.clone(),
+            revision,
+            "agent.testnet".parse().unwrap(),
+            None,
+            None,
+        );
+        let second = flexible_payment(&mut c, &id);
+        assert_eq!(
+            c.get_order(first).unwrap().max_order_price_yocto,
+            Some(U128(PRICE * 10))
+        );
+        assert_eq!(c.get_order(second).unwrap().max_order_price_yocto, None);
+        ctx("alice.testnet", STORAGE);
+        c.top_up_storage(id.clone());
+        ctx("alice.testnet", 1);
+        c.nft_transfer("bob.testnet".parse().unwrap(), id.clone(), None, None);
+        assert_eq!(c.payment_mode(&id), PaymentMode::Manual);
+        assert_eq!(c.order_limit(&id), None);
+        ctx("bob.testnet", 1);
+        c.cancel_and_refund(id.clone(), c.pass(&id).authorization_revision);
+        callback(true);
+        c.on_refund_result(id.clone(), 1);
+        let b = c.budget(&id).unwrap();
+        assert_eq!(b.spent_yocto.0, PRICE * 2);
+        assert_eq!(b.refunded_yocto.0, amount - PRICE * 2);
+    }
+    #[test]
+    #[should_panic(expected = "ORDER_PRICE_LIMIT_EXCEEDED")]
+    fn flexible_budget_enforces_owner_price_ceiling() {
+        let mut c = setup();
+        let id = flexible_pass(&mut c, PRICE * 100, Some(U128(PRICE - 1)));
+        ctx("agent.testnet", 0);
+        c.reserve_order(id, 1, "a".repeat(64));
+    }
+    #[test]
+    fn flexible_storage_topup_does_not_consume_service_or_invalidate_active_order() {
+        let mut c = setup();
+        let id = flexible_pass(&mut c, PRICE * 100, None);
+        let required = c
+            .get_pass(id.clone())
+            .unwrap()
+            .storage_required_for_order_yocto
+            .0;
+        if required > 0 {
+            ctx("alice.testnet", required);
+            c.top_up_storage(id.clone());
+        }
+        let revision = c.pass(&id).authorization_revision;
+        ctx("agent.testnet", 0);
+        let order = c.reserve_order(id.clone(), revision, "a".repeat(64));
+        let before = c.budget(&id).unwrap();
+        let credit = c.pass(&id).storage_credit_yocto.0;
+        ctx("alice.testnet", STORAGE);
+        c.top_up_storage(id.clone());
+        assert_eq!(c.pass(&id).authorization_revision, revision);
+        assert_eq!(c.pass(&id).storage_credit_yocto.0, credit + STORAGE);
+        let after = c.budget(&id).unwrap();
+        assert_eq!(before.available_yocto, after.available_yocto);
+        assert_eq!(after.reserved_yocto, U128(PRICE));
+        ctx("publisher.testnet", 0);
+        let _ = c.publish_delivery(
+            order.order_id.clone(),
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            MODEL.into(),
+            POLICY.into(),
+            "provider_tee".into(),
+        );
+        callback(true);
+        assert!(c.on_payment_result(order.order_id, 1));
+    }
+    #[test]
+    fn flexible_budget_sequences_continue_beyond_one_hundred_orders() {
+        let mut c = setup();
+        let id = flexible_pass(&mut c, PRICE * 200, None);
+        for _ in 0..101 {
+            flexible_payment(&mut c, &id);
+        }
+        assert_eq!(c.budget(&id).unwrap().orders_created, 101);
+        assert_eq!(c.budget(&id).unwrap().spent_yocto, U128(PRICE * 101));
+        assert_eq!(c.budget(&id).unwrap().available_yocto, U128(PRICE * 99));
+        assert_eq!(c.order(&format!("{id}-order-101")).phase, OrderPhase::Paid);
+    }
+    #[test]
+    #[should_panic(expected = "ORDER_STORAGE_REQUIRED")]
+    fn flexible_budget_cannot_spend_service_funds_as_storage() {
+        let mut c = setup();
+        let id = flexible_pass(&mut c, PRICE * 100, None);
+        let mut p = c.pass(&id);
+        p.storage_credit_yocto = U128(0);
+        c.passes.insert(&id, &p);
+        ctx("agent.testnet", 0);
+        c.reserve_order(id, 1, "a".repeat(64));
+    }
+    #[test]
+    fn flexible_storage_allowance_covers_maximum_length_account_and_token_ids() {
+        let mut c = setup();
+        let owner = "a".repeat(64);
+        let agent = "d".repeat(64);
+        let publisher = "c".repeat(64);
+        c.seller = "b".repeat(64).parse().unwrap();
+        c.publisher = publisher.parse().unwrap();
+        c.sequence = u64::MAX - 1;
+        ctx(&owner, PRICE * 2 + STORAGE);
+        let id = c
+            .create_flexible_budget_pass(
+                SERVICE.into(),
+                U64(1_000_000),
+                Some(PaymentMode::Automatic),
+                U128(PRICE * 2),
+                Some(U128(PRICE * 10)),
+            )
+            .pass
+            .token_id;
+        ctx(&owner, 1);
+        c.assign_agent(id.clone(), 0, agent.parse().unwrap(), None);
+        let required = c
+            .get_pass(id.clone())
+            .unwrap()
+            .storage_required_for_order_yocto
+            .0;
+        if required > 0 {
+            ctx(&owner, required);
+            c.top_up_storage(id.clone());
+        }
+        let revision = c.pass(&id).authorization_revision;
+        ctx(&agent, 0);
+        let order = c.reserve_order(id.clone(), revision, "a".repeat(64));
+        ctx(&publisher, 0);
+        let _ = c.publish_delivery(
+            order.order_id.clone(),
+            "a".repeat(64),
+            "b".repeat(64),
+            "c".repeat(64),
+            MODEL.into(),
+            POLICY.into(),
+            "provider_tee".into(),
+        );
+        callback(true);
+        assert!(c.on_payment_result(order.order_id, 1));
+        assert_eq!(c.budget(&id).unwrap().spent_yocto, U128(PRICE));
     }
     #[test]
     fn transfer_moves_entitlement() {

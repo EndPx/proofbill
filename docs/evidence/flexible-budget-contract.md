@@ -1,0 +1,11 @@
+# Flexible budget and optional order ceiling
+
+Candidate contract validation, 14 November 2026. These are native unit and actual Wasm/Sandbox checks with synthetic publisher statements; this report alone does not establish deployment or provider inference.
+
+Version 4 adds `create_flexible_budget_pass`. The owner chooses a total service budget covering at least one current 0.010 testnet NEAR quote. Higher totals need not be price multiples and are not capped at 1 NEAR. An optional positive `max_order_price_yocto` limits each seller payment; absence means no additional per-order ceiling, while the stored service quote and remaining allocation still apply. The ceiling does not set the service price. `configure_budget_agent` changes assignment, payment mode and ceiling in one holder-authorized transaction and advances revision. Orders retain their own ceiling snapshots.
+
+Initial storage backing starts at 0.030 NEAR independently of the service budget; extra attached backing is tracked separately. Actual byte growth consumes storage credit. A conservative 1,400-byte allowance must be available before a new flexible order; the view quotes any deficit. Owner-only `top_up_storage` adds backing without changing funded/available/spent/refunded service amounts. Between orders it refreshes authorization; during an active order it preserves the bound revision. Further history can require additional backing. Neither gas nor retained storage is promised free, and service funds are never silently converted into storage.
+
+Existing root, pass, order and budget Borsh layouts remain unchanged. New optional flags/limits use additional storage prefixes. Legacy creation, ownership, callbacks and refund behavior remain supported.
+
+Eighteen Rust tests and four Wasm/Sandbox scenarios passed against the official cargo-near build. New cases cover arbitrary atomic totals, optional/removed ceilings, an agent's rejected attempt to change owner policy, over-ceiling rejection, immutable earlier order limits, independent storage top-ups, active-order authorization, exact residual refunds and maximum-length account/token identifiers. A native unit case exercises 101 simulated callback-confirmed orders on one NFT; it runs no model requests. Earlier receiver-return/failure, storage-credit and financial callback scenarios remain passing.
