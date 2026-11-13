@@ -177,6 +177,44 @@ test("custom demo amounts preserve fractional refunds and an optional recorded c
   await expect(card).toContainText("0.020 NEAR");
 });
 
+for (const width of [1440, 390]) {
+  test(`demo explains an unaffordable per-purchase ceiling at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const demo = page.getByRole("region", { name: "Interactive workspace demo", exact: true });
+    await demo.getByRole("button", { name: "Purchase Passes", exact: true }).click();
+    await demo.getByRole("button", { name: "New demo pass", exact: true }).click();
+    await demo.getByRole("textbox", { name: "Pass name", exact: true }).fill("Ceiling recovery");
+    const enabledLimit = demo.getByRole("checkbox", { name: "Set a sample per-purchase limit" });
+    const limit = demo.getByRole("textbox", { name: "Maximum per demo purchase (sample NEAR)" });
+    const help = demo.locator("#demo-limit-help");
+    const create = demo.getByRole("button", { name: "Create demo pass" });
+    await enabledLimit.check();
+    await limit.fill("0.009");
+    await expect(create).toBeDisabled();
+    await expect(limit).toHaveAttribute("aria-invalid", "true");
+    await expect(limit).toHaveAttribute("aria-describedby", "demo-limit-help");
+    await expect(help).toHaveText("The current service costs 0.010 NEAR, above your maximum. Raise the limit or turn it off to continue.");
+    await limit.fill("");
+    await expect(help).toHaveText("Enter a positive maximum.");
+    await limit.fill("0.010");
+    await expect(limit).toHaveAttribute("aria-invalid", "false");
+    await expect(create).toBeEnabled();
+    await enabledLimit.uncheck();
+    await expect(help).toHaveCount(0);
+    await expect(create).toBeEnabled();
+    await create.click();
+    const card = demo.getByRole("article").filter({ has: page.getByRole("heading", { name: "Ceiling recovery", exact: true }) });
+    await card.getByRole("button", { name: "New demo purchase" }).click();
+    await enabledLimit.check();
+    await limit.fill("0.009");
+    await expect(help).toContainText("Raise the limit or turn it off");
+    await expect(demo.getByRole("button", { name: "Run demo agent" })).toBeDisabled();
+    await limit.fill("0.010");
+    await expect(demo.getByRole("button", { name: "Run demo agent" })).toBeEnabled();
+  });
+}
+
 test("mobile demo keeps named menus, internal scrolling and accessible controls", async ({
   page,
 }) => {

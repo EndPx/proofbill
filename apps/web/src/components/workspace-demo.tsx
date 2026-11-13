@@ -62,6 +62,11 @@ export function WorkspaceDemo() {
   try { budgetQuote=budgetFunding(parseNearAmount(budget),{flexible:true}); } catch { /* Show the invalid draft next to its input. */ }
   let limitAmount:string|null=null,limitValid=true;
   try{if(limited)limitAmount=parseOrderPriceLimit(limitInput)}catch{limitValid=false}
+  const limitError = !limitValid
+    ? "Enter a positive maximum."
+    : limitAmount && BigInt(limitAmount) < BigInt(SERVICE_PRICE)
+      ? `The current service costs ${formatNear(SERVICE_PRICE)} NEAR, above your maximum. Raise the limit or turn it off to continue.`
+      : null;
 
   function menu(next: View) {
     scroll.current?.scrollTo({ top: 0 });
@@ -92,7 +97,7 @@ export function WorkspaceDemo() {
   }
   function createPass(event: FormEvent) {
     event.preventDefault();
-    if (!name.trim() || !budgetQuote || !limitValid || (limitAmount&&BigInt(limitAmount)<BigInt(SERVICE_PRICE))) return;
+    if (!name.trim() || !budgetQuote || limitError) return;
     scroll.current?.scrollTo({ top: 0 });
     setPasses((previous) => [
       ...previous,
@@ -129,7 +134,7 @@ export function WorkspaceDemo() {
   function runDemoAgent(event: FormEvent) {
     event.preventDefault();
     if(taskPass.phase!=="Available" || demoLedger(taskPass,orders).available<BigInt(SERVICE_PRICE) ||
-       !limitValid || (limitAmount&&BigInt(SERVICE_PRICE)>BigInt(limitAmount)) ||
+       limitError ||
        (ownAgent&&!validAccountId(agentAccount)) || (paymentMode==="Automatic"&&!consent)) return;
     const next: DemoOrder={id:`demo-order-${String(orders.length+1).padStart(3,"0")}`,passId:taskPass.id,
       title:taskPass.name,phase:"Delivered",brief:"Order 12 workshop notebooks for Community team.",
@@ -147,8 +152,8 @@ export function WorkspaceDemo() {
   }
   const limitControl=<>
     <label className={styles.consent}><input type="checkbox" aria-label="Set a sample per-purchase limit" checked={limited} onChange={e=>{setLimited(e.target.checked);setConsent(false)}}/>Set a maximum service price per purchase (optional)</label>
-    {limited&&<label>Maximum per demo purchase (sample NEAR)<input aria-label="Maximum per demo purchase (sample NEAR)" inputMode="decimal" value={limitInput} aria-invalid={!limitValid} onChange={e=>{setLimitInput(e.target.value);setConsent(false)}}/>
-      <small>{limitValid?"The seller quote and remaining balance must also fit.":"Enter a positive maximum."}</small>
+    {limited&&<label>Maximum per demo purchase (sample NEAR)<input aria-label="Maximum per demo purchase (sample NEAR)" inputMode="decimal" value={limitInput} aria-invalid={!!limitError} aria-describedby="demo-limit-help" onChange={e=>{setLimitInput(e.target.value);setConsent(false)}}/>
+      <small id="demo-limit-help" aria-live="polite">{limitError ?? "The seller quote and remaining balance must also fit."}</small>
     </label>}
   </>;
   function tabKey(event: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -332,7 +337,7 @@ export function WorkspaceDemo() {
                 <p>
                   Sample data only. No wallet or funds are used. The starting storage quote is separate from service funds; actual retained history can need an owner top-up. This preview does not simulate byte growth.
                 </p>
-                <button className={styles.primary} type="submit" disabled={!budgetQuote||!name.trim()||!limitValid||!!(limitAmount&&BigInt(limitAmount)<BigInt(SERVICE_PRICE))}>
+                <button className={styles.primary} type="submit" disabled={!budgetQuote||!name.trim()||!!limitError}>
                   Create demo pass <ArrowRight size={14} />
                 </button>
               </form>
@@ -357,7 +362,7 @@ export function WorkspaceDemo() {
                 </label>}
                 <label>Sample brief<textarea readOnly value="Order 12 workshop notebooks for Community team."/></label>
                 <p>This uses fixed sample data. No model runs, wallet connection or API request.</p>
-                <button type="submit" className={styles.primary} disabled={demoLedger(taskPass,orders).available<BigInt(SERVICE_PRICE)||!limitValid||!!(limitAmount&&BigInt(SERVICE_PRICE)>BigInt(limitAmount))||(ownAgent&&!validAccountId(agentAccount))||(paymentMode==="Automatic"&&!consent)}>
+                <button type="submit" className={styles.primary} disabled={demoLedger(taskPass,orders).available<BigInt(SERVICE_PRICE)||!!limitError||(ownAgent&&!validAccountId(agentAccount))||(paymentMode==="Automatic"&&!consent)}>
                   Run demo agent <ArrowRight size={14}/>
                 </button>
               </form>
