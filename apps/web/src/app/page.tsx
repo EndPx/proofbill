@@ -214,19 +214,30 @@ export default function Home() {
         <section className={styles.ownership} aria-labelledby="ownership-title">
           <PassHandover />
           <div>
-            <span className={styles.label}>
-              An NFT that carries the permission
-            </span>
+            <span className={styles.label}>Permission follows the holder</span>
             <h2 id="ownership-title">
               Pass it on.
               <br />
               The rights go with it.
             </h2>
             <p>
-              Hand an unused Purchase Pass to a teammate. The new holder
-              receives its use and refund rights, and the previous agent
-              assignment is cleared.
+              Send an unused pass to a teammate. The purchase and refund rights
+              move with it, while the previous agent assignment is cleared.
             </p>
+            <ul className={styles.ownershipFacts}>
+              <li>
+                <KeyRound size={17} />
+                <span>
+                  Use + refund rights<strong>Follow the new holder</strong>
+                </span>
+              </li>
+              <li>
+                <ShieldCheck size={17} />
+                <span>
+                  Previous agent assignment<strong>Cleared on transfer</strong>
+                </span>
+              </li>
+            </ul>
             <p className={styles.ownershipNote}>
               An active order locks transfer. A completed pass keeps its
               receipt.

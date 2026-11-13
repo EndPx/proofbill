@@ -1,0 +1,303 @@
+.scene {
+  border: 1px solid #3a5644;
+  border-radius: 18px;
+  padding: 25px 27px 23px;
+  background: #18261e;
+  color: #dcebe1;
+  overflow: hidden;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #a9c4b3;
+  font:
+    10px/1.5 ui-monospace,
+    monospace;
+}
+.previewTag {
+  padding: 5px 8px;
+  border: 1px solid #3f5b49;
+  border-radius: 5px;
+  color: #c1dacb;
+  font-size: 9px;
+}
+.track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  height: 275px;
+  padding-bottom: 5px;
+  margin-top: 23px;
+}
+.route {
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: 202px;
+  height: 1px;
+  background: #526b59;
+}
+.progress {
+  width: 100%;
+  height: 100%;
+  background: #51e79c;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.passLane {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 50%;
+  height: 146px;
+  display: grid;
+  place-items: center;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  perspective: 800px;
+}
+.pass {
+  position: relative;
+  width: 148px;
+  min-height: 144px;
+  border: 1px solid #82f2b2;
+  border-radius: 12px;
+  padding: 13px 14px 10px;
+  background: #51e79c;
+  color: #163a25;
+  isolation: isolate;
+  box-shadow:
+    4px 5px 0 #315c40,
+    8px 14px 22px #0003;
+  transform: rotate(-7deg) rotateY(-7deg);
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/art/mint-security-surface.webp") center/cover;
+  border-radius: inherit;
+  opacity: 0.2;
+  z-index: -1;
+}
+.passTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #29613d66;
+  padding-bottom: 9px;
+  font:
+    7px ui-monospace,
+    monospace;
+  letter-spacing: 0.05em;
+}
+.pass > strong {
+  display: block;
+  font:
+    740 24px/1 "Archivo Variable",
+    sans-serif;
+  letter-spacing: -1.2px;
+  margin-top: 12px;
+}
+.passMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font:
+    7px ui-monospace,
+    monospace;
+  margin-top: 10px;
+}
+.passFoot {
+  font:
+    6px ui-monospace,
+    monospace;
+  letter-spacing: 0.06em;
+  border-top: 1px dashed #29613d66;
+  margin-top: 10px;
+  padding-top: 8px;
+}
+.person {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  position: relative;
+  z-index: 1;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 53px;
+  height: 53px;
+  border: 1px solid #53715d;
+  border-radius: 50%;
+  background: #18261e;
+  color: #bdcfbf;
+  transition:
+    background 0.4s,
+    color 0.4s,
+    border-color 0.4s,
+    box-shadow 0.4s;
+}
+.person > strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+.person > span {
+  font:
+    9px/1.5 ui-monospace,
+    monospace;
+  color: #9cb6a5;
+  min-height: 12px;
+}
+.person[data-current="true"] .avatar {
+  color: #173b26;
+  background: #51e79c;
+  border-color: #51e79c;
+  box-shadow: 0 0 0 5px #51e79c0c;
+}
+.person[data-current="true"] > span {
+  color: #87edb0;
+}
+.scene[data-transferred="true"] .passLane {
+  transform: translateX(100%);
+}
+.scene[data-transferred="true"] .pass {
+  transform: rotate(7deg) rotateY(7deg);
+}
+.scene[data-transferred="true"] .progress {
+  transform: scaleX(1);
+}
+.rights {
+  margin: 21px 0 0;
+  border-top: 1px solid #36513f;
+}
+.rights > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 13px 0;
+  border-bottom: 1px solid #36513f;
+  font-size: 10px;
+}
+.rights dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #abc6b4;
+}
+.rights dd {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #e1f0e5;
+  font-size: 10px;
+}
+.rights dd[data-cleared="true"] {
+  color: #87edb0;
+}
+.scene .status {
+  margin: 17px 0 0;
+  min-height: 34px;
+  max-width: none;
+  color: #bfd4c5;
+  font-size: 10px;
+  line-height: 1.7;
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 15px;
+  min-height: 42px;
+  border: 1px solid #51e79c;
+  border-radius: 7px;
+  background: #51e79c;
+  color: #142d1c;
+  font-size: 11px;
+  font-weight: 600;
+  transition:
+    background 0.2s,
+    translate 0.2s;
+}
+.button:hover {
+  background: #d6f8e4;
+  border-color: #d6f8e4;
+  translate: 0 -2px;
+}
+.button:active {
+  translate: 0 0;
+}
+.button:focus-visible {
+  outline: 2px solid #51e79c;
+  outline-offset: 4px;
+}
+.scene .note {
+  font-size: 9px;
+  color: #a5bbaa;
+  margin: 0;
+  max-width: 130px;
+  line-height: 1.6;
+}
+@media (max-width: 1050px) {
+  .scene {
+    padding: 23px 20px;
+  }
+  .footer {
+    flex-wrap: wrap;
+  }
+  .scene .note {
+    max-width: none;
+  }
+}
+@media (max-width: 760px) {
+  .scene {
+    padding: 22px 18px;
+  }
+  .pass {
+    width: clamp(108px, 35vw, 140px);
+    padding: 11px 12px 9px;
+  }
+  .pass > strong {
+    font-size: 22px;
+  }
+  .header {
+    font-size: 9px;
+  }
+  .previewTag {
+    font-size: 8px;
+  }
+  .rights > div {
+    font-size: 9px;
+    gap: 10px;
+  }
+  .rights dd {
+    font-size: 9px;
+  }
+  .scene .status {
+    font-size: 10px;
+  }
+  .footer {
+    align-items: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene * {
+    transition: none !important;
+  }
+}

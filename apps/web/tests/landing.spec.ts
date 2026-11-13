@@ -54,6 +54,16 @@ test("handover illustration moves the rights and can be reset", async ({
   page,
 }) => {
   await page.goto("/");
+  const scene = page.getByRole("region", {
+    name: "Purchase Pass handover preview",
+    exact: true,
+  });
+  await scene.scrollIntoViewIfNeeded();
+  const pass = scene.locator("[data-handover-pass]");
+  const before = (await pass.boundingBox())!.x;
+  await expect(
+    scene.getByRole("group", { name: "You", exact: true }),
+  ).toContainText("Current holder");
   await page.getByRole("button", { name: "Preview a handover" }).click();
   await expect(
     page.getByText("Teammate holds the rights. Previous agent cleared.", {
@@ -63,10 +73,20 @@ test("handover illustration moves the rights and can be reset", async ({
   await expect(
     page.getByText("Illustrative handover", { exact: true }),
   ).toBeVisible();
+  await expect(
+    scene.getByRole("group", { name: "Teammate", exact: true }),
+  ).toContainText("Current holder");
+  await expect
+    .poll(async () => (await pass.boundingBox())!.x)
+    .toBeGreaterThan(before + 80);
+  await expect(scene.locator("dd[data-cleared=true]")).toContainText("Cleared");
   await page.getByRole("button", { name: "Reset preview" }).click();
   await expect(
     page.getByText("You hold the use and refund rights.", { exact: true }),
   ).toBeVisible();
+  await expect
+    .poll(async () => Math.abs((await pass.boundingBox())!.x - before))
+    .toBeLessThan(1);
 });
 
 test("landing is readable without JavaScript", async ({ browser, baseURL }) => {

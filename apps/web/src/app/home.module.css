@@ -927,120 +927,32 @@
 .ownership .textLink {
   margin-top: 25px;
 }
-.handover {
-  min-height: 350px;
-  border-radius: 14px;
-  border: 1px solid #3a5644;
-  background: #18281d;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 17px;
-  padding: 32px;
-}
-.handover > .diagramLabel {
-  text-align: center;
-  color: #99b4a3;
-  margin: 0;
-}
-.handoverDiagram {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.ownershipFacts {
+  list-style: none;
+  padding: 0;
+  margin: 25px 0 0;
+  display: grid;
   gap: 16px;
-  min-height: 155px;
 }
-.handoverPerson {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  font-size: 10px;
-  color: #bfd5c7;
-}
-.handoverPerson > svg {
-  box-sizing: content-box;
-  padding: 15px;
-  border: 1px solid #4d7158;
-  border-radius: 50%;
-  color: #cfebd8;
-  background: #152319;
-}
-.handoverPath {
+.ownershipFacts > li {
   display: flex;
-  align-items: center;
-  flex: 1;
-  max-width: 220px;
+  align-items: flex-start;
+  gap: 11px;
+  color: #8fe6af;
 }
-.handoverPath > span {
-  height: 1px;
-  background: #6e9c7f;
-  flex: 1;
+.ownershipFacts > li > svg {
+  margin-top: 2px;
 }
-.handoverPath > div {
-  display: grid;
-  place-items: center;
-  gap: 10px;
-  width: 105px;
-  min-height: 136px;
-  border-radius: 10px;
-  background: #51e79c url("/art/mint-security-surface.webp") center/cover;
-  color: #173b26;
-  border: 1px solid #74f4ae;
-  rotate: -7deg;
-  transition:
-    translate 0.4s,
-    rotate 0.4s;
-}
-.handoverPath > div > span {
-  font-size: 8px;
-}
-.handoverPath > svg {
-  flex-shrink: 1;
-  min-width: 18px;
-}
-.handoverDiagram[data-transferred="true"] .handoverPath > div {
-  translate: 23px 0;
-  rotate: 5deg;
-}
-.handoverDiagram[data-transferred="false"] .handoverPerson:first-child > svg,
-.handoverDiagram[data-transferred="true"] .handoverPerson:last-child > svg {
-  background: #51e79c;
-  color: #173b26;
-  border-color: #74f4ae;
-}
-.handover .handoverStatus {
-  margin: 0;
-  min-height: 36px;
-  max-width: none;
-  text-align: center;
-  color: #adcfb9;
+.ownershipFacts span {
+  color: #9db6a6;
   font-size: 10px;
 }
-.handoverButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 11px 15px;
-  border: 1px solid #577961;
-  border-radius: 6px;
-  color: #c6e2d0;
-  background: #112319;
-  font-size: 11px;
-  transition:
-    color 0.2s,
-    background 0.2s,
-    translate 0.2s;
-}
-.handoverButton:hover {
-  background: #51e79c;
-  color: #173b26;
-  translate: 0 -2px;
-}
-.handoverButton:active {
-  translate: 0 0;
+.ownershipFacts strong {
+  display: block;
+  color: #d7e7dc;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 4px;
 }
 .faq {
   padding-bottom: 110px;
@@ -1379,9 +1291,6 @@
   .ownership {
     gap: 35px;
   }
-  .handover {
-    padding: 24px;
-  }
 }
 @media (max-width: 900px) {
   .story {
@@ -1639,20 +1548,6 @@
   }
   .ownership p {
     font-size: 14px;
-  }
-  .handover {
-    padding: 24px 18px;
-    min-height: 330px;
-  }
-  .handoverDiagram {
-    gap: 12px;
-  }
-  .handoverPerson > svg {
-    padding: 13px;
-  }
-  .handoverPath > div {
-    width: 95px;
-    min-height: 128px;
   }
   .faq {
     padding-bottom: 70px;
