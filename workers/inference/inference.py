@@ -51,7 +51,7 @@ async def execute(payload):
     if request['model']!=MODEL or request.get('stream') is not False or request.get('max_tokens',0)>1024: raise ValueError('REQUEST_POLICY_MISMATCH')
     key=os.environ.get('NEAR_AI_CLOUD_API_KEY')
     if not key: raise ValueError('PROVIDER_NOT_CONFIGURED')
-    headers={'Accept':'application/json','Accept-Encoding':'identity','x-no-aliasing':'true'}
+    headers={'Accept':'application/json','Accept-Encoding':'identity','x-no-aliasing':'true','Authorization':'Bearer '+key}
     preflight={}
     for name,extra in [('gateway',{}),('model',{'model':MODEL,'provider':'near'})]:
         nonce=secrets.token_hex(32)

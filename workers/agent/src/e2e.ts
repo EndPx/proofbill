@@ -313,6 +313,12 @@ const privateResponse = await fetch(base + "/api/private/" + id, {
 });
 assert.equal(privateResponse.status, 200);
 const result = await privateResponse.json();
+const exported = await fetch(base + "/api/private/" + id + "?export=1", {
+  headers: { Cookie: bobCookie },
+});
+assert.equal(exported.status, 200);
+await mkdir(".local/feature-check", { recursive: true });
+await writeFile(`.local/feature-check/${id}-evidence.json`, await exported.text(), { mode: 0o600 });
 assert.equal(Number(result.result.output.quantity), 12);
 assert.ok(
   result.result.checks
