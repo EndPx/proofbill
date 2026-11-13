@@ -3,11 +3,12 @@ import copy
 import hashlib
 import json
 import unittest
+from unittest.mock import patch
 
 from eth_account import Account
 from eth_account.messages import encode_defunct
 from inference import MODEL, verify_signature
-from verify_export import commitment, validate_export
+from verify_export import commitment, read_order, validate_export
 
 
 class BuyerVerificationTests(unittest.TestCase):
@@ -67,6 +68,28 @@ class BuyerVerificationTests(unittest.TestCase):
         bundle["artifacts"]["response_base64"] = base64.b64encode(b"forged").decode()
         with self.assertRaisesRegex(ValueError, "ARTIFACT_SERIALIZATION_MISMATCH"):
             validate_export(bundle, self.order)
+
+    def test_order_ids_include_1000_and_the_full_contract_u32_sequence(self):
+        for order_id in ("pass-1-order", "pass-1-order-1", "pass-1-order-999",
+                         "pass-1-order-1000", "pass-1-order-4294967295"):
+            with self.subTest(order_id=order_id), patch("verify_export.requests.post") as post:
+                order = {"order_id": order_id, "phase": "Paid"}
+                post.return_value.json.return_value = {
+                    "result": {"result": list(json.dumps(order).encode()), "block_hash": "fixture-block"}}
+                self.assertEqual(read_order(order_id), (order, "fixture-block"))
+                post.return_value.raise_for_status.assert_called_once()
+                payload = post.call_args.kwargs["json"]["params"]
+                self.assertEqual(payload["finality"], "final")
+                self.assertEqual(json.loads(base64.b64decode(payload["args_base64"])), {"order_id": order_id})
+
+    def test_invalid_order_ids_never_reach_the_rpc(self):
+        for order_id in ("pass-1-order-0", "pass-1-order-01", "pass-1-order-4294967296",
+                         "pass-1-order-10000000000", "pass-0-order-1", "pass-01-order-1",
+                         "pass-1-order-1x", "pass-1-order-1\n", "pass-1-order-1\u0660"):
+            with self.subTest(order_id=order_id), patch("verify_export.requests.post") as post:
+                with self.assertRaisesRegex(ValueError, "INVALID_ORDER_ID"):
+                    read_order(order_id)
+                post.assert_not_called()
 
 
 if __name__ == "__main__":

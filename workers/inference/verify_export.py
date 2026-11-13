@@ -53,7 +53,9 @@ def validate_export(bundle, order):
 
 
 def read_order(order_id):
-    if not re.fullmatch(r"pass-[1-9]\d{0,19}-order(?:-[1-9]\d{0,2})?", order_id):
+    # Legacy IDs have no sequence; reusable orders use the contract's checked u32 counter.
+    match = re.fullmatch(r"pass-[1-9][0-9]{0,19}-order(?:-([1-9][0-9]{0,9}))?", order_id)
+    if not match or (match[1] is not None and int(match[1]) > 4294967295):
         raise ValueError("INVALID_ORDER_ID")
     args = base64.b64encode(json.dumps({"order_id": order_id}).encode()).decode()
     response = requests.post("https://test.rpc.fastnear.com", json={
