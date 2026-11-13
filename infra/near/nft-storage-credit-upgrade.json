@@ -1,0 +1,13 @@
+{
+  "tested_at": "2026-11-13T10:39:53.093Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "deploy_transaction": "Dyx1n3EniZ93zwFY69QwvVD388YPXWWgvmadniRG7RjX",
+  "wasm_sha256": "52c6324967bf8157c05b15bc276a28a12aca204caf07028208788d0d2f2dd10b",
+  "wasm_bytes": 575219,
+  "preserved_passes": 9,
+  "preserved_orders": 9,
+  "previous_wasm_sha256": "159e19134f9f56a226ae958c478b589739e5350e15f4be46aaea0bfccdf795cb",
+  "payment_policies_preserved": true,
+  "state_reinitialized": false
+}

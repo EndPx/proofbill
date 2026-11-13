@@ -168,6 +168,8 @@ The worker requires your own provisioned accounts and provider access. No operat
 
 The [agent/payment release evidence](docs/evidence/agent-payment-hosted.md) records all four hosted combinations, a fresh own-agent CLI purchase, compatibility checks and recovery guards. Manual remains the default; Automatic settlement requires explicit owner authorization for the pass.
 
+The later [recovery/storage release](docs/evidence/recovery-storage-release.md) records restart fault tests, same-token asynchronous transfer regressions, a new hosted purchase and repeated live testnet returns/refund.
+
 ```sh
 pnpm check
 pnpm test

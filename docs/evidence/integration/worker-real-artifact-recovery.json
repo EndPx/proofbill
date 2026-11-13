@@ -1,0 +1,14 @@
+{
+  "tested_at": "2026-11-13T10:46:24.775Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "order_id": "pass-10-order",
+  "passed": true,
+  "real_saved_provider_artifact": true,
+  "simulation": "expired publishing job cloned into isolated PostgreSQL; actual chain queried read-only",
+  "recovered_state": "delivered",
+  "provider_calls": 0,
+  "publication_calls": 0,
+  "production_job_unchanged": true,
+  "private_artifact_published": false
+}

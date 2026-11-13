@@ -1,0 +1,54 @@
+{
+  "tested_at": "2026-11-13T10:45:09.916Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "token_id": "pass-11",
+  "passed": true,
+  "receiver_kind": "project-owned account without nft_on_transfer",
+  "mint_tx": "GYZHCUXaPH7SmVfyETFgXwzpWzVq8M5db3ELnzZF8aKD",
+  "assignment_tx": "3ecZ3Rb6bjgq7prfV9NuWmFFhJKokr77aPVnCfFz84WB",
+  "initial_storage_credit_yocto": "20480000000000000000000",
+  "stable_after_first_return_yocto": "21450000000000000000000",
+  "calls": [
+    {
+      "tx_hash": "DSbdo99eokSsXXeyLBKmG2fc2gvkL8FnebXw8MJCT44y",
+      "expected_receiver_failure": true,
+      "owner_after": "bob.proofbill-endpx-2026.testnet",
+      "revision_after": 2,
+      "credit_after_yocto": "21450000000000000000000",
+      "pending_after": false
+    },
+    {
+      "tx_hash": "EDBuJj1Y2TwLkUtAgoyyZArT8828RX2Psr5d6LJrAaYZ",
+      "expected_receiver_failure": true,
+      "owner_after": "bob.proofbill-endpx-2026.testnet",
+      "revision_after": 3,
+      "credit_after_yocto": "21450000000000000000000",
+      "pending_after": false
+    },
+    {
+      "tx_hash": "AhGtk3MGCtMGCbdafErk6AKWkGQnqJcifdtnHFqnu9Qc",
+      "expected_receiver_failure": true,
+      "owner_after": "bob.proofbill-endpx-2026.testnet",
+      "revision_after": 4,
+      "credit_after_yocto": "21450000000000000000000",
+      "pending_after": false
+    },
+    {
+      "tx_hash": "2dhQLrAbrVTUrmnbpRtCru6qYNdb2QgtErHYYKwT3Z2A",
+      "expected_receiver_failure": true,
+      "owner_after": "bob.proofbill-endpx-2026.testnet",
+      "revision_after": 5,
+      "credit_after_yocto": "21450000000000000000000",
+      "pending_after": false
+    }
+  ],
+  "refund_tx": "5i2G9EUaWxR9VgomZqLeKZnbc61w6pjeuy8VB2QCLHSF",
+  "final_phase": "Refunded",
+  "service_allocation_yocto": "10000000000000000000000",
+  "limits": [
+    "Only the failed-receiver return path was repeated on live testnet.",
+    "Keep/true-return/mixed activity/long-account paths were exercised in Wasm Sandbox.",
+    "Project-owned test accounts; not user adoption."
+  ]
+}
