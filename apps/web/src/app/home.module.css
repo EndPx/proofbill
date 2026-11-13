@@ -1111,6 +1111,9 @@
     10px ui-monospace,
     monospace;
 }
+.finaleCopy {
+  min-width: 0;
+}
 .finale .statusDot {
   background: #51e79c;
 }
