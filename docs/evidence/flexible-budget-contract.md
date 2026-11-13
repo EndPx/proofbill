@@ -1,6 +1,6 @@
 # Flexible budget and optional order ceiling
 
-Candidate contract validation, 14 November 2026. These are native unit and actual Wasm/Sandbox checks with synthetic publisher statements; this report alone does not establish deployment or provider inference.
+Contract validation, 14 November 2026. These are native unit and actual Wasm/Sandbox checks with synthetic publisher statements; [hosted deployment/provider evidence](flexible-budget-hosted.md) is recorded separately.
 
 Version 4 adds `create_flexible_budget_pass`. The owner chooses a total service budget covering at least one current 0.010 testnet NEAR quote. Higher totals need not be price multiples and are not capped at 1 NEAR. An optional positive `max_order_price_yocto` limits each seller payment; absence means no additional per-order ceiling, while the stored service quote and remaining allocation still apply. The ceiling does not set the service price. `configure_budget_agent` changes assignment, payment mode and ceiling in one holder-authorized transaction and advances revision. Orders retain their own ceiling snapshots.
 

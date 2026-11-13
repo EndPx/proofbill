@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://proofbill-two.vercel.app"><img src=".github/assets/badges/live-app.svg" alt="Live app" height="34" /></a>
   <a href="#review-in-five-minutes"><img src=".github/assets/badges/reviewer-walkthrough.svg" alt="Reviewer walkthrough" height="34" /></a>
-  <a href="docs/evidence/budget-pass-hosted.md"><img src=".github/assets/badges/execution-evidence.svg" alt="Execution evidence" height="34" /></a>
+  <a href="docs/evidence/flexible-budget-hosted.md"><img src=".github/assets/badges/execution-evidence.svg" alt="Execution evidence" height="34" /></a>
   <a href="#local-development"><img src=".github/assets/badges/run-locally.svg" alt="Run locally" height="34" /></a>
 </p>
 
@@ -36,7 +36,7 @@ The initial user is a developer or small team operating paid-API agents. The cur
 
 Version 3 adds [reusable NFT budgets](docs/evidence/budget-pass-hosted.md) and [buyer-run private evidence verification](docs/verify-private-result.md). One real NFT funded Automatic and Manual purchases, transferred its remaining entitlement, and refunded only the unspent allocation to the new holder. A buyer export passed independent checking; a tampered copy was rejected. Earlier single-use passes keep their original behavior; dated reports identify which version was exercised.
 
-Version 4 adds [custom totals, optional per-purchase ceilings and independent storage backing](docs/evidence/flexible-budget-contract.md), with [application/SDK checks](docs/evidence/flexible-budget-application.md). A ceiling bounds an individual seller payment; it does not choose the merchant price. Deployment records identify which tested artifact is active.
+Version 4 is [hosted and exercised with a custom 1.2345 budget](docs/evidence/flexible-budget-hosted.md), optional/removed per-purchase ceilings, two real payments and exact residual refund to a new NFT holder. A ceiling bounds an individual seller payment; it does not choose the merchant price. [Contract checks](docs/evidence/flexible-budget-contract.md), [application checks](docs/evidence/flexible-budget-application.md) and deployment records identify the exact scope and tested artifact.
 
 <p align="center">
   <img src=".github/assets/landing-desktop.webp" alt="The live ProofBill landing page with its Purchase Pass illustration, wallet entry action and testnet product preview." width="1200" />
@@ -80,6 +80,7 @@ These are implementation claims, not awards or a security certification. [The of
 
 | Evidence | What it establishes | Boundary |
 | --- | --- | --- |
+| [Custom budget and spending limits](docs/evidence/flexible-budget-hosted.md) | Arbitrary total, optional/removed ceiling, real over-limit refusal, independent storage deposit, two actual purchases and exact residual handover/refund. | Project-owned accounts and synthetic briefs; no independent customer validation or mainnet claim. |
 | [Reusable budget and buyer verification](docs/evidence/budget-pass-hosted.md) | Two real purchases from one NFT, remaining-budget handover/refund, historical buyer access and verification/tampering checks on a real response export. | Project-owned accounts/synthetic briefs; historical response evidence, no new completion during re-verification. |
 | [Agent/payment release](docs/evidence/agent-payment-hosted.md), [recovery/storage release](docs/evidence/recovery-storage-release.md) and [public receipts](docs/evidence/public-receipts.md) | Hosted agent/payment combinations, restart and storage regressions, and anonymous receipt access with private boundaries intact. | Each report separates local fixtures from real provider/testnet checks; no mainnet or independent customer claim. |
 | [Hosted release](docs/evidence/hosted-release.md) and [pass-2-order record](docs/evidence/integration/pass-2-order.json) | The hosted API, private persistence, worker, inference and NEAR testnet purchase were exercised together. | Project-owned test accounts and synthetic input; not customer traction. |

@@ -260,7 +260,7 @@ export function PurchaseObject({ phase: requestedPhase }: { phase: number }) {
                 <dl>
                   <div>
                     <dt>Order</dt>
-                    <dd>pass-2-order</dd>
+                    <dd>pass-13-order-1</dd>
                   </div>
                   <div>
                     <dt>Outcome</dt>

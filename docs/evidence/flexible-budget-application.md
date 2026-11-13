@@ -1,6 +1,6 @@
 # Flexible budget application and SDK checks
 
-Validated locally on 14 November 2026. These checks use production builds, injected wallets, read-only RPC fixtures and isolated PostgreSQL. They do not establish a real buyer signature, deployed version or provider request; hosted evidence is recorded separately.
+Validated locally on 14 November 2026. These checks use production builds, injected wallets, read-only RPC fixtures and isolated PostgreSQL. They do not establish a real buyer signature, deployed version or provider request; [hosted evidence](flexible-budget-hosted.md) records those separately.
 
 The owner enters a custom total and optionally enables a positive per-purchase ceiling. Leaving the control unchecked sends null; an enabled empty or zero draft is not silently treated as unlimited. Quotes preserve atomic precision. A 1 NEAR total starts with 0.030 separate backing and 1.030 funding plus gas; a 1.2345 total starts at 1.2645. The current service quote remains 0.010 regardless of the ceiling. Extra backing can be prepaid separately, and future byte growth can require holder-signed top-ups. Service balances never pay for that backing automatically.
 

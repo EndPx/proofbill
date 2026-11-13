@@ -1,0 +1,162 @@
+{
+  "tested_at": "2026-11-13T21:15:46.955Z",
+  "transfer_mode": "none",
+  "agent_kind": "external",
+  "payment_mode": "Manual",
+  "app_origin": "https://proofbill-two.vercel.app",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "token_id": "pass-13",
+  "order_id": "pass-13-order-2",
+  "pass_phase": "Available",
+  "service_budget": {
+    "funded_yocto": "1234500000000000000000000",
+    "available_yocto": "1214500000000000000000000",
+    "reserved_yocto": "0",
+    "spent_yocto": "20000000000000000000000",
+    "refunded_yocto": "0",
+    "orders_created": 2
+  },
+  "recorded_order_ceiling_yocto": null,
+  "passed": true,
+  "steps": [
+    {
+      "check": "resumed_existing_funded_pass",
+      "token_id": "pass-13",
+      "current_owner": "alice.proofbill-endpx-2026.testnet",
+      "revision": 4
+    },
+    {
+      "check": "wallet_message_login",
+      "account": "alice.proofbill-endpx-2026.testnet",
+      "passed": true
+    },
+    {
+      "check": "wallet_message_login",
+      "account": "bob.proofbill-endpx-2026.testnet",
+      "passed": true
+    },
+    {
+      "method": "top_up_storage",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "EnxW5XSwcST85pndob1jM473kmN82WiuFJxKnVZ9TEBj",
+      "expected_failure": null,
+      "status": {
+        "SuccessValue": "eyJ0b2tlbl9pZCI6InBhc3MtMTMiLCJvd25lcl9pZCI6ImFsaWNlLnByb29mYmlsbC1lbmRweC0yMDI2LnRlc3RuZXQiLCJzZWxsZXJfaWQiOiJzZWxsZXIucHJvb2ZiaWxsLWVuZHB4LTIwMjYudGVzdG5ldCIsIm1vZGVsX2lkIjoiUXdlbi9Rd2VuMy44LTI3QiIsInByaWNlX3lvY3RvIjoiMTAwMDAwMDAwMDAwMDAwMDAwMDAwMDAiLCJleHBpcmVzX2F0X25zIjoiMTc5NDY5MDQzNzQxMTAwMDAwMCIsImF1dGhvcml6YXRpb25fcmV2aXNpb24iOjUsImFnZW50X2lkIjoiYm9iLnByb29mYmlsbC1lbmRweC0yMDI2LnRlc3RuZXQiLCJwaGFzZSI6IkF2YWlsYWJsZSIsIm9yZGVyX2lkIjpudWxsLCJzdG9yYWdlX2NyZWRpdF95b2N0byI6IjE0MDAwMDAwMDAwMDAwMDAwMDAwMDAwIiwidHJhbnNmZXJfcGVuZGluZyI6ZmFsc2UsImF0dGVtcHQiOjAsInJlZnVuZF9yZWNlaXZlciI6bnVsbCwicGF5bWVudF9tb2RlIjoiTWFudWFsIiwiYnVkZ2V0Ijp7ImZ1bmRlZF95b2N0byI6IjEyMzQ1MDAwMDAwMDAwMDAwMDAwMDAwMDAiLCJhdmFpbGFibGVfeW9jdG8iOiIxMjI0NTAwMDAwMDAwMDAwMDAwMDAwMDAwIiwicmVzZXJ2ZWRfeW9jdG8iOiIwIiwic3BlbnRfeW9jdG8iOiIxMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsInJlZnVuZGVkX3lvY3RvIjoiMCIsIm9yZGVyc19jcmVhdGVkIjoxfSwiZmxleGlibGVfYnVkZ2V0Ijp0cnVlLCJtYXhfb3JkZXJfcHJpY2VfeW9jdG8iOm51bGwsInN0b3JhZ2VfcmVxdWlyZWRfZm9yX29yZGVyX3lvY3RvIjoiMCJ9"
+      }
+    },
+    {
+      "check": "external_agent_reserved_and_submitted",
+      "agent_id": "bob.proofbill-endpx-2026.testnet",
+      "orderId": "pass-13-order-2",
+      "reservationTx": "Brf47xjqWSw9Rx3nyfpGguDtVZztg2KjZbNafautYyTV",
+      "state": "queued",
+      "passed": true
+    },
+    {
+      "method": "assign_agent",
+      "signer": "bob.proofbill-endpx-2026.testnet",
+      "tx_hash": "FhKgdGuao9g6c7soAwbRDTLFyWmrWUfdLhaH2Z92xXf1",
+      "expected_failure": "HOLDER_ONLY",
+      "status": {
+        "Failure": {
+          "ActionError": {
+            "index": 0,
+            "kind": {
+              "FunctionCallError": {
+                "ExecutionError": "Smart contract panicked: HOLDER_ONLY"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "check": "private_buyer_read",
+      "allowed": "alice.proofbill-endpx-2026.testnet",
+      "denied": "bob.proofbill-endpx-2026.testnet",
+      "passed": true,
+      "synthetic_output": {
+        "item": "workshop notebooks",
+        "quantity": 12,
+        "requested_by": "Community team"
+      },
+      "evidence_checks": [
+        {
+          "name": "Response bytes match",
+          "state": "passed"
+        },
+        {
+          "name": "Model signature matched",
+          "state": "passed"
+        },
+        {
+          "name": "Intel TDX preflight",
+          "state": "passed"
+        },
+        {
+          "name": "NVIDIA GPU evidence",
+          "state": "passed"
+        },
+        {
+          "name": "TLS connection binding",
+          "state": "not_checked"
+        },
+        {
+          "name": "Source-image allowlist",
+          "state": "not_checked"
+        }
+      ]
+    },
+    {
+      "method": "approve_and_pay",
+      "signer": "bob.proofbill-endpx-2026.testnet",
+      "tx_hash": "GrntqUDbxnCo6wkQadTmufCWKiMiFXd4yw9U1XWN6oj5",
+      "expected_failure": "HOLDER_ONLY",
+      "status": {
+        "Failure": {
+          "ActionError": {
+            "index": 0,
+            "kind": {
+              "FunctionCallError": {
+                "ExecutionError": "Smart contract panicked: HOLDER_ONLY"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "approve_and_pay",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "FZfiDFeo28uYzmEY481SEdaVs5stkhM7xrgZrp49ZFAu",
+      "expected_failure": null,
+      "status": {
+        "SuccessValue": "dHJ1ZQ=="
+      }
+    },
+    {
+      "method": "approve_and_pay",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "4e3irUwgEQ39cF3eQobrFUuMqKAHCAYbxPXFTKjkfUTf",
+      "expected_failure": "ORDER_NOT_PAYABLE",
+      "status": {
+        "Failure": {
+          "ActionError": {
+            "index": 0,
+            "kind": {
+              "FunctionCallError": {
+                "ExecutionError": "Smart contract panicked: ORDER_NOT_PAYABLE"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Scripted project-owned testnet accounts; not organic users.",
+    "Wallet signature protocol verified through HTTP/API; browser wallet confirmation still needs its own smoke check.",
+    "Hardware inference proof scope is the application's declared policy, not a production audit."
+  ]
+}

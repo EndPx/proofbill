@@ -64,7 +64,7 @@ test("real receipt CTA opens anonymous financial facts and verification limits a
   await page.getByRole("link",{name:"Read the verification limits"}).click();
   await expect(page.locator("#verification-limits")).toHaveAttribute("open","");
   await page.getByRole("link",{name:"View a real public receipt"}).click();
-  await expect(page).toHaveURL(/\/receipts\/pass-12-order-1$/);
+  await expect(page).toHaveURL(/\/receipts\/pass-13-order-1$/);
   await expect(page.getByRole("heading",{name:"Seller payment confirmed"})).toBeVisible();
   await expect(page.getByRole("heading",{name:"Connect to continue"})).toHaveCount(0);
 });
@@ -151,7 +151,7 @@ test("one demo NFT funds multiple purchases with current quotes and retained aut
   await demo.getByRole("button",{name:"Purchase Passes",exact:true}).click();
   await expect(card).toContainText("Completed");
   await expect(card.getByRole("button",{name:"New demo purchase"})).toHaveCount(0);
-  await expect(page.getByRole("link",{name:"View a real public receipt"})).toHaveAttribute("href","/receipts/pass-12-order-1");
+  await expect(page.getByRole("link",{name:"View a real public receipt"})).toHaveAttribute("href","/receipts/pass-13-order-1");
 });
 test("custom demo amounts preserve fractional refunds and an optional recorded ceiling",async({page})=>{
   await page.goto("/");const demo=page.getByRole("region",{name:"Interactive workspace demo",exact:true});

@@ -1,0 +1,18 @@
+{
+  "tested_at": "2026-11-13T21:12:15.057Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "deploy_transaction": "GkeXa55D8Ga6WmFM54hrSNBW8kjdV1p7MHHCdonCevxw",
+  "wasm_sha256": "44de06a662ad2ca973a7888f62c636b8abf7e94f59578451d8c533d1ded57b90",
+  "wasm_bytes": 295956,
+  "preserved_passes": 12,
+  "preserved_orders": 12,
+  "previous_wasm_sha256": "1394b19623905da0797bf78332543a4d34b2b2f3cc5eecb05d2b9a384b0c2d63",
+  "source_commit": "a1964b083d6855ce6dffac940f9e69be162dc2a8",
+  "ci_run": "https://github.com/EndPx/proofbill/actions/runs/43503658521",
+  "snapshot_block_hash": "2p5FMdBKjbGJBFnKym9Cvbfm1dNAPFRUZFttrKH18vi5",
+  "snapshot_block_height": 277562790,
+  "payment_policies_preserved": true,
+  "state_reinitialized": false,
+  "validation_note": "Post-deploy policy check originally compared list-order data against the current NFT policy. Revalidated full original get_order views at the saved pre-upgrade block; historical order policies and fields are unchanged."
+}

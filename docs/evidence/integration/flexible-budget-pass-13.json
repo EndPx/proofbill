@@ -1,0 +1,117 @@
+{
+  "tested_at": "2026-11-13T21:17:45.271Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "token_id": "pass-13",
+  "passed": true,
+  "scripted_project_accounts": true,
+  "actual_provider": true,
+  "budget": {
+    "funded_yocto": "1234500000000000000000000",
+    "available_yocto": "0",
+    "reserved_yocto": "0",
+    "spent_yocto": "20000000000000000000000",
+    "refunded_yocto": "1214500000000000000000000",
+    "orders_created": 2
+  },
+  "orders": [
+    {
+      "order_id": "pass-13-order-1",
+      "payment_mode": "Automatic",
+      "recorded_order_ceiling_yocto": "100000000000000000000000",
+      "phase": "Paid",
+      "price_yocto": "10000000000000000000000",
+      "buyer_id": "alice.proofbill-endpx-2026.testnet",
+      "agent_id": "bob.proofbill-endpx-2026.testnet",
+      "anonymous_private_status": 401,
+      "new_holder_private_status": 404,
+      "buyer_private_status": 200
+    },
+    {
+      "order_id": "pass-13-order-2",
+      "payment_mode": "Manual",
+      "recorded_order_ceiling_yocto": null,
+      "phase": "Paid",
+      "price_yocto": "10000000000000000000000",
+      "buyer_id": "alice.proofbill-endpx-2026.testnet",
+      "agent_id": "bob.proofbill-endpx-2026.testnet",
+      "anonymous_private_status": 401,
+      "new_holder_private_status": 404,
+      "buyer_private_status": 200
+    }
+  ],
+  "refund_receiver": "bob.proofbill-endpx-2026.testnet",
+  "ceiling_rejection": {
+    "calls": [
+      {
+        "method": "configure_budget_agent",
+        "signer": "alice.proofbill-endpx-2026.testnet",
+        "tx_hash": "7sVYJQJWZnWXoiH3eLX1LjKDCQiHzWjD44puL3shExDv",
+        "deposit_yocto": "1",
+        "expected_failure": null
+      },
+      {
+        "method": "reserve_order",
+        "signer": "bob.proofbill-endpx-2026.testnet",
+        "tx_hash": "6hoea9AVsCvyQAMZboBSFwN9cqgqsRKTC9HYAHi3TSEd",
+        "deposit_yocto": "0",
+        "expected_failure": "ORDER_PRICE_LIMIT_EXCEEDED"
+      }
+    ],
+    "api_status": 409,
+    "error": "ORDER_PRICE_LIMIT_EXCEEDED",
+    "service_budget_unchanged": true,
+    "job_count": 1
+  },
+  "ceiling_removed": [
+    {
+      "method": "configure_budget_agent",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "EbjRZcTE3Anhnr9veHwYw9Sx7PuYAuHuw9CsnjoFRPay",
+      "deposit_yocto": "1",
+      "expected_failure": null
+    }
+  ],
+  "handover_refund": [
+    {
+      "method": "top_up_storage",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "6FeDP4f7FTfFYGv5HwdZek7SG16z3XsHHtJEpRT3PGFy",
+      "deposit_yocto": "10000000000000000000000",
+      "expected_failure": null
+    },
+    {
+      "method": "configure_budget_agent",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "Er6xq5LSbJQTKcA1FKeoC6XexNnUrZiobMvw6GbkgSgM",
+      "deposit_yocto": "1",
+      "expected_failure": null
+    },
+    {
+      "method": "nft_transfer",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "GLjYxiS7HJQTJqu4L7MuqSnEbQ3eFGh9rBgD7q27nmB3",
+      "deposit_yocto": "1",
+      "expected_failure": null
+    },
+    {
+      "method": "cancel_and_refund",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "m6DqiKmFseeK5A5YAVRt5FzAQoBmEb3EFW39efqyE75",
+      "deposit_yocto": "1",
+      "expected_failure": "HOLDER_ONLY"
+    },
+    {
+      "method": "cancel_and_refund",
+      "signer": "bob.proofbill-endpx-2026.testnet",
+      "tx_hash": "HvUZKsxmMKjmjfyRVb9GLKSRvWrN1crqQCEoVDWyvqYf",
+      "deposit_yocto": "1",
+      "expected_failure": null
+    }
+  ],
+  "limits": [
+    "Synthetic briefs and project-owned testnet accounts; not customer validation.",
+    "SDK and HTTP signatures exercised; no human browser-wallet confirmation automated.",
+    "Storage backing remains separate from refunded service allocation."
+  ]
+}
