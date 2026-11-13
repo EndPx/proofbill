@@ -20,6 +20,11 @@ assert.equal(
   root,
   "This script only targets the declared demo contract",
 );
+const transferMode = process.env.E2E_TRANSFER_MODE ?? "unused";
+assert.ok(
+  ["none", "unused"].includes(transferMode),
+  "E2E_TRANSFER_MODE must be none or unused",
+);
 const steps: unknown[] = [];
 async function identity(name: string) {
   const id = `${name}.${root}`,
@@ -100,8 +105,9 @@ async function login(who: typeof alice) {
 await mkdir("docs/evidence/integration", { recursive: true });
 let token = process.env.E2E_TOKEN_ID ?? "";
 if (!token) {
+  const initialHolder = transferMode === "none" ? bob : alice;
   const mint = await tx(
-    alice,
+    initialHolder,
     "create_purchase_pass",
     {
       service_id: SERVICE_ID,
@@ -113,33 +119,37 @@ if (!token) {
   assert.ok(value);
   token = (JSON.parse(Buffer.from(value, "base64").toString()) as PurchasePass)
     .token_id;
-  await tx(alice, "assign_agent", {
+  await tx(initialHolder, "assign_agent", {
     token_id: token,
     expected_revision: 0,
     agent_id: process.env.NEAR_AGENT_ID,
   });
-  await tx(alice, "nft_transfer", {
-    token_id: token,
-    receiver_id: bob.id,
-    approval_id: null,
-    memo: "Integration: unused entitlement follows the NFT",
-  });
-  const transferred = await view<PurchasePass>("get_pass", { token_id: token });
-  assert.equal(transferred.owner_id, bob.id);
-  assert.equal(transferred.agent_id, null);
-  assert.equal(transferred.authorization_revision, 2);
-  await tx(
-    alice,
-    "cancel_and_refund",
-    { token_id: token, expected_revision: 2 },
-    1n,
-    "HOLDER_ONLY",
-  );
-  await tx(bob, "assign_agent", {
-    token_id: token,
-    expected_revision: 2,
-    agent_id: process.env.NEAR_AGENT_ID,
-  });
+  if (transferMode === "unused") {
+    await tx(alice, "nft_transfer", {
+      token_id: token,
+      receiver_id: bob.id,
+      approval_id: null,
+      memo: "Integration: unused entitlement follows the NFT",
+    });
+    const transferred = await view<PurchasePass>("get_pass", {
+      token_id: token,
+    });
+    assert.equal(transferred.owner_id, bob.id);
+    assert.equal(transferred.agent_id, null);
+    assert.equal(transferred.authorization_revision, 2);
+    await tx(
+      alice,
+      "cancel_and_refund",
+      { token_id: token, expected_revision: 2 },
+      1n,
+      "HOLDER_ONLY",
+    );
+    await tx(bob, "assign_agent", {
+      token_id: token,
+      expected_revision: 2,
+      agent_id: process.env.NEAR_AGENT_ID,
+    });
+  }
 } else {
   const resumed = await view<PurchasePass>("get_pass", { token_id: token });
   assert.equal(resumed.owner_id, bob.id);
@@ -228,6 +238,7 @@ assert.equal(
 );
 const report = {
   tested_at: new Date().toISOString(),
+  transfer_mode: transferMode,
   network: "testnet",
   contract_id: root,
   token_id: token,

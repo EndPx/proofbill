@@ -1,0 +1,144 @@
+{
+  "tested_at": "2026-11-13T05:42:10.478Z",
+  "transfer_mode": "unused",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "token_id": "pass-4",
+  "order_id": "pass-4-order",
+  "passed": true,
+  "steps": [
+    {
+      "method": "create_purchase_pass",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "AaxSyRDoYwMGru6dAgu9FUSVYTB7gWV74namFZC99WCT",
+      "expected_failure": null,
+      "status": {
+        "SuccessValue": "eyJ0b2tlbl9pZCI6InBhc3MtNCIsIm93bmVyX2lkIjoiYWxpY2UucHJvb2ZiaWxsLWVuZHB4LTIwMjYudGVzdG5ldCIsInNlbGxlcl9pZCI6InNlbGxlci5wcm9vZmJpbGwtZW5kcHgtMjAyNi50ZXN0bmV0IiwibW9kZWxfaWQiOiJRd2VuL1F3ZW4zLjgtMjdCIiwicHJpY2VfeW9jdG8iOiIxMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsImV4cGlyZXNfYXRfbnMiOiIxNzk0NjM0ODY0MjAwMDAwMDAwIiwiYXV0aG9yaXphdGlvbl9yZXZpc2lvbiI6MCwiYWdlbnRfaWQiOm51bGwsInBoYXNlIjoiQXZhaWxhYmxlIiwib3JkZXJfaWQiOm51bGwsInN0b3JhZ2VfY3JlZGl0X3lvY3RvIjoiMTk3OTAwMDAwMDAwMDAwMDAwMDAwMDAiLCJ0cmFuc2Zlcl9wZW5kaW5nIjpmYWxzZSwiYXR0ZW1wdCI6MCwicmVmdW5kX3JlY2VpdmVyIjpudWxsfQ=="
+      }
+    },
+    {
+      "method": "assign_agent",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "2NX9Cgav4PeNfoR6LUvALER9WJ8dSyUHbJm5AiVo9HuF",
+      "expected_failure": null,
+      "status": {
+        "SuccessValue": "eyJ0b2tlbl9pZCI6InBhc3MtNCIsIm93bmVyX2lkIjoiYWxpY2UucHJvb2ZiaWxsLWVuZHB4LTIwMjYudGVzdG5ldCIsInNlbGxlcl9pZCI6InNlbGxlci5wcm9vZmJpbGwtZW5kcHgtMjAyNi50ZXN0bmV0IiwibW9kZWxfaWQiOiJRd2VuL1F3ZW4zLjgtMjdCIiwicHJpY2VfeW9jdG8iOiIxMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsImV4cGlyZXNfYXRfbnMiOiIxNzk0NjM0ODY0MjAwMDAwMDAwIiwiYXV0aG9yaXphdGlvbl9yZXZpc2lvbiI6MSwiYWdlbnRfaWQiOiJhZ2VudC5wcm9vZmJpbGwtZW5kcHgtMjAyNi50ZXN0bmV0IiwicGhhc2UiOiJBdmFpbGFibGUiLCJvcmRlcl9pZCI6bnVsbCwic3RvcmFnZV9jcmVkaXRfeW9jdG8iOiIxOTQxMDAwMDAwMDAwMDAwMDAwMDAwMCIsInRyYW5zZmVyX3BlbmRpbmciOmZhbHNlLCJhdHRlbXB0IjowLCJyZWZ1bmRfcmVjZWl2ZXIiOm51bGx9"
+      }
+    },
+    {
+      "method": "nft_transfer",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "4FQAVVyDzsg3dkMphE7SdKp65heKU4nFLXPYzCKQfRct",
+      "expected_failure": null,
+      "status": {
+        "SuccessValue": ""
+      }
+    },
+    {
+      "method": "cancel_and_refund",
+      "signer": "alice.proofbill-endpx-2026.testnet",
+      "tx_hash": "Hsne8yFEYKtTx1dZ9DjjZx2fRZJXgVriCcnfp9udJ2SN",
+      "expected_failure": "HOLDER_ONLY",
+      "status": {
+        "Failure": {
+          "ActionError": {
+            "index": 0,
+            "kind": {
+              "FunctionCallError": {
+                "ExecutionError": "Smart contract panicked: HOLDER_ONLY"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "assign_agent",
+      "signer": "bob.proofbill-endpx-2026.testnet",
+      "tx_hash": "Am88MHA6REbkqYYXujjRXy45pEsp1V9w99jPwwnvF7oj",
+      "expected_failure": null,
+      "status": {
+        "SuccessValue": "eyJ0b2tlbl9pZCI6InBhc3MtNCIsIm93bmVyX2lkIjoiYm9iLnByb29mYmlsbC1lbmRweC0yMDI2LnRlc3RuZXQiLCJzZWxsZXJfaWQiOiJzZWxsZXIucHJvb2ZiaWxsLWVuZHB4LTIwMjYudGVzdG5ldCIsIm1vZGVsX2lkIjoiUXdlbi9Rd2VuMy44LTI3QiIsInByaWNlX3lvY3RvIjoiMTAwMDAwMDAwMDAwMDAwMDAwMDAwMDAiLCJleHBpcmVzX2F0X25zIjoiMTc5NDYzNDg2NDIwMDAwMDAwMCIsImF1dGhvcml6YXRpb25fcmV2aXNpb24iOjMsImFnZW50X2lkIjoiYWdlbnQucHJvb2ZiaWxsLWVuZHB4LTIwMjYudGVzdG5ldCIsInBoYXNlIjoiQXZhaWxhYmxlIiwib3JkZXJfaWQiOm51bGwsInN0b3JhZ2VfY3JlZGl0X3lvY3RvIjoiMTkwMzAwMDAwMDAwMDAwMDAwMDAwMDAiLCJ0cmFuc2Zlcl9wZW5kaW5nIjpmYWxzZSwiYXR0ZW1wdCI6MCwicmVmdW5kX3JlY2VpdmVyIjpudWxsfQ=="
+      }
+    },
+    {
+      "check": "wallet_message_login",
+      "account": "bob.proofbill-endpx-2026.testnet",
+      "passed": true
+    },
+    {
+      "check": "wallet_message_login",
+      "account": "alice.proofbill-endpx-2026.testnet",
+      "passed": true
+    },
+    {
+      "check": "private_buyer_read",
+      "allowed": "bob.proofbill-endpx-2026.testnet",
+      "denied": "alice.proofbill-endpx-2026.testnet",
+      "passed": true,
+      "synthetic_output": {
+        "item": "workshop notebooks",
+        "quantity": 12,
+        "requested_by": "Community team"
+      },
+      "evidence_checks": [
+        {
+          "name": "Response bytes match",
+          "state": "passed"
+        },
+        {
+          "name": "Model signature matched",
+          "state": "passed"
+        },
+        {
+          "name": "Intel TDX preflight",
+          "state": "passed"
+        },
+        {
+          "name": "NVIDIA GPU evidence",
+          "state": "passed"
+        },
+        {
+          "name": "TLS connection binding",
+          "state": "not_checked"
+        },
+        {
+          "name": "Source-image allowlist",
+          "state": "not_checked"
+        }
+      ]
+    },
+    {
+      "method": "approve_and_pay",
+      "signer": "bob.proofbill-endpx-2026.testnet",
+      "tx_hash": "5SD6eEPD8nHsrpuwFpjBwi3vBgLU5ACZ2JAwRiDDhZuu",
+      "expected_failure": null,
+      "status": {
+        "SuccessValue": "dHJ1ZQ=="
+      }
+    },
+    {
+      "method": "approve_and_pay",
+      "signer": "bob.proofbill-endpx-2026.testnet",
+      "tx_hash": "FNsQa7QTNVpuqfCaHKtZRqydpM9dTn7pYACxVTdAjprN",
+      "expected_failure": "ORDER_NOT_PAYABLE",
+      "status": {
+        "Failure": {
+          "ActionError": {
+            "index": 0,
+            "kind": {
+              "FunctionCallError": {
+                "ExecutionError": "Smart contract panicked: ORDER_NOT_PAYABLE"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Scripted project-owned testnet accounts; not organic users.",
+    "Wallet signature protocol verified through HTTP/API; browser wallet confirmation still needs its own smoke check.",
+    "Hardware inference proof scope is the application's declared policy, not a production audit."
+  ]
+}

@@ -29,6 +29,25 @@ The existing job identity is retained. No schema migration, contract reset or pa
 - A worker skips the recipient's locked row, then claims the new buyer's intent after commit.
 - Ciphertext rejects both cross-buyer decryption directions; old-buyer lookup no longer finds the rebound intent.
 
-The suite uses synthetic briefs and a generated encryption key. It does not call NEAR AI, sign wallet transactions, or change production application data. A separate operator integration run is necessary to prove hosted inference and settlement.
+The suite uses synthetic briefs and a generated encryption key. It does not call NEAR AI, sign wallet transactions, or change production application data. Hosted execution is recorded separately below; it does not turn the controlled race reproduction into a live blockchain race.
 
 NFT transfer is optional. The basic demo can fund a pass, assign an agent, run a task, inspect the private result and approve payment without changing owners. An unused transfer demonstrates delegation; an active onchain order locks transfer.
+
+## Hosted demo checks
+
+The queue fix was released in commit `c93cbda`. [CI run 43373425295](https://github.com/EndPx/proofbill/actions/runs/43373425295) passed typechecking, unit tests, nine PostgreSQL queue tests, the production build and eighteen browser tests. Vercel deployed it through the GitHub integration, and the server worker was updated while no queued or active jobs were present.
+
+The [original-holder integration report](integration/pass-3-order.json) records a hosted purchase without any NFT transfer. Bob funded the pass, assigned the agent, authenticated by wallet-message signature, received a NEAR AI result through the server worker, read it privately and approved payment. Alice's private read was rejected; a second payment was rejected. The order ended Paid and the NFT Completed.
+
+- [Original-holder receipt](https://proofbill-two.vercel.app/app/receipts/pass-3-order)
+- [Confirmed payment](https://testnet.nearblocks.io/txns/5h99Ue5B1B46o2hVwAeQ4KkymfYLCJkKnLcps9bFY8vV)
+
+The [unused-transfer integration report](integration/pass-4-order.json) records Alice funding and assigning a pass, transferring it to Bob, and losing the old assignment at revision 2. Alice's refund attempt was rejected. Bob assigned the agent at revision 3, submitted a fresh brief, privately inspected the NEAR AI delivery and approved payment. That order also ended Paid and the NFT Completed; duplicate payment was rejected.
+
+- [Transferred-pass receipt](https://proofbill-two.vercel.app/app/receipts/pass-4-order)
+- [Unused NFT transfer](https://testnet.nearblocks.io/txns/4FQAVVyDzsg3dkMphE7SdKp65heKU4nFLXPYzCKQfRct)
+- [Confirmed payment](https://testnet.nearblocks.io/txns/5SD6eEPD8nHsrpuwFpjBwi3vBgLU5ACZ2JAwRiDDhZuu)
+
+These are scripted project-owned testnet accounts and synthetic briefs. They prove the hosted API, restricted worker, provider and settlement path. The queued-transfer race uses controlled chain fixtures in isolated PostgreSQL. The script does not operate a browser wallet extension; wallet confirmation clicks remain part of the recording rehearsal.
+
+For the main demo, use: connect wallet -> fund a Purchase Pass -> assign agent -> submit brief -> unlock and inspect result/evidence -> approve payment -> open receipt. Use transfer as a short optional second flow: transfer an Available pass -> recipient assigns agent -> recipient submits their own brief. A completed NFT remains a receipt; the historical buyer retains private-result access.
