@@ -2,9 +2,11 @@
 import http from 'node:http';
 const hash='1'.repeat(32),privateMarker='PRIVATE_FIXTURE_SECRET';
 const orderFor=id=>{
- const number=Number(/^pass-(\d+)-order(?:-1)?$/.exec(id)?.[1]);if(![2,7,8,9,12,13].includes(number))return null;
+ const match=/^pass-(\d+)-order(?:-([12]))?$/.exec(id);
+ const number=Number(match?.[1]),sequence=Number(match?.[2]||0);
+ if(![2,7,8,9,12,13].includes(number)||(sequence===2&&number!==13))return null;
  const phase=number===8?'PaymentPending':number===9?'Refunded':'Paid';
- return {order_id:id,token_id:`pass-${number}`,buyer_id:'buyer.testnet',agent_id:'agent.testnet',seller_id:'seller.testnet',price_yocto:'10000000000000000000000',revision:1,request_commitment:'a'.repeat(64),response_commitment:'b'.repeat(64),evidence_commitment:'c'.repeat(64),policy_id:'near-tee-ecdsa-v1',phase,attempt:1,created_at_ns:'1794528000000000000',private_input:privateMarker,result_cipher:privateMarker,...([12,13].includes(number)?{payment_mode:'Automatic'}:{}),...(number===13?{max_order_price_yocto:'100000000000000000000000'}:{})};
+ return {order_id:id,token_id:`pass-${number}`,buyer_id:'buyer.testnet',agent_id:'agent.testnet',seller_id:'seller.testnet',price_yocto:'10000000000000000000000',revision:1,request_commitment:'a'.repeat(64),response_commitment:'b'.repeat(64),evidence_commitment:'c'.repeat(64),policy_id:'near-tee-ecdsa-v1',phase,attempt:1,created_at_ns:'1794528000000000000',private_input:privateMarker,result_cipher:privateMarker,...([12,13].includes(number)?{payment_mode:sequence===2?'Manual':'Automatic'}:{}),...(number===13?{max_order_price_yocto:sequence===2?null:'100000000000000000000000'}:{})};
 };
 const server=http.createServer(async(req,res)=>{
  res.setHeader('Content-Type','application/json');

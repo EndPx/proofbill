@@ -59,6 +59,8 @@ The receipt image is a recorded testnet snapshot. The [public receipt](https://p
 
 ## Review in five minutes
 
+Start with the [public review journey](https://proofbill-two.vercel.app/review): one recorded budget, both payment policies, actual public receipts, handover/refund and the buyer-verification boundary. No wallet is needed to inspect it. The landing sample remains explicitly simulated; this guide links recorded execution evidence.
+
 1. **Understand the product.** Open the [landing page](https://proofbill-two.vercel.app), create a sample budget in the interactive workspace, choose a hosted/custom sample agent and Manual/Automatic payment, then repeat purchases with that same pass. The preview uses local mock records and the shared funding quote helper; it needs no wallet or credits and submits no transactions. The prominent real-receipt link opens actual anonymous financial facts separately.
 2. **Inspect a real public receipt.** Open the [Manual example](https://proofbill-two.vercel.app/receipts/pass-2-order) or [Automatic example](https://proofbill-two.vercel.app/receipts/pass-10-order) without connecting a wallet. The [workspace](https://proofbill-two.vercel.app/app/purchases) remains wallet-gated; another wallet cannot unlock the buyer's private result.
 3. **Check the payment independently.** Compare the [successful seller payment](https://testnet.nearblocks.io/txns/EKHAhwbEjwJos2sAzc7kxvHAnuA4aYS24H7TmjeeKj5Z), [duplicate-payment refusal](https://testnet.nearblocks.io/txns/68kMbxpYj3uxqekXBnJVwWEqATx2MrcTsTf6ENduXJZ1), and [integration record](docs/evidence/integration/pass-2-order.json). Reading these does not require a new purchase.

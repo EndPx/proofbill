@@ -55,6 +55,7 @@ export default function Home() {
           ProofBill
         </Link>
         <nav aria-label="Main navigation">
+          <Link className={styles.navLink} href="/review">Review the proof</Link>
           <a className={styles.navLink} href="#how-it-works">
             How it works
           </a>
@@ -101,6 +102,7 @@ export default function Home() {
 
         <section
           className={styles.previewSection}
+          id="workspace-preview"
           aria-label="ProofBill product preview"
         >
           <div className={styles.previewHeading}>
@@ -345,6 +347,7 @@ export default function Home() {
           <p>Know what your agent bought.</p>
         </div>
         <nav aria-label="Project links">
+          <Link href="/review">Review the proof <ArrowUpRight size={14} /></Link>
           <a href={landing.github} target="_blank" rel="noopener noreferrer">
             Source code <ArrowUpRight size={14} />
           </a>
