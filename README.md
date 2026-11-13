@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/assets/proofbill-banner.svg" alt="ProofBill. Your agent orders. You stay in control." width="1280" />
+  <img src="design/proofbill-brand-v1/proofbill-logo-on-dark.png" alt="ProofBill logo" width="900" />
 </p>
 
 <h1 align="center">ProofBill</h1>
