@@ -9,6 +9,7 @@ import {
   type JobRow,
 } from "@proofbill/server";
 import { view, call, contractId } from "@proofbill/server/chain";
+import { claimNextJob } from "@proofbill/server/jobs";
 import {
   MODEL_ID,
   POLICY_ID,
@@ -179,10 +180,7 @@ async function processJob(j: JobRow) {
   await db()`update pb_jobs set state='delivered',lease_until=null,updated_at=now() where job_id=${j.job_id}`;
 }
 async function next() {
-  const rows = await db()<
-    JobRow[]
-  >`update pb_jobs set state='claimed',lease_until=now()+interval '6 minutes',updated_at=now() where job_id=(select job_id from pb_jobs where state='queued' and contract_id=${contractId()} order by created_at for update skip locked limit 1) returning *`;
-  return rows[0];
+  return claimNextJob(db(), contractId());
 }
 async function retention() {
   const rows = await db()<

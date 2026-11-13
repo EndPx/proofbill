@@ -66,6 +66,10 @@ export interface JobRow {
   result_cipher: string | null;
   request_commitment: string | null;
   error_code: string | null;
+  lease_until: Date | null;
+  provider_attempted_at: Date | null;
+  erased_at: Date | null;
+  terminal_at: Date | null;
   updated_at: Date;
   created_at: Date;
 }

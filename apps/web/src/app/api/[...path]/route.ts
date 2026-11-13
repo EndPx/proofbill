@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
+import { queuePurchase, QueueError } from "@proofbill/server/jobs";
 import {
   db,
-  seal,
   open,
   artifactContext,
   jobForBuyer,
   publicJob,
-  ensureAccount,
   recordObservation,
-  type JobRow,
 } from "@/lib/server";
 import {
   challenge,
@@ -170,41 +167,19 @@ export async function POST(req: NextRequest, ctx: Context) {
         body.input.length > 8000
       )
         return json({ error: "INVALID_PRIVATE_BRIEF" }, 400);
-      const p = await view<PurchasePass | null>("get_pass", {
-        token_id: body.tokenId,
+      const job = await queuePurchase(buyer, body.tokenId, body.input, {
+        sql: db(),
+        contract: contractId(),
+        agent:
+          process.env.NEAR_AGENT_ID ??
+          process.env.NEXT_PUBLIC_NEAR_AGENT_ID ??
+          "",
+        readPass: (token) =>
+          view<PurchasePass | null>("get_pass", { token_id: token }),
+        readOrder: (order) =>
+          view<PurchaseOrder | null>("get_order", { order_id: order }),
       });
-      if (!p || p.owner_id !== buyer)
-        return json({ error: "HOLDER_ONLY" }, 403);
-      if (
-        p.phase !== "Available" ||
-        p.transfer_pending ||
-        BigInt(p.expires_at_ns) <= BigInt(Date.now()) * 1000000n
-      )
-        return json({ error: "PASS_NOT_AVAILABLE" }, 409);
-      if (
-        p.agent_id !==
-        (process.env.NEAR_AGENT_ID ?? process.env.NEXT_PUBLIC_NEAR_AGENT_ID)
-      )
-        return json({ error: "ASSIGN_AGENT_FIRST" }, 409);
-      const recent =
-        await db()`select count(*)::int as count from pb_jobs where buyer_id=${buyer} and created_at>now()-interval '24 hours'`;
-      if (recent[0].count >= 10)
-        return json({ error: "DAILY_SERVICE_LIMIT" }, 429);
-      const id = `${p.token_id}-order`,
-        input = seal(
-          {
-            input: body.input.trim(),
-            salt: randomBytes(32).toString("hex"),
-            nonce: randomBytes(16).toString("hex"),
-          },
-          artifactContext(id, buyer),
-        );
-      await ensureAccount(buyer);
-      const rows = await db()<
-        JobRow[]
-      >`insert into pb_jobs(contract_id,order_id,token_id,buyer_id,revision,input_cipher) values(${contractId()},${id},${p.token_id},${buyer},${p.authorization_revision},${input}) on conflict(network,contract_id,order_id) do nothing returning *`;
-      if (!rows[0]) return json({ error: "ORDER_ALREADY_QUEUED" }, 409);
-      return json({ job: publicJob(rows[0]) }, 201);
+      return json({ job: publicJob(job) }, 201);
     }
     if (route === "observe") {
       if (
@@ -266,6 +241,9 @@ export async function POST(req: NextRequest, ctx: Context) {
     }
     return json({ error: "NOT_FOUND" }, 404);
   } catch (e) {
-    return json({ error: safeError(e) }, 400);
+    return json(
+      { error: safeError(e) },
+      e instanceof QueueError ? e.status : 400,
+    );
   }
 }

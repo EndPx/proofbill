@@ -63,6 +63,8 @@ const errorCopy: Record<string, string> = {
   ASSIGN_AGENT_FIRST: "Assign the purchasing agent before running your task.",
   ORDER_ALREADY_QUEUED:
     "This pass already has a queued task. Open its order to continue.",
+  PASS_JOB_REQUIRES_RECONCILIATION:
+    "An earlier task may already be processing. Refresh its status before retrying. If it stays blocked, contact support for reconciliation.",
   SERVICE_UNAVAILABLE:
     "The service could not be reached. Your funds have not been marked as paid.",
   CHALLENGE_EXPIRED:

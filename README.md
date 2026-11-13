@@ -176,6 +176,8 @@ pnpm --filter @proofbill/web test:browser
 
 The browser suite builds a production server on port 3215. On Linux, use `playwright install --with-deps chromium`. It covers wallet gating/restoration/disconnect, landing interactions, keyboard FAQ, reduced motion, no-JavaScript readability and accessibility. [CI](.github/workflows/check.yml) runs these checks without provider or signing secrets and preserves browser failure artifacts.
 
+Queue ownership regression tests use real PostgreSQL row locks and controlled chain fixtures. Create an isolated database named `proofbill_queue_check`, set `QUEUE_TEST_DATABASE_URL`, and run `pnpm test:queue`. Each run creates and removes its own random schema. Never point this test at the application database. CI provisions its own PostgreSQL service. See [the ownership queue regression](docs/evidence/queue-ownership-regression.md) for scope and safety limits.
+
 Contract tests require [the pinned Rust toolchain](contracts/proofbill/rust-toolchain.toml), cargo-near and Sandbox prerequisites. Windows contract validation was performed in WSL Ubuntu:
 
 ```sh
