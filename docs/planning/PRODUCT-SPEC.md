@@ -128,7 +128,7 @@ The current owner can request a refund before payment starts. That request snaps
 
 If a seller payment fails conclusively, allow an explicit retry of that same payment or a refund exit; the contract serializes these alternatives. If the outcome is unknown, neither a new seller payout nor refund is allowed until reconciled. Pass expiry does not undo a payment already approved and in flight.
 
-One inference request consumes the seller's credits even if the buyer rejects payment. This MVP demonstrates buyer-controlled purchasing, not guaranteed seller payment for every delivered result. The seller accepts that bounded risk; the service has input limits, one request per pass and operating rate limits. Pricing/fairness validation belongs after the functional demo.
+Each inference request consumes the seller's credits even if the buyer rejects payment. This MVP demonstrates buyer-controlled purchasing, not guaranteed seller payment for every delivered result. The seller accepts that bounded risk; the service has input limits, one active order per pass and operating rate limits. A funded budget pass supports repeated sequential purchases while its remaining balance covers the service quote and its authorization remains valid. Retries keep the same explicit order ID; they do not authorize another purchase. Legacy single-use passes remain supported. Pricing/fairness validation belongs after the functional demo.
 
 ## 8. Privacy experience
 
