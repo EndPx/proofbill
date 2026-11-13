@@ -2,6 +2,8 @@
 
 Validated 13 November 2026, Asia/Jakarta.
 
+The later [agent and payment-mode release](agent-payment-hosted.md) extends this baseline with owner-operated agents and explicit Automatic settlement. It preserves the original four passes/orders. The flow below records the earlier Manual-only validation.
+
 - Public app: https://proofbill-two.vercel.app
 - Public workspace: https://proofbill-two.vercel.app/app/purchases
 - Public receipt from the hosted test: https://proofbill-two.vercel.app/app/receipts/pass-2-order

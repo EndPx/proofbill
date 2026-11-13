@@ -1,0 +1,76 @@
+{
+  "tested_at": "2026-11-13T06:47:21.294Z",
+  "network": "testnet",
+  "origin": "https://proofbill-two.vercel.app",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "wasm_sha256": "159e19134f9f56a226ae958c478b589739e5350e15f4be46aaea0bfccdf795cb",
+  "passed": true,
+  "active_jobs": 0,
+  "cases": [
+    {
+      "order_id": "pass-5-order",
+      "agent_id": "agent.proofbill-endpx-2026.testnet",
+      "payment_mode": "Manual",
+      "order_phase": "Paid",
+      "nft_phase": "Completed",
+      "owner": "bob.proofbill-endpx-2026.testnet",
+      "one_job": true,
+      "job_state": "delivered",
+      "anonymous_private_status": 401
+    },
+    {
+      "order_id": "pass-6-order",
+      "agent_id": "alice.proofbill-endpx-2026.testnet",
+      "payment_mode": "Manual",
+      "order_phase": "Paid",
+      "nft_phase": "Completed",
+      "owner": "bob.proofbill-endpx-2026.testnet",
+      "one_job": true,
+      "job_state": "delivered",
+      "anonymous_private_status": 401
+    },
+    {
+      "order_id": "pass-7-order",
+      "agent_id": "agent.proofbill-endpx-2026.testnet",
+      "payment_mode": "Automatic",
+      "order_phase": "Paid",
+      "nft_phase": "Completed",
+      "owner": "bob.proofbill-endpx-2026.testnet",
+      "one_job": true,
+      "job_state": "delivered",
+      "anonymous_private_status": 401
+    },
+    {
+      "order_id": "pass-8-order",
+      "agent_id": "alice.proofbill-endpx-2026.testnet",
+      "payment_mode": "Automatic",
+      "order_phase": "Paid",
+      "nft_phase": "Completed",
+      "owner": "bob.proofbill-endpx-2026.testnet",
+      "one_job": true,
+      "job_state": "delivered",
+      "anonymous_private_status": 401
+    },
+    {
+      "order_id": "pass-9-order",
+      "agent_id": "alice.proofbill-endpx-2026.testnet",
+      "payment_mode": "Automatic",
+      "order_phase": "Paid",
+      "nft_phase": "Completed",
+      "owner": "bob.proofbill-endpx-2026.testnet",
+      "one_job": true,
+      "job_state": "delivered",
+      "anonymous_private_status": 401
+    }
+  ],
+  "cli_resume": {
+    "order_id": "pass-8-order",
+    "new_reservation": false,
+    "changed_buyer_rejected": true,
+    "provider_attempt_unchanged": true
+  },
+  "limits": [
+    "Scripted project-owned testnet accounts and synthetic inputs.",
+    "Browser wallet interaction is fixture-based in Playwright; hosted signatures and settlement use real testnet accounts."
+  ]
+}

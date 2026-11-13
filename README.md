@@ -166,6 +166,8 @@ The worker requires your own provisioned accounts and provider access. No operat
 
 ## Checks and reproduction
 
+The [agent/payment release evidence](docs/evidence/agent-payment-hosted.md) records all four hosted combinations, a fresh own-agent CLI purchase, compatibility checks and recovery guards. Manual remains the default; Automatic settlement requires explicit owner authorization for the pass.
+
 ```sh
 pnpm check
 pnpm test

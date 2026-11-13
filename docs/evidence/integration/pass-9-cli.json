@@ -1,0 +1,24 @@
+{
+  "tested_at": "2026-11-13T06:43:15.689Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "token_id": "pass-9",
+  "order_id": "pass-9-order",
+  "passed": true,
+  "agent_kind": "external",
+  "payment_mode": "Automatic",
+  "entrypoint": "workers/agent/src/run-own-agent.ts",
+  "fresh_saved_request": true,
+  "saved_request_bound_to_buyer_and_revision": true,
+  "owner_approval_transaction": false,
+  "owner_after": "bob.proofbill-endpx-2026.testnet",
+  "order_phase": "Paid",
+  "nft_phase": "Completed",
+  "mint_tx": "B1enMSQAGofkWLNvouKJnkdT8rn75re5RtEMyaspPiAR",
+  "assignment_tx": "CXz1a4sdSG3n4a4AMN7DGh1GkDxNVMr521rPsJNm9Kzw",
+  "reservation_tx": "ABECzsQjNbxXPPFw9siCBmYKHdV1gvZoqg3FZY76UXwq",
+  "limits": [
+    "Scripted project-owned testnet accounts and a synthetic brief.",
+    "CLI runtime, not a browser wallet extension."
+  ]
+}
