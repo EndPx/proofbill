@@ -56,6 +56,8 @@ GSAP owns the animation clock. Lenis and WebGL render through its ticker, with s
 
 QA must cover real start/mid/reverse scroll, pointer response, shape controls, pause, viewport resize, reduced motion changes, context failure and navigation teardown. Keep screenshots and critic notes local. Preserve wallet gating and financial authority in the contract.
 
+Purchase-stage changes keep the physical card in place. Its base color, foil/paper texture opacity, border and shadow blend over 450ms. Only the printed content fades out for 140ms, replaces at zero opacity, then fades in for 240ms. Scroll pose and pointer tilt retain their existing transform owners. Interruptions cancel superseded text callbacks; the latest selected stage wins. Reduced-motion changes settle the requested content and materials immediately.
+
 ## 10. Interactive landing workspace preview
 
 Replace the static product screenshot with a client-side sandbox that follows the real app's charcoal sidebar and rounded white panel. Purchases, Purchase Passes and Receipts are working local views; order Result/Request/Evidence tabs are keyboard accessible. Include local pass creation, approval simulation, search and reset so controls demonstrate a coherent journey. Use explicit demo-prefixed IDs and synthetic content. Persistent labels say Interactive demo / Sample data; no wallet, API, storage or transaction calls belong to this component. The live-app link remains a real navigation through the wallet gate.

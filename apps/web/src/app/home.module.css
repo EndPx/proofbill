@@ -526,6 +526,17 @@
 .objectFloat {
   transform-style: preserve-3d;
 }
+.objectText {
+  display: flex;
+  flex-direction: column;
+  min-height: 710px;
+}
+.objectText > .objectBarcode {
+  margin-top: auto;
+  padding-top: 23px;
+  height: 53px;
+  flex-shrink: 0;
+}
 .objectCard {
   position: relative;
   isolation: isolate;
@@ -535,7 +546,7 @@
   margin: auto;
   padding: 25px 27px 20px;
   color: #17231b;
-  background: #51e79c url("/art/mint-security-surface.webp") center/cover;
+  background-color: #51e79c;
   border: 1px solid #8cf7ba;
   border-radius: 19px;
   box-shadow:
@@ -546,7 +557,35 @@
   transform-style: preserve-3d;
   transition:
     transform 0.18s ease,
-    box-shadow 0.25s;
+    background-color 0.45s ease,
+    border-color 0.45s ease,
+    border-radius 0.45s ease,
+    box-shadow 0.45s ease;
+}
+.objectFoil,
+.objectPaper {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+.objectFoil {
+  background: url("/art/mint-security-surface.webp") center/cover;
+  opacity: 0.85;
+}
+.objectPaper {
+  background: url("/art/receipt-paper.webp") center/cover;
+  opacity: 0;
+}
+.objectCard[data-stage="1"] .objectFoil,
+.objectCard[data-stage="2"] .objectFoil {
+  opacity: 0;
+}
+.objectCard[data-stage="1"] .objectPaper,
+.objectCard[data-stage="2"] .objectPaper {
+  opacity: 0.9;
 }
 .objectCard::after {
   content: "";
@@ -564,14 +603,14 @@
   transform: translateZ(1px);
 }
 .objectCard[data-stage="1"] {
-  background: #dee9e2 url("/art/receipt-paper.webp") center/cover;
+  background-color: #dee9e2;
   border-color: #cddfd2;
   box-shadow:
     9px 10px 0 #5e7865,
     22px 38px 65px #0008;
 }
 .objectCard[data-stage="2"] {
-  background: #e9e8dc url("/art/receipt-paper.webp") center/cover;
+  background-color: #e9e8dc;
   border-color: #d3d6c8;
   border-radius: 2px;
   box-shadow:
@@ -727,7 +766,7 @@
   color: #3a5143;
   margin-top: 8px;
 }
-.objectCard > a {
+.objectCard a {
   display: inline-flex;
   gap: 6px;
   align-items: center;

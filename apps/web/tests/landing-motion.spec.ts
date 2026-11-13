@@ -1,5 +1,81 @@
 import { expect, test } from "@playwright/test";
 
+test("purchase card blends materials and replaces its print without stale rapid updates", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  const steps = page.getByRole("group", { name: "Purchase workflow steps" });
+  await steps
+    .getByRole("button", { name: /Fund a Purchase Pass/ })
+    .scrollIntoViewIfNeeded();
+  const detail = page.getByRole("region", {
+    name: "Purchase lifecycle illustration",
+    exact: true,
+  });
+  const card = detail.locator("[data-stage]");
+  const print = detail.locator("[data-text-phase]");
+  await expect(print).toHaveAttribute("data-text-phase", "0");
+  await expect(card).toHaveCSS("background-color", "rgb(81, 231, 156)");
+  const transform = await card.evaluate(
+    (element) => getComputedStyle(element).transform,
+  );
+  await steps
+    .getByRole("button", { name: /Give your agent the brief/ })
+    .dispatchEvent("click");
+  await expect(print).toHaveAttribute("data-text-transition", /out|in/);
+  await expect(print).toHaveAttribute("data-text-phase", "1");
+  await expect(print).toHaveAttribute("data-text-transition", "idle");
+  await expect(card).toHaveCSS("background-color", "rgb(222, 233, 226)");
+  await expect
+    .poll(() => card.evaluate((element) => getComputedStyle(element).transform))
+    .toBe(transform);
+  await steps
+    .getByRole("button", { name: /Fund a Purchase Pass/ })
+    .dispatchEvent("click");
+  await page.waitForTimeout(35);
+  await steps
+    .getByRole("button", { name: /Review it. Then approve payment/ })
+    .dispatchEvent("click");
+  await page.waitForTimeout(35);
+  await steps
+    .getByRole("button", { name: /Give your agent the brief/ })
+    .dispatchEvent("click");
+  await expect(print).toHaveAttribute("data-text-phase", "1");
+  await expect(print).toHaveAttribute("data-text-transition", "idle");
+  await page.waitForTimeout(450);
+  await expect(print).toHaveAttribute("data-text-phase", "1");
+  await expect(print).toHaveCSS("opacity", "1");
+});
+
+test("reduced motion settles a changing purchase card immediately", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const steps = page.getByRole("group", { name: "Purchase workflow steps" });
+  const detail = page.getByRole("region", {
+    name: "Purchase lifecycle illustration",
+    exact: true,
+  });
+  const print = detail.locator("[data-text-phase]");
+  await steps
+    .getByRole("button", { name: /Give your agent the brief/ })
+    .dispatchEvent("click");
+  await expect(print).toHaveAttribute("data-text-phase", "1");
+  await expect(print).toHaveAttribute("data-text-transition", "idle");
+  await expect(print).toHaveCSS("opacity", "1");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await steps
+    .getByRole("button", { name: /Fund a Purchase Pass/ })
+    .dispatchEvent("click");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(print).toHaveAttribute("data-text-phase", "0");
+  await expect(print).toHaveAttribute("data-text-transition", "idle");
+  await expect(print).toHaveCSS("opacity", "1");
+});
+
 test("mobile stages place the matching illustration beside the selected chapter", async ({
   page,
 }) => {
