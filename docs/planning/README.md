@@ -6,6 +6,8 @@ The user selected four build targets: **Agent Economy (`agents`), AI Security & 
 
 ## Read in order
 
+For the problem, alternative approaches, NFT tradeoff and planned first-user acquisition, start with [problem evidence and validation plan](PROBLEM-EVIDENCE.md). External sources are distinct from ProofBill user validation, which is pending.
+
 1. [Product specification and adjusted flow](PRODUCT-SPEC.md) — customer, experience, Purchase Pass rights, money, privacy, screens and track outcomes. This is the home for product decisions.
 2. [Technical design](TECHNICAL-DESIGN.md) — responsibilities, state, contract interface, verification bridge, data and authorization. Source/build artifacts define exact interfaces.
 3. [Delivery plan](DELIVERY-PLAN.md) — feature milestones, bounded verification, demo and release evidence. This is the home for work status.

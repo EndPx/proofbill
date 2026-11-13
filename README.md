@@ -26,6 +26,8 @@
 
 When an agent uses a paid AI service, its owner needs to connect three things: **what was permitted, what came back, and what was actually paid**. Separate spending rules, response logs and transaction records make that review harder.
 
+Public agent-security guidance supports separating execution permission from an agent's reasoning, while agent research describes the friction of repeated approval prompts. Our [problem evidence and first-user plan](docs/planning/PROBLEM-EVIDENCE.md) links the original sources, compares ordinary budgets/wallets and explains the NFT tradeoff. These are external problem signals; independent ProofBill user validation is still pending.
+
 ProofBill puts that purchase into one lifecycle:
 
 **Fund a Purchase Pass budget → chosen agent orders → private result and evidence → Manual approval or preauthorized settlement → confirmed seller payment and receipt → use the remaining budget again or refund it.**

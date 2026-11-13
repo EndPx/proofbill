@@ -6,7 +6,7 @@ Product guide aligned with the implemented testnet scope on 14 November 2026. Th
 
 ProofBill gives a developer or small team a controlled way to let an AI agent purchase a service: the spending right lives in an NFT Purchase Pass, the delivered response carries inspectable evidence, and the exact approved order produces one reconciled payment receipt.
 
-First customer: someone already comfortable connecting a NEAR testnet wallet who runs a purchasing agent. The first service is **private brief extraction**: turn a short user-supplied brief into structured item, quantity and requester fields. The demo uses synthetic data. Manual mode lets the buyer review quality before approving; Automatic mode has no final quality-review gate.
+Initial audience to test: developers in small teams that already run agents against paid APIs and need to reconcile service permission, delivery and payment. The first workflow is repeated **private brief extraction**: turn short internal purchase briefs into structured item, quantity and requester fields. It purchases extraction, not physical goods. A NEAR testnet wallet is a demo prerequisite, not the customer definition. The demo uses synthetic data. Manual mode lets the buyer review quality before approving; Automatic mode has no final quality-review gate.
 
 Problem hypothesis: spending permission, delivered bytes and payment status are often reviewed separately. The owner needs to know what was allowed, what arrived, and whether that exact order was paid. Demand and willingness to pay are not validated yet; there are no claimed customers or measured savings.
 
@@ -172,6 +172,6 @@ The [hosted matrix](../evidence/agent-payment-hosted.md), [recovery/storage repo
 
 ## 11. Business and next users
 
-First validation: ask a small number of developers who already operate paid-API agents to inspect a complete purchase receipt and try setting a pass. Record confusion, review time, whether transfer/refund is useful, and willingness to use the workflow again. Do not turn test accounts into traction claims.
+The [problem evidence and first-user plan](PROBLEM-EVIDENCE.md) contains original external sources, a comparison with existing budgets, NFT justification and a five-developer trial with explicit measurements and decision gates. Initial acquisition is planned founder-led outreach to NEAR Builders and open-source agent communities, offering a supported testnet trial. No outreach, partners, independent pilots or measured demand are claimed. Record confusion, review time, whether transfer/refund is useful, seller rejection costs and willingness to use the workflow again. Do not turn test accounts into traction claims.
 
 After validation, explore a hosted team plan for budgets, approvals and reconciliation, or a disclosed service fee. The hackathon flow takes no platform fee. Later phases may add recurring passes, more sellers, supported mainnet assets, Agent Connect or team treasury integrations. The initial product has no cross-chain, staking, marketplace or autonomous custody dependency.
