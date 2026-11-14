@@ -1,0 +1,27 @@
+{
+  "cover-chatgpt-v1.webp": {
+    "kind": "conceptual illustration",
+    "generator": "Built-in ChatGPT Image",
+    "prompt": "Create an original premium editorial 3D illustration for the documentation cover of ProofBill, a NEAR testnet application for agent purchasing budgets and private AI delivery. Wide landscape composition, about 2:1 aspect ratio, with generous clean negative space around a central sculptural object. A tactile mint-green authorization pass with a small embossed checkmark rests in front of a thick rounded charcoal frame. A warm off-white paper receipt flows gently through that frame, suggesting permission becoming a traceable receipt. Restrained palette: mint #51e79c, charcoal #252525, ivory #f6f5ee, neutral white background. Refined physical materials: soft matte mint rubber or coated card, subtly fibrous paper, satin dark graphite. Beautiful soft studio lighting, precise contact shadows, calm confident product design, slightly elevated three-quarter perspective, sophisticated and minimal. No text, no numbers, no fake UI, no money amounts, no glowing neon, no chains, no generic lock/shield icons, no crypto coin logos. This is a conceptual product illustration, not a screenshot or evidence artifact.",
+    "processing": "PNG encoded as WebP quality 90; composition unchanged"
+  },
+  "public-receipt.png": {
+    "kind": "existing actual public testnet receipt screenshot",
+    "source": ".github/assets/product-receipt-desktop.png",
+    "order": "pass-14-order-1",
+    "private_content": false
+  },
+  "workspace-example.png": {
+    "kind": "local synthetic UI fixture screenshot",
+    "source": "Current task-first app visual check",
+    "real_wallet_execution": false
+  },
+  "diagrams": {
+    "kind": "editable Excalidraw scenes and matching SVG/PNG views",
+    "subjects": [
+      "purchase-journey",
+      "system-architecture"
+    ],
+    "rendering": "Authored scene geometry and text rendered to SVG, then PNG; not AI-generated evidence"
+  }
+}
