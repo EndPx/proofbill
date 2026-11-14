@@ -84,6 +84,8 @@ The preview's optional ceiling uses the existing inline-error primitive. When it
 
 ## 11. Agent and payment authorization
 
+New-pass funding validates service budget, optional price ceiling and initial storage separately, with persistent inline text, aria-invalid/describedby and the existing red error tokens. A new pass's ceiling must cover the current quote and not exceed its initial service budget; this is a creation-form rule, not a claim that the contract forbids ceilings above a later remaining balance. Changing a budget must revalidate an enabled ceiling. Storage errors never mark the service budget invalid. Invalid drafts cannot open a mint transaction. The budget hint states the current unit price instead of predicting a purchase count from funds alone, since storage and policy can also constrain orders.
+
 Reuse the workspace Field/select, bordered info panel and black/outlined Button primitives for ProofBill assistant versus My own agent. Custom mode reveals one account-ID field with a persistent label. Payment approval defaults to Manual; Automatic reveals a separate consent checkbox with the fixed service price, seller and delivery trigger. Save is disabled for invalid accounts, missing automatic consent or an in-flight operation. Existing signed policy and purchasing-agent account remain visible in the pass facts. Do not reset edited values on background polling; reset after a changed onchain authorization revision. External-agent instructions link to the executable SDK guide, with no key entry/upload field. Keep the wallet-owned NFT and buyer-only result boundaries visible. Existing scrolling, mobile stacking and reduced-motion rules remain unchanged.
 
 ## 12. Public payment receipts

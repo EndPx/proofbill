@@ -981,6 +981,12 @@ textarea {
 .purchase-funding .receipt .amount small {
   color: var(--muted);
 }
+.purchase-funding .field input[aria-invalid="true"] {
+  border-color: var(--error-ink);
+  background: var(--error-surface);
+}
+.field-error,
+.field .field-error { color: var(--error-ink); }
 .facts {
   margin: 0;
   display: grid;

@@ -130,13 +130,14 @@ function budgetRefundCopy(budget: PassBudget) {
   const amount = formatNear((BigInt(budget.available_yocto) + BigInt(budget.reserved_yocto)).toString());
   return `Refund returns ${amount} testnet NEAR and closes this budget pass. Prior payments and storage backing are excluded.`;
 }
-function OrderLimitField({enabled,value,onToggle,onChange,disabled=false}:{enabled:boolean;value:string;onToggle:(v:boolean)=>void;onChange:(v:string)=>void;disabled?:boolean}) {
-  let valid=true;try{if(enabled)parseOrderPriceLimit(value)}catch{valid=false}
+function OrderLimitField({enabled,value,onToggle,onChange,disabled=false,validationError}:{enabled:boolean;value:string;onToggle:(v:boolean)=>void;onChange:(v:string)=>void;disabled?:boolean;validationError?:string}) {
+  let error=validationError??"";
+  try{if(enabled)parseOrderPriceLimit(value)}catch{error="Enter a positive NEAR amount using up to 24 decimal places."}
   return <>
     <div className="info"><label><input type="checkbox" aria-label="Set a per-purchase limit" checked={enabled} disabled={disabled} onChange={e=>onToggle(e.target.checked)}/> Set a maximum service price per purchase (optional)</label></div>
     {enabled&&<label className="field">Maximum per purchase (testnet NEAR)
-      <input aria-label="Maximum per purchase (testnet NEAR)" inputMode="decimal" value={value} disabled={disabled} aria-invalid={!valid} aria-describedby="order-limit-help" onChange={e=>onChange(e.target.value)}/>
-      <small id="order-limit-help">{valid?"Each seller payment must fit this limit and the remaining service budget.":"Enter a positive NEAR amount; zero or an empty enabled limit is not accepted."}</small>
+      <input aria-label="Maximum per purchase (testnet NEAR)" inputMode="decimal" value={value} disabled={disabled} aria-invalid={!!error} aria-describedby="order-limit-help" onChange={e=>onChange(e.target.value)}/>
+      <small id="order-limit-help" className={error?"field-error":undefined} aria-live="polite">{error||"Each purchase must fit this limit and your remaining budget."}</small>
     </label>}
   </>;
 }
@@ -324,7 +325,7 @@ export function Workspace() {
     [serviceBudget, setServiceBudget] = useState("0.050"),
     [initialStorage,setInitialStorage]=useState("0.030"),
     [limitEnabled,setLimitEnabled]=useState(false),
-    [limitInput,setLimitInput]=useState("0.100"),
+    [limitInput,setLimitInput]=useState("0.010"),
     [storageTopUp,setStorageTopUp]=useState("0.030"),
     [paymentMode, setPaymentMode] = useState<PaymentMode>("Manual"),
     [automaticConsent, setAutomaticConsent] = useState(false),
@@ -395,14 +396,34 @@ export function Workspace() {
   }
   let budgetQuote: ReturnType<typeof budgetFunding> | null = null;
   let budgetAmount = SERVICE_PRICE;
-  let limitAmount:string|null=null,limitValid=true,topUpAmount:string|null=null;
-  try { if(limitEnabled)limitAmount=parseOrderPriceLimit(limitInput); } catch { limitValid=false; }
-  try { topUpAmount=parseOrderPriceLimit(storageTopUp); } catch { /* Keep an invalid storage draft non-actionable. */ }
+  let budgetError="",storageError="",limitError="";
+  let limitAmount:string|null=null,topUpAmount:string|null=null;
+  let storageAmount=STORAGE_BUDGET;
   try {
     budgetAmount=parseNearAmount(serviceBudget);
-    budgetQuote=budgetFunding(budgetAmount,{flexible:!!wallet.config.flexibleBudgets,
-      ...(wallet.config.flexibleBudgets?{storageBudget:parseNearAmount(initialStorage)}:{})});
-  } catch { /* Invalid draft is explained next to the field. */ }
+    if(BigInt(budgetAmount)<BigInt(SERVICE_PRICE)) budgetError="Service budget must be at least 0.010 NEAR.";
+    else if(!wallet.config.flexibleBudgets && (BigInt(budgetAmount)>10n**24n || BigInt(budgetAmount)%BigInt(SERVICE_PRICE)!==0n))
+      budgetError="Use 0.010 to 1.000 NEAR in increments of 0.010 for this legacy pass.";
+  } catch { budgetError="Enter a valid service budget using up to 24 decimal places."; }
+  if(wallet.config.flexibleBudgets) {
+    try {
+      storageAmount=parseNearAmount(initialStorage);
+      if(BigInt(storageAmount)<BigInt(STORAGE_BUDGET)) storageError="Storage backing must be at least 0.030 NEAR. It is separate from your service budget.";
+    } catch { storageError="Enter valid storage backing using up to 24 decimal places."; }
+  }
+  if(limitEnabled) {
+    try {
+      limitAmount=parseOrderPriceLimit(limitInput);
+      if(BigInt(limitAmount)<BigInt(SERVICE_PRICE)) limitError="The limit must cover the current 0.010 NEAR service price. Raise it or turn the limit off.";
+      else if(!budgetError && BigInt(limitAmount)>BigInt(budgetAmount)) limitError=`The per-purchase limit cannot exceed your ${formatNear(budgetAmount)} NEAR service budget. Lower the limit or increase the budget.`;
+    } catch { limitError="Enter a positive NEAR limit using up to 24 decimal places, or turn the limit off."; }
+  }
+  const limitValid=!limitError;
+  try { topUpAmount=parseOrderPriceLimit(storageTopUp); } catch { /* Keep an invalid storage draft non-actionable. */ }
+  try {
+    if(!budgetError && !storageError)
+      budgetQuote=budgetFunding(budgetAmount,{flexible:!!wallet.config.flexibleBudgets,storageBudget:storageAmount});
+  } catch { budgetError="The service budget and storage exceed the supported total. Reduce one of these amounts."; }
   const available = passes
       .filter((p) => ["Available", "InUse"].includes(p.phase))
       .reduce((s, p) => s + BigInt(p.budget?.available_yocto ?? (p.phase === "Available" ? p.price_yocto : "0")), 0n),
@@ -495,22 +516,21 @@ export function Workspace() {
             {wallet.config.budgetPasses && (
               <label className="field funding-budget">
                 Service budget (testnet NEAR)
-                <input aria-describedby="budget-help" aria-invalid={!budgetQuote} inputMode="decimal"
+                <input aria-describedby="budget-help" aria-invalid={!!budgetError} inputMode="decimal"
                   value={serviceBudget} disabled={!!busy}
                   onChange={(e) => { setServiceBudget(e.target.value); setAutomaticConsent(false); }} />
-                <small id="budget-help" aria-live="polite">
-                  {budgetQuote ? wallet.config.flexibleBudgets?`Up to ${budgetQuote.orders} purchases at the current 0.010 NEAR quote, subject to your limit and storage credit.`:`${budgetQuote.orders} purchases at 0.010 NEAR each. Storage is separate.` : wallet.config.flexibleBudgets?"Enter a budget covering at least one current 0.010 NEAR service quote and valid storage backing. Any higher atomic amount is accepted.":"Enter 0.010 to 1.000 NEAR in increments of 0.010."}
+                <small id="budget-help" className={budgetError?"field-error":undefined} aria-live="polite">
+                  {budgetError||"Current service price: 0.010 NEAR per purchase."}
                 </small>
               </label>
             )}
             {wallet.config.flexibleBudgets&&<>
-              <OrderLimitField enabled={limitEnabled} value={limitInput} disabled={!!busy}
+              <OrderLimitField enabled={limitEnabled} value={limitInput} disabled={!!busy} validationError={limitError}
                 onToggle={v=>{setLimitEnabled(v);setAutomaticConsent(false)}} onChange={v=>{setLimitInput(v);setAutomaticConsent(false)}}/>
-              {limitAmount&&BigInt(limitAmount)<BigInt(SERVICE_PRICE)&&<p className="fine">The current 0.010 NEAR service quote exceeds this limit. Increase it before buying this service.</p>}
-              <details className="panel funding-storage"><summary>Initial storage backing</summary>
+              <details className="panel funding-storage"><summary>Initial storage backing{storageError&&<span className="field-error"> · Needs attention</span>}</summary>
                 <label className="field">Storage backing (testnet NEAR)
-                  <input aria-label="Storage backing (testnet NEAR)" inputMode="decimal" value={initialStorage} disabled={!!busy} onChange={e=>{setInitialStorage(e.target.value);setAutomaticConsent(false)}}/>
-                  <small>At least 0.030 NEAR, independent of your service budget. Actual history growth uses this backing. You can add more separately later.</small>
+                  <input aria-label="Storage backing (testnet NEAR)" aria-invalid={!!storageError} aria-describedby="storage-help" inputMode="decimal" value={initialStorage} disabled={!!busy} onChange={e=>{setInitialStorage(e.target.value);setAutomaticConsent(false)}}/>
+                  <small id="storage-help" className={storageError?"field-error":undefined} aria-live="polite">{storageError||"At least 0.030 NEAR, independent of your service budget. Actual history growth uses this backing. You can add more separately later."}</small>
                 </label>
               </details>
             </>}
@@ -568,11 +588,11 @@ export function Workspace() {
             <dl className="facts">
               <div>
                 <dt>{wallet.config.budgetPasses ? "Service budget" : "Service allocation"}</dt>
-                <dd>{wallet.config.budgetPasses ? budgetQuote ? `${formatNear(budgetAmount)} NEAR` : "Enter a valid budget" : `${formatNear(SERVICE_PRICE)} NEAR`}</dd>
+                <dd>{wallet.config.budgetPasses ? !budgetError ? `${formatNear(budgetAmount)} NEAR` : "Enter a valid budget" : `${formatNear(SERVICE_PRICE)} NEAR`}</dd>
               </div>
               <div>
                 <dt>Storage budget</dt>
-                <dd>{formatNear(wallet.config.budgetPasses ? budgetQuote?.storage ?? "0" : STORAGE_BUDGET)} NEAR</dd>
+                <dd>{wallet.config.flexibleBudgets && storageError ? "Enter valid storage backing" : `${formatNear(wallet.config.flexibleBudgets ? storageAmount : wallet.config.budgetPasses ? budgetQuote?.storage ?? STORAGE_BUDGET : STORAGE_BUDGET)} NEAR`}</dd>
               </div>
             </dl>
             <div className="amount">

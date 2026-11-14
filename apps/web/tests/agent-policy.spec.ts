@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { prepareWallet } from "./helpers/wallet";
+import axe from "axe-core";
 import type { OrderPhase, PaymentMode } from "@proofbill/shared";
 const owner = "wallet-entry-test.testnet";
 const pass = {
@@ -74,7 +75,7 @@ test("budget funding uses exact amounts and a changed cap requires renewed autom
   const input=page.getByRole("textbox",{name:"Service budget (testnet NEAR)"});
   const mint=page.getByRole("button",{name:"Confirm and mint pass"});
   await expect(input).toHaveValue("0.050");
-  await expect(page.getByText("5 purchases at 0.010 NEAR each. Storage is separate.")).toBeVisible();
+  await expect(page.getByText("Current service price: 0.010 NEAR per purchase.")).toBeVisible();
   await input.fill("0.015");
   await expect(input).toHaveAttribute("aria-invalid","true");
   await expect(mint).toBeDisabled();
@@ -129,6 +130,96 @@ test("an omitted ceiling stays null and does not require a price-step budget",as
   await page.getByRole("button",{name:"Confirm and mint pass"}).click();
   await expect.poll(async()=>(await transactions(page)).length).toBe(1);
   expect((await transactions(page))[0].actions[0].params.args).toMatchObject({budget_yocto:"2015000000000000000000000",max_order_price_yocto:null});
+});
+
+test("a new pass explains a ceiling above its budget and revalidates after budget edits",async({page})=>{
+  await setup(page,false,true,true);await page.goto('/app/passes/new');
+  const budget=page.getByRole('textbox',{name:'Service budget (testnet NEAR)'});
+  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  await page.getByRole('checkbox',{name:'Set a per-purchase limit'}).check();
+  const limit=page.getByRole('textbox',{name:'Maximum per purchase (testnet NEAR)'});
+  await expect(limit).toHaveValue('0.010');
+  await limit.fill('0.5');
+  await expect(limit).toHaveAttribute('aria-invalid','true');
+  await expect(page.locator('#order-limit-help')).toContainText('cannot exceed your 0.050 NEAR service budget');
+  await expect(mint).toBeDisabled();
+  await expect(budget).toHaveAttribute('aria-invalid','false');
+  await page.screenshot({path:test.info().outputPath('limit-exceeds-budget-desktop.png')});
+  await page.addScriptTag({content:axe.source});
+  const violations=await page.evaluate(async()=>{
+    const result=await(window as unknown as {axe:typeof axe}).axe.run('.purchase-funding',{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}});
+    return result.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.failureSummary)}));
+  });
+  expect(violations).toEqual([]);
+  await budget.fill('0.5');
+  await expect(limit).toHaveAttribute('aria-invalid','false');
+  await expect(mint).toBeEnabled();
+  await budget.fill('0.05');
+  await expect(limit).toHaveAttribute('aria-invalid','true');
+  await page.getByRole('checkbox',{name:'Set a per-purchase limit'}).uncheck();
+  await expect(mint).toBeEnabled();
+  expect(await transactions(page)).toEqual([]);
+});
+
+test("invalid, zero and below-price purchase limits have actionable field errors",async({page})=>{
+  await setup(page,false,true,true);await page.goto('/app/passes/new');
+  await page.getByRole('checkbox',{name:'Set a per-purchase limit'}).check();
+  const limit=page.getByRole('textbox',{name:'Maximum per purchase (testnet NEAR)'});
+  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  for(const value of ['', '0','-0.1','1e2','0.0100000000000000000000001','0.005']){
+    await limit.fill(value);
+    await expect(limit).toHaveAttribute('aria-invalid','true');
+    await expect(page.locator('#order-limit-help')).toHaveClass('field-error');
+    await expect(mint).toBeDisabled();
+  }
+  await expect(page.locator('#order-limit-help')).toContainText('current 0.010 NEAR service price');
+  await limit.fill('0.050');
+  await expect(limit).toHaveAttribute('aria-invalid','false');
+  await expect(mint).toBeEnabled();
+  expect(await transactions(page)).toEqual([]);
+});
+
+test("service budget errors replace purchase estimates and overflow cannot mint",async({page})=>{
+  await setup(page,false,true,true);await page.goto('/app/passes/new');
+  const budget=page.getByRole('textbox',{name:'Service budget (testnet NEAR)'});
+  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  for(const value of ['', '0', '0.009','-1','1e2','0.0100000000000000000000001','340282366920938.463463374607431768211455']){
+    await budget.fill(value);
+    await expect(budget).toHaveAttribute('aria-invalid','true');
+    await expect(page.locator('#budget-help')).toHaveClass('field-error');
+    await expect(mint).toBeDisabled();
+  }
+  await expect(page.locator('#budget-help')).toContainText('exceed the supported total');
+  await budget.fill('0.5');
+  await expect(page.locator('#budget-help')).toHaveText('Current service price: 0.010 NEAR per purchase.');
+  await expect(page.getByText(/Up to \d+ purchases/)).toHaveCount(0);
+  await expect(mint).toBeEnabled();
+  expect(await transactions(page)).toEqual([]);
+});
+
+test("invalid storage is attributed to storage while a valid service budget stays valid",async({page})=>{
+  await page.setViewportSize({width:375,height:900});
+  await setup(page,false,true,true);await page.goto('/app/passes/new');
+  await page.locator('.funding-storage summary').click();
+  const storage=page.getByRole('textbox',{name:'Storage backing (testnet NEAR)'});
+  const budget=page.getByRole('textbox',{name:'Service budget (testnet NEAR)'});
+  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  for(const value of ['', 'invalid','0.029']){
+    await storage.fill(value);
+    await expect(storage).toHaveAttribute('aria-invalid','true');
+    await expect(budget).toHaveAttribute('aria-invalid','false');
+    await expect(page.locator('#budget-help')).toHaveText('Current service price: 0.010 NEAR per purchase.');
+    await expect(mint).toBeDisabled();
+  }
+  await expect(page.locator('#storage-help')).toContainText('at least 0.030 NEAR');
+  await expect(page.locator('.receipt')).toContainText('Enter valid storage backing');
+  await page.screenshot({path:test.info().outputPath('invalid-storage-mobile.png')});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(375);
+  await storage.fill('0.030');
+  await expect(storage).toHaveAttribute('aria-invalid','false');
+  await expect(page.locator('.amount')).toContainText('0.080');
+  await expect(mint).toBeEnabled();
+  expect(await transactions(page)).toEqual([]);
 });
 test("storage backing is an explicit owner deposit and does not increase service funds",async({page})=>{
   await page.setViewportSize({width:360,height:900});await setup(page,false,true,true);
