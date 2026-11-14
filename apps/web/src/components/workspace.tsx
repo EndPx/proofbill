@@ -321,7 +321,7 @@ export function Workspace() {
     [filter, setFilter] = useState("All"),
     [brief, setBrief] = useState(""),
     [receiver, setReceiver] = useState(""),
-    [hours, setHours] = useState("72"),
+    [expiryMinutes, setExpiryMinutes] = useState("4320"),
     [serviceBudget, setServiceBudget] = useState("0.050"),
     [initialStorage,setInitialStorage]=useState("0.030"),
     [limitEnabled,setLimitEnabled]=useState(false),
@@ -536,10 +536,11 @@ export function Workspace() {
             </>}
             <label className="field">
               Pass expires after
-              <select value={hours} onChange={(e) => setHours(e.target.value)}>
-                <option value="24">24 hours</option>
-                <option value="72">3 days</option>
-                <option value="168">7 days</option>
+              <select value={expiryMinutes} onChange={(e) => setExpiryMinutes(e.target.value)}>
+                <option value="10">10 minutes</option>
+                <option value="1440">24 hours</option>
+                <option value="4320">3 days</option>
+                <option value="10080">7 days</option>
               </select>
             </label>
             {wallet.config.advancedModes && (
@@ -629,7 +630,7 @@ export function Workspace() {
                         ...(wallet.config.budgetPasses ? { budget_yocto: budgetAmount } : {}),
                         ...(wallet.config.flexibleBudgets?{max_order_price_yocto:limitAmount}:{}),
                         expires_at_ns: (
-                          (BigInt(Date.now()) + BigInt(hours) * 3600000n) *
+                          (BigInt(Date.now()) + BigInt(expiryMinutes) * 60000n) *
                           1000000n
                         ).toString(),
                       },

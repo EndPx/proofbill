@@ -132,6 +132,25 @@ test("an omitted ceiling stays null and does not require a price-step budget",as
   expect((await transactions(page))[0].actions[0].params.args).toMatchObject({budget_yocto:"2015000000000000000000000",max_order_price_yocto:null});
 });
 
+test("pass expiry supports ten minutes and preserves the existing durations",async({page})=>{
+  await page.clock.setFixedTime(new Date('2026-11-14T12:00:00.000Z'));
+  await setup(page,false,true,true);await page.goto('/app/passes/new');
+  const expiry=page.getByRole('combobox',{name:'Pass expires after'});
+  await expect(expiry).toHaveValue('4320');
+  for(const [value,expected] of [
+    ['10','1794658200000000000'],
+    ['1440','1794744000000000000'],
+    ['4320','1794916800000000000'],
+    ['10080','1795262400000000000'],
+  ]){
+    await page.goto('/app/passes/new');
+    await expiry.selectOption(value);
+    await page.getByRole('button',{name:'Confirm and mint pass'}).click();
+    await expect.poll(async()=>(await transactions(page)).at(-1)?.actions[0].params.args.expires_at_ns).toBe(expected);
+    await expect(page).toHaveURL(/\/app\/passes$/);
+  }
+});
+
 test("a new pass explains a ceiling above its budget and revalidates after budget edits",async({page})=>{
   await setup(page,false,true,true);await page.goto('/app/passes/new');
   const budget=page.getByRole('textbox',{name:'Service budget (testnet NEAR)'});
