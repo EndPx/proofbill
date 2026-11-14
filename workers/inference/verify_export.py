@@ -9,6 +9,7 @@ from pathlib import Path
 
 import requests
 from inference import MODEL, verify_report, verify_signature
+from tls_binding import HOST, certificate_spki
 
 CONTRACT = "proofbill-endpx-2026.testnet"
 
@@ -75,7 +76,16 @@ async def verify_export(bundle):
         raise ValueError("UNSUPPORTED_VERIFICATION_POLICY")
     preflight = artifacts["preflight"]
     gateway = preflight["gateway"]
-    await verify_report(gateway["response"]["gateway_attestation"], gateway["nonce"], False)
+    report = gateway["response"]["gateway_attestation"]
+    tls = gateway.get("transport")
+    peer = None
+    if tls is not None or report.get("tls_cert_fingerprint") is not None:
+        if not isinstance(tls, dict) or tls.get("kind") != "gateway-same-connection-spki-v1" or tls.get("host") != HOST:
+            raise ValueError("TLS_RECORD_INVALID")
+        peer = certificate_spki(base64.b64decode(tls["peer_certificate_der_base64"], validate=True))
+        if tls.get("peer_spki_sha256") != peer:
+            raise ValueError("TLS_RECORD_INVALID")
+    await verify_report(report, gateway["nonce"], False, peer_spki_sha256=peer)
     model = preflight["model"]
     reports = model["response"].get("model_attestations", [])
     if not reports or any(r.get("model_name") != MODEL for r in reports):
@@ -87,10 +97,12 @@ async def verify_export(bundle):
         "order_id": order["order_id"], "buyer_id": order["buyer_id"],
         "finalized_block_hash": block_hash, "signer": signer,
         "checks": ["onchain commitments", "signed order context", "displayed result bytes",
-                   "response signature", "Intel TDX preflight", "NVIDIA NRAS JWT signatures and claims"],
+                   "response signature", "Intel TDX preflight", "NVIDIA NRAS JWT signatures and claims"]
+                  + (["recorded gateway SPKI/quote binding"] if peer else []),
         "scope": ["Historical response evidence, not a new inference or current deployment attestation.",
                   "Answer quality is not established. The application operator processes plaintext.",
-                  "TLS binding and source-image allowlisting are not checked; NVIDIA signing keys are obtained over HTTPS."],
+                  "A buyer cannot re-observe the worker's historical socket. Legacy exports without a TLS record do not gain a TLS check.",
+                  "Source-image allowlisting is not checked; NVIDIA signing keys are obtained over HTTPS."],
     }
 
 

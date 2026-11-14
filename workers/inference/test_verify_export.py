@@ -183,15 +183,17 @@ class NrasVerificationTests(unittest.TestCase):
     def test_nras_failure_stops_execution_before_completion(self):
         async def check():
             body = json.dumps({"model": MODEL, "stream": False, "max_tokens": 128}).encode()
-            gateway = Mock(); gateway.json.return_value = {"gateway_attestation": {}}
-            model = Mock(); model.json.return_value = {"model_attestations": [{"model_name": MODEL}]}
+            connection = Mock(fingerprint="b"*64)
+            connection.request.side_effect = [json.dumps({"gateway_attestation": {}}), json.dumps({"model_attestations": [{"model_name": MODEL}]})]
+            context = Mock(); context.__enter__ = Mock(return_value=connection); context.__exit__ = Mock(return_value=False)
             with (patch.dict("os.environ", {"NEAR_AI_CLOUD_API_KEY": "fixture-not-a-real-key"}),
-                  patch("inference.requests.get", side_effect=[gateway, model]),
+                  patch("inference.GatewayConnection", return_value=context),
                   patch("inference.verify_report", new=AsyncMock(side_effect=[{}, ValueError("GPU_TOKEN_INVALID")])),
                   patch("inference.requests.post") as completion):
                 with self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
                     await execute({"request_base64": base64.b64encode(body).decode()})
                 completion.assert_not_called()
+                self.assertTrue(all(call.args[0] == "GET" for call in connection.request.call_args_list))
         asyncio.run(check())
 
 
