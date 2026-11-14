@@ -30,10 +30,16 @@ import {
 } from "@proofbill/shared";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const privateHeaders = {
+  "Cache-Control": "private, no-store, max-age=0",
+  "Pragma": "no-cache",
+  "Expires": "0",
+  "Vary": "Cookie",
+};
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: privateHeaders,
   });
 }
 const safeError = (e: unknown) =>
@@ -147,7 +153,7 @@ export async function GET(req: NextRequest, ctx: Context) {
           headers: {
             "Content-Type": "application/json",
             "Content-Disposition": `attachment; filename="proofbill-${id}.json"`,
-            "Cache-Control": "no-store",
+            ...privateHeaders,
           },
         });
       return json({ job: publicJob(job), result: data.result });

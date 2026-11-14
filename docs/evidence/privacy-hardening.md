@@ -19,3 +19,9 @@ Remaining boundaries: HTTPS still supplies trust in NVIDIA's key distribution; g
 The worker now constructs a small allowlisted environment for Python rather than inheriting the entire worker environment and deleting five known secrets. The child receives the NEAR AI key, required OS/locale/cache settings and configured certificate paths. It receives no database credential, artifact-encryption key, agent/publisher/owner key, unrelated future secret, SSH agent socket or Python module-injection setting. User-site imports and bytecode writes are disabled. The parent environment is unchanged; the worker retains its normal database, signing and encrypted-persistence responsibilities.
 
 Two unit tests verify the exact inherited set, omission of synthetic secret markers and preservation of Windows variable casing. This limits unnecessary credential exposure to the subprocess; it is not an OS sandbox or protection against the application operator.
+
+## Protect browser/API delivery
+
+API JSON responses and authenticated evidence downloads share private/no-store/max-age=0, legacy no-cache/expiry headers and a Cookie cache variant. The same protections apply to authentication refusals and errors. Workspace/API routes suppress referrer transmission, disable content sniffing and deny framing. No script/connect-source restriction or cross-window isolation header is introduced, preserving the existing wallet-connection mechanism. Public receipt pages remain outside the wallet gate.
+
+Two production-build browser tests check session/private/export refusal headers, cross-origin job refusal without echoing a synthetic brief, anonymous job refusal, workspace frame protection and anonymous public receipt access. The full wallet/policy/preview/receipt regression suite remains the compatibility check; this is browser response protection, not end-to-end encryption.
