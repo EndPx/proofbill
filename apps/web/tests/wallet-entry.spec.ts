@@ -72,9 +72,10 @@ test("restored connection survives refresh and disconnect closes the workspace",
   await expect(page.locator(".app-shell")).toBeVisible();
   await page
     .getByRole("button", {
-      name: "Account wallet-entry-test.testnet; disconnect",
+      name: "Account wallet-entry-test.testnet; open options",
     })
     .click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Connect to continue" }),
   ).toBeVisible();

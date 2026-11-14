@@ -16,13 +16,11 @@ import {
   Bot,
   Check,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   ExternalLink,
   FileText,
   KeyRound,
   LoaderCircle,
-  LogOut,
   Plus,
   ReceiptText,
   RefreshCw,
@@ -31,7 +29,6 @@ import {
   ShoppingCart,
   Ticket,
   TriangleAlert,
-  UserRound,
   XCircle,
 } from "lucide-react";
 import {
@@ -54,6 +51,7 @@ import {
 } from "@proofbill/shared";
 import { api, useWallet } from "./wallet";
 import { WalletBalance, useWalletBalance } from "./wallet-balance";
+import { AccountMenu } from "./account-menu";
 type Job = { order_id: string; state: string; error_code: string | null };
 type OrderDetail = {
   order: PurchaseOrder | null;
@@ -1535,34 +1533,7 @@ export function Workspace() {
           >
             Project & documentation <ArrowUpRight size={15} />
           </a>
-          <button
-            className="account-card"
-            aria-label={
-              wallet.account
-                ? `Account ${wallet.account}; disconnect`
-                : "Connect wallet"
-            }
-            onClick={() =>
-              void run(
-                "Account",
-                wallet.account ? wallet.disconnect : wallet.connect,
-              )
-            }
-            disabled={!!busy}
-          >
-            <span className="avatar">
-              <UserRound size={20} />
-            </span>
-            <span>
-              <strong>{wallet.account || "Connect wallet"}</strong>
-              <small>
-                {wallet.account
-                  ? "NEAR testnet account"
-                  : "Start your first purchase"}
-              </small>
-            </span>
-            {wallet.account ? <LogOut size={16} /> : <ChevronDown size={16} />}
-          </button>
+          <AccountMenu funds={walletFunds} disabled={!!busy} onDisconnect={() => void run("Signing out", wallet.disconnect)} />
         </div>
       </aside>
       <div className="content-sheet">

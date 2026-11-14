@@ -107,7 +107,8 @@ test("disconnect while a signature is pending invalidates its completion", async
   await expect(page.getByRole("button",{name:"Signing in…",exact:true})).toBeDisabled();
   await expect.poll(() => messages(page).then(m => m.length)).toBe(1);
   await page.screenshot({path:test.info().outputPath("private-signin-pending-mobile.png")});
-  await page.getByRole("button",{name:`Account ${owner}; disconnect`}).click();
+  await page.getByRole("button",{name:`Account ${owner}; open options`}).click();
+  await page.getByRole("button",{name:"Sign out",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Connect to continue"})).toBeVisible();
   await page.evaluate(() => (window as unknown as {proofbillResolveMessage:()=>void}).proofbillResolveMessage());
   // Flush the resumed signature handler; it must not reach auth/verify.
