@@ -63,6 +63,8 @@ For developers and small teams running paid-API agents: fund one NFT budget, ass
 
 **Scope:** hosted **NEAR testnet MVP**; project-owned accounts and synthetic briefs. One fixed service, seller and model today. No independent user pilot, audit or mainnet-readiness claim.
 
+Read the [product guides and technical reference](docs/gitbook/introduction/overview.md). The GitBook source includes the user workflow, data model, verification scope, and deployment addresses.
+
 <details>
 <summary>Product screenshots — desktop and mobile</summary>
 

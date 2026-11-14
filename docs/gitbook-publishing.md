@@ -2,6 +2,16 @@
 
 The English source is `docs/gitbook`. `SUMMARY.md` supplies seven native page groups and nested Overview children. The root `.gitbook.yaml` points Git Sync at that directory. Existing engineering/evidence docs remain outside the public GitBook navigation.
 
+## Hosted status checked 15 November 2026, Asia/Jakarta
+
+The new ProofBill space and Basic site were created in the existing SAMA organization. Git Sync to `EndPx/proofbill`, branch `main`, completed successfully in the Git-to-GitBook direction. API inspection confirmed 31 document pages, seven native groups, nested guides, and Home's hidden title/sidebar/pagination settings. The generated cover also rendered in the authenticated editor.
+
+Native customization was saved with the Clean theme, rounded corners, charcoal tint, Inter, green `#08623C` in light mode and mint `#51E79C` in dark mode, and a light/dark toggle. Logo/favicon URLs were configured. The site remains Basic; no paid plan was purchased. Configuration read-back is not a substitute for verifying all theme features in a public render.
+
+Publication is **not complete**. The API and authenticated editor both returned `Request blocked for security reasons`, and the owner reported the same result when clicking Publish manually. The provider did not give a more specific reason. Do not present the intended slug or an editor/preview link as a live public documentation URL, and do not bypass the provider restriction. Recheck publication after GitBook resolves the restriction.
+
+An isolated attempt to render the temporary preview did not reach the expected Home heading, so desktop/mobile published-site visual acceptance remains unverified. The source, imported structure, editor Home, and assets are available; they do not establish a public release.
+
 ## Source and hosting
 
 Connect the existing `EndPx/proofbill` repository, branch `main`, to the new ProofBill space. For a fresh connection, the initial direction is **Git → GitBook**. The authored repository is the source; importing GitBook's blank/template content into Git could overwrite it. The official MCP supports space/site creation and content editing, but its guide states that Git Sync wiring is configured in the GitBook app.
