@@ -72,7 +72,7 @@ export default function ReviewPage() {
         <p>Public receipts expose onchain payment facts and commitments. Private results require the historical buyer's signed session and are encrypted at rest. A buyer can export their own evidence and independently check committed bytes, signed order context and scoped provider TEE evidence.</p>
         <div className={styles.boundary}>
           <h3>The trust boundary stays visible.</h3>
-          <p>The app operator processes plaintext. The contract trusts its configured publisher and does not verify hardware evidence onchain. Signature checks do not establish answer quality. TLS binding, source-image allowlisting and local NRAS JWT-chain validation remain unchecked.</p>
+          <p>The app operator processes plaintext. The contract trusts its configured publisher and does not verify hardware evidence onchain. Signature checks do not establish answer quality. The current verifier checks NRAS JWT signatures and claims against NVIDIA's HTTPS signing keys; TLS binding and source-image allowlisting remain unchecked. Older stored deliveries keep their original check labels and scope.</p>
         </div>
         <div className={styles.actions}>
           <a href={`${source}/docs/verify-private-result.md`}>Run buyer-side verification</a>

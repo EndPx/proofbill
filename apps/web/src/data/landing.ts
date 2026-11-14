@@ -56,7 +56,7 @@ export const landing = {
     {
       question: "Does verified evidence mean the AI answer is correct?",
       answer:
-        "No. Response signatures and attestation checks help establish response integrity and its stated execution context. They do not guarantee answer accuracy. ProofBill's operator handles plaintext, and its offchain evidence publisher remains trusted. The current policy does not check TLS binding, a source-image allowlist or the NRAS JWT chain locally.",
+        "No. Response signatures and attestation checks help establish response integrity and its stated execution context. They do not guarantee answer accuracy. ProofBill's operator handles plaintext, and its offchain evidence publisher remains trusted. The current verifier checks NRAS JWT signatures and claims against NVIDIA's HTTPS signing keys. TLS binding and a source-image allowlist remain unchecked. Older deliveries keep their original check labels and scope.",
     },
     {
       question: "Can I transfer or refund a pass?",
