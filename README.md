@@ -30,6 +30,21 @@
 
 Actual NEAR testnet payment, captured 14 November 2026: **0.010 NEAR paid**, with the pass's separate **0.015 unused service budget refunded**. [Open the public receipt](https://proofbill-two.vercel.app/receipts/pass-14-order-1) or [inspect the recorded run](docs/evidence/tls-image-policy.md#hosted-rollout-and-actual-private-order). The buyer's private result is not pictured.
 
+## One complete onchain cycle
+
+**`pass-15` · `endpx.testnet` · Manual payment:** 0.050 NEAR service budget, 0.010 NEAR paid to the seller, and 0.040 NEAR refunded. The separate 0.030 NEAR initial storage backing and transaction gas are excluded from service refunds. All six transactions below were checked through finalized RPC outcomes; the order remains **Paid** and its budget pass is **Refunded**. This pass had a three-day expiry, not the later ten-minute example.
+
+| Stage | Full transaction hash · NEAR testnet |
+| --- | --- |
+| Mint the NFT budget | [`6L1tB2vz3bd2LouEZxzhuwL5ofBAUED4WogFG6ZNPmKk`](https://testnet.nearblocks.io/txns/6L1tB2vz3bd2LouEZxzhuwL5ofBAUED4WogFG6ZNPmKk) |
+| Assign the agent with Manual payment | [`G6yvWtf6pGfw8UaiUmCesqHRiQ6PMxFffYpgTGbYRyCd`](https://testnet.nearblocks.io/txns/G6yvWtf6pGfw8UaiUmCesqHRiQ6PMxFffYpgTGbYRyCd) |
+| Reserve `pass-15-order-1` | [`3Qf3YdBJVdJ3oa1HKhMoyZdZeaMSNeC37g46DFcSa2pc`](https://testnet.nearblocks.io/txns/3Qf3YdBJVdJ3oa1HKhMoyZdZeaMSNeC37g46DFcSa2pc) |
+| Publish delivery commitments | [`24DG2teh6bqttiiUQf6qagTmmLcFz1TStV99EUVcdrP9`](https://testnet.nearblocks.io/txns/24DG2teh6bqttiiUQf6qagTmmLcFz1TStV99EUVcdrP9) |
+| Approve and confirm the 0.010 NEAR seller payment | [`6HUfeMGJJ5LqW7ZGSth2iNHvPjdSvcnVnh8YpEAsvf3m`](https://testnet.nearblocks.io/txns/6HUfeMGJJ5LqW7ZGSth2iNHvPjdSvcnVnh8YpEAsvf3m) |
+| Refund the remaining 0.040 NEAR service budget | [`9sWy1ePRkPpSD6ivCnraPaULKDcYohP4JTzA78Qoh6Jv`](https://testnet.nearblocks.io/txns/9sWy1ePRkPpSD6ivCnraPaULKDcYohP4JTzA78Qoh6Jv) |
+
+[Open this cycle's public receipt](https://proofbill-two.vercel.app/receipts/pass-15-order-1) · [Public RPC evidence](docs/evidence/integration/pass-15-cycle.json). The NFT uses NEP-171 core methods; its identity is the contract account plus token ID, rather than an independent wallet address. Public financial evidence does not disclose the private brief or result and is not a source-verification badge or security audit.
+
 ## Why ProofBill
 
 An agent can call a paid API, but its owner still needs to answer: **what did I authorize, what did I receive, and who got paid?** ProofBill connects those three records in one purchase flow.

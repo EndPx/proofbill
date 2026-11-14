@@ -1,0 +1,213 @@
+{
+  "checked_at": "2026-11-14T21:47:58.417Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "block_hash": "C8m6v9uLXHSEb3bsgQEhbVQkn8mjJef2f2vbcdLCNNL3",
+  "block_height": 277714465,
+  "token_id": "pass-15",
+  "buyer_id": "endpx.testnet",
+  "order_id": "pass-15-order-1",
+  "order_phase": "Paid",
+  "pass_phase": "Refunded",
+  "payment_mode": "Manual",
+  "max_order_price_yocto": null,
+  "budget": {
+    "funded_yocto": "50000000000000000000000",
+    "available_yocto": "0",
+    "reserved_yocto": "0",
+    "spent_yocto": "10000000000000000000000",
+    "refunded_yocto": "40000000000000000000000",
+    "orders_created": 1
+  },
+  "transactions": [
+    {
+      "stage": "Mint NFT budget",
+      "hash": "6L1tB2vz3bd2LouEZxzhuwL5ofBAUED4WogFG6ZNPmKk",
+      "signer": "endpx.testnet",
+      "method": "create_flexible_budget_pass",
+      "success": true,
+      "events": [
+        {
+          "standard": "nep171",
+          "version": "1.0.0",
+          "event": "nft_mint",
+          "data": [
+            {
+              "owner_id": "endpx.testnet",
+              "token_ids": [
+                "pass-15"
+              ],
+              "memo": "Funded purchase entitlement"
+            }
+          ]
+        },
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "pass_created",
+          "data": [
+            {
+              "token_id": "pass-15",
+              "owner_id": "endpx.testnet"
+            }
+          ]
+        },
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "budget_funded",
+          "data": [
+            {
+              "token_id": "pass-15",
+              "amount_yocto": "50000000000000000000000"
+            }
+          ]
+        }
+      ],
+      "explorer": "https://testnet.nearblocks.io/txns/6L1tB2vz3bd2LouEZxzhuwL5ofBAUED4WogFG6ZNPmKk"
+    },
+    {
+      "stage": "Assign agent and Manual policy",
+      "hash": "G6yvWtf6pGfw8UaiUmCesqHRiQ6PMxFffYpgTGbYRyCd",
+      "signer": "endpx.testnet",
+      "method": "configure_budget_agent",
+      "success": true,
+      "events": [
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "pass_authorized",
+          "data": [
+            {
+              "token_id": "pass-15",
+              "owner_id": "endpx.testnet",
+              "agent_id": "agent.proofbill-endpx-2026.testnet",
+              "revision": 1,
+              "payment_mode": "Manual"
+            }
+          ]
+        }
+      ],
+      "explorer": "https://testnet.nearblocks.io/txns/G6yvWtf6pGfw8UaiUmCesqHRiQ6PMxFffYpgTGbYRyCd"
+    },
+    {
+      "stage": "Reserve order",
+      "hash": "3Qf3YdBJVdJ3oa1HKhMoyZdZeaMSNeC37g46DFcSa2pc",
+      "signer": "agent.proofbill-endpx-2026.testnet",
+      "method": "reserve_order",
+      "success": true,
+      "events": [
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "order_reserved",
+          "data": [
+            {
+              "order_id": "pass-15-order-1"
+            }
+          ]
+        }
+      ],
+      "explorer": "https://testnet.nearblocks.io/txns/3Qf3YdBJVdJ3oa1HKhMoyZdZeaMSNeC37g46DFcSa2pc"
+    },
+    {
+      "stage": "Publish delivery",
+      "hash": "24DG2teh6bqttiiUQf6qagTmmLcFz1TStV99EUVcdrP9",
+      "signer": "publisher.proofbill-endpx-2026.testnet",
+      "method": "publish_delivery",
+      "success": true,
+      "events": [
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "delivery_published",
+          "data": [
+            {
+              "order_id": "pass-15-order-1"
+            }
+          ]
+        }
+      ],
+      "explorer": "https://testnet.nearblocks.io/txns/24DG2teh6bqttiiUQf6qagTmmLcFz1TStV99EUVcdrP9"
+    },
+    {
+      "stage": "Approve and pay",
+      "hash": "6HUfeMGJJ5LqW7ZGSth2iNHvPjdSvcnVnh8YpEAsvf3m",
+      "signer": "endpx.testnet",
+      "method": "approve_and_pay",
+      "success": true,
+      "events": [
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "payment_started",
+          "data": [
+            {
+              "order_id": "pass-15-order-1",
+              "attempt": 1
+            }
+          ]
+        },
+        {
+          "standard": "nep171",
+          "version": "1.2.0",
+          "event": "nft_metadata_update",
+          "data": [
+            {
+              "token_ids": [
+                "pass-15"
+              ]
+            }
+          ]
+        },
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "payment_succeeded",
+          "data": [
+            {
+              "order_id": "pass-15-order-1",
+              "attempt": 1,
+              "amount_yocto": "10000000000000000000000"
+            }
+          ]
+        }
+      ],
+      "explorer": "https://testnet.nearblocks.io/txns/6HUfeMGJJ5LqW7ZGSth2iNHvPjdSvcnVnh8YpEAsvf3m"
+    },
+    {
+      "stage": "Refund remaining service budget",
+      "hash": "9sWy1ePRkPpSD6ivCnraPaULKDcYohP4JTzA78Qoh6Jv",
+      "signer": "endpx.testnet",
+      "method": "cancel_and_refund",
+      "success": true,
+      "events": [
+        {
+          "standard": "nep171",
+          "version": "1.2.0",
+          "event": "nft_metadata_update",
+          "data": [
+            {
+              "token_ids": [
+                "pass-15"
+              ]
+            }
+          ]
+        },
+        {
+          "standard": "proofbill",
+          "version": "1.0.0",
+          "event": "refund_succeeded",
+          "data": [
+            {
+              "token_id": "pass-15",
+              "attempt": 1
+            }
+          ]
+        }
+      ],
+      "explorer": "https://testnet.nearblocks.io/txns/9sWy1ePRkPpSD6ivCnraPaULKDcYohP4JTzA78Qoh6Jv"
+    }
+  ],
+  "scope": "Finalized public chain state and successful transaction receipts. This record contains no private brief, result, salt, provider evidence, or credential. It establishes this completed cycle, not source-code verification or a security audit."
+}
