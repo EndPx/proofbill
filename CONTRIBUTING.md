@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The landing page and wallet entry can be inspected without production credentials. A complete purchase requires your own database, artifact-encryption key, testnet contract and operational accounts, and funded NEAR AI API access. Follow the [full setup in the README](README.md#local-development). Do not reuse deployment keys from another environment.
+The landing page and wallet entry can be inspected without production credentials. A complete purchase requires your own database, artifact-encryption key, testnet contract and operational accounts, and funded NEAR AI API access. Follow the [complete service setup](docs/development.md#local-development). Do not reuse deployment keys from another environment.
 
 ## Check a change
 
