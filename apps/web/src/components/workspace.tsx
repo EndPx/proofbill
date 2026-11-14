@@ -688,10 +688,10 @@ export function Workspace() {
                 <dt>Seller</dt>
                 <dd><AccountLink id={pass.seller_id} /></dd>
               </div>
-              <div>
-                <dt>Price per order</dt>
+              {!pass.budget && <div>
+                <dt>Service allocation</dt>
                 <dd>{formatNear(pass.price_yocto)} testnet NEAR</dd>
-              </div>
+              </div>}
               {pass.budget && Object.entries({Funded:pass.budget.funded_yocto, Available:pass.budget.available_yocto, Reserved:pass.budget.reserved_yocto, Spent:pass.budget.spent_yocto, Refunded:pass.budget.refunded_yocto}).map(([label, amount]) => (
                 <div key={label}><dt>{label} service budget</dt><dd>{formatNear(amount)} testnet NEAR</dd></div>
               ))}
