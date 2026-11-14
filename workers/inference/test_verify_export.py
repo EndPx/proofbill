@@ -1,13 +1,20 @@
+import asyncio
 import base64
 import copy
 import hashlib
 import json
+import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
+
+import jwt
+import requests
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from eth_account import Account
 from eth_account.messages import encode_defunct
-from inference import MODEL, verify_signature
+from inference import MODEL, execute, verify_signature
+from nras import ISSUER, JWKS_URL, verify_nras_response
 from verify_export import commitment, read_order, validate_export
 
 
@@ -90,6 +97,102 @@ class BuyerVerificationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "INVALID_ORDER_ID"):
                     read_order(order_id)
                 post.assert_not_called()
+
+
+class NrasVerificationTests(unittest.TestCase):
+    def setUp(self):
+        self.key = ec.generate_private_key(ec.SECP384R1())
+        self.jwk = {**json.loads(jwt.algorithms.ECAlgorithm.to_jwk(self.key.public_key())), "kid": "fixture-key"}
+        now = int(time.time())
+        self.nonce = "a" * 64
+        self.claims = {"iss": ISSUER, "iat": now - 1, "nbf": now - 1, "exp": now + 300,
+                       "eat_nonce": self.nonce}
+        self.http = Mock(status_code=200, content=b"{}")
+        self.http.json.return_value = {"keys": [self.jwk]}
+
+    def token(self, claims, key=None, headers=None):
+        return jwt.encode(claims, key or self.key, algorithm="ES384",
+                          headers={"kid": "fixture-key", **(headers or {})})
+
+    def response(self, changes=None, gpu_changes=None):
+        gpu = self.token({**self.claims, **(gpu_changes or {})})
+        overall = {**self.claims, "sub": "NVIDIA-PLATFORM-ATTESTATION", "x-nvidia-overall-att-result": True,
+                   "submods": {"GPU-0": ["DIGEST", ["SHA-256", hashlib.sha256(gpu.encode()).hexdigest()]]},
+                   **(changes or {})}
+        return [["JWT", self.token(overall)], {"GPU-0": gpu}]
+
+    def verify(self, response, nonce=None):
+        with patch("nras.requests.get", return_value=self.http) as get:
+            result = verify_nras_response(response, nonce or self.nonce)
+            get.assert_called_once_with(JWKS_URL, timeout=15, allow_redirects=False)
+            return result
+
+    def test_signed_overall_and_bound_gpu_tokens_pass(self):
+        self.assertTrue(all(self.verify(self.response()).values()))
+
+    def test_untrusted_claims_are_rejected_even_with_a_valid_signature(self):
+        now = int(time.time())
+        cases = [{"iss": "https://attacker.invalid"}, {"iss": ISSUER + "/attacker"},
+                 {"eat_nonce": "b" * 64}, {"exp": now - 1}, {"iat": now + 300},
+                 {"nbf": now + 300}, {"iat": str(now - 1)}, {"sub": "OTHER"},
+                 {"x-nvidia-overall-att-result": False}, {"x-nvidia-overall-att-result": "true"}]
+        for changes in cases:
+            with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+                self.verify(self.response(changes))
+        for name in ("iss", "iat", "nbf", "exp", "eat_nonce"):
+            response = self.response()
+            claims = jwt.decode(response[0][1], options={"verify_signature": False})
+            del claims[name]
+            response[0][1] = self.token(claims)
+            with self.subTest(missing=name), self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+                self.verify(response)
+
+    def test_forgery_algorithm_confusion_and_unknown_keys_are_rejected(self):
+        response = self.response()
+        claims = jwt.decode(response[0][1], options={"verify_signature": False})
+        tokens = [self.token(claims, key=ec.generate_private_key(ec.SECP384R1())),
+                  self.token(claims, headers={"kid": "unknown", "jku": "https://attacker.invalid/keys"}),
+                  jwt.encode(claims, "attacker" * 8, algorithm="HS256", headers={"kid": "fixture-key"}),
+                  jwt.encode(claims, None, algorithm="none"), "PRIVATE_MARKER_NOT_A_TOKEN"]
+        for token in tokens:
+            with self.subTest(token_kind=token[:8]), self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+                self.verify([["JWT", token], response[1]])
+
+    def test_detached_gpu_tokens_cannot_be_replaced_removed_or_replayed(self):
+        response = self.response()
+        altered = copy.deepcopy(response)
+        altered[1]["GPU-0"] = self.token({**self.claims, "extra": "changed"})
+        for value in (altered, [response[0], {}], [response[0], {"GPU-other": response[1]["GPU-0"]}],
+                      self.response(gpu_changes={"eat_nonce": "b" * 64}),
+                      self.response(gpu_changes={"exp": int(time.time()) - 1})):
+            with self.subTest(), self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+                self.verify(value)
+
+    def test_key_fetch_failure_and_ambiguous_keys_fail_closed(self):
+        for keys in ([], [self.jwk, self.jwk], [{**self.jwk, "crv": "P-256"}], [{**self.jwk, "use": "enc"}]):
+            self.http.json.return_value = {"keys": keys}
+            with self.subTest(keys=len(keys)), self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+                self.verify(self.response())
+        self.http.status_code = 302
+        with self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+            self.verify(self.response())
+        with patch("nras.requests.get", side_effect=requests.Timeout("PRIVATE_MARKER")):
+            with self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+                verify_nras_response(self.response(), self.nonce)
+
+    def test_nras_failure_stops_execution_before_completion(self):
+        async def check():
+            body = json.dumps({"model": MODEL, "stream": False, "max_tokens": 128}).encode()
+            gateway = Mock(); gateway.json.return_value = {"gateway_attestation": {}}
+            model = Mock(); model.json.return_value = {"model_attestations": [{"model_name": MODEL}]}
+            with (patch.dict("os.environ", {"NEAR_AI_CLOUD_API_KEY": "fixture-not-a-real-key"}),
+                  patch("inference.requests.get", side_effect=[gateway, model]),
+                  patch("inference.verify_report", new=AsyncMock(side_effect=[{}, ValueError("GPU_TOKEN_INVALID")])),
+                  patch("inference.requests.post") as completion):
+                with self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
+                    await execute({"request_base64": base64.b64encode(body).decode()})
+                completion.assert_not_called()
+        asyncio.run(check())
 
 
 if __name__ == "__main__":

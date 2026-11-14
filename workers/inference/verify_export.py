@@ -87,10 +87,10 @@ async def verify_export(bundle):
         "order_id": order["order_id"], "buyer_id": order["buyer_id"],
         "finalized_block_hash": block_hash, "signer": signer,
         "checks": ["onchain commitments", "signed order context", "displayed result bytes",
-                   "response signature", "Intel TDX preflight", "NVIDIA NRAS HTTPS result"],
+                   "response signature", "Intel TDX preflight", "NVIDIA NRAS JWT signatures and claims"],
         "scope": ["Historical response evidence, not a new inference or current deployment attestation.",
                   "Answer quality is not established. The application operator processes plaintext.",
-                  "TLS binding, source-image allowlisting and local NRAS JWT-chain verification are not checked."],
+                  "TLS binding and source-image allowlisting are not checked; NVIDIA signing keys are obtained over HTTPS."],
     }
 
 

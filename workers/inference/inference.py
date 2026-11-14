@@ -6,6 +6,7 @@ import dcap_qvl
 import requests
 from eth_account import Account
 from eth_account.messages import encode_defunct
+from nras import verify_nras_response
 
 BASE='https://cloud-api.near.ai/v1'
 MODEL='Qwen/Qwen3.8-27B'
@@ -30,9 +31,8 @@ async def verify_report(report, nonce, gpu_required):
     if gpu_required:
         payload=parsed(report['nvidia_payload'])
         r=requests.post('https://nras.attestation.nvidia.com/v3/attest/gpu',json=payload,timeout=40);r.raise_for_status();gpu_response=r.json()
-        if gpu_response[0][0]!='JWT': raise ValueError('GPU_EVIDENCE_UNAVAILABLE')
-        claims=json.loads(base64.urlsafe_b64decode(gpu_response[0][1].split('.')[1]+'==='))
-        checks.update({'gpu_request_nonce':payload['nonce']==nonce,'gpu_result_nonce':claims.get('eat_nonce')==nonce,'gpu_accepted':claims.get('x-nvidia-overall-att-result') is True})
+        authenticated_gpu=verify_nras_response(gpu_response,nonce)
+        checks.update({'gpu_request_nonce':payload['nonce']==nonce,**{'gpu_jwt_'+name:passed for name,passed in authenticated_gpu.items()}})
     if not all(checks.values()): raise ValueError('PREFLIGHT_CHECK_FAILED')
     return {'signing_address':report['signing_address'],'signing_algo':report['signing_algo'],'checks':checks,'verified_at':stamp(),'nras_response':gpu_response}
 
@@ -80,8 +80,8 @@ async def execute(payload):
     if text.startswith('```'): text=text.split('\n',1)[1].rsplit('```',1)[0].strip()
     output=json.loads(text)
     if not isinstance(output,dict) or not all(k in output for k in ('item','quantity','requested_by')): raise ValueError('RESULT_FORMAT_INVALID')
-    checks=[{'name':'Response bytes match','state':'passed'},{'name':'Model signature matched','state':'passed'},{'name':'Intel TDX preflight','state':'passed'},{'name':'NVIDIA GPU evidence','state':'passed'},{'name':'TLS connection binding','state':'not_checked'},{'name':'Source-image allowlist','state':'not_checked'}]
-    scope=['Integrity and matched attested signer do not establish answer accuracy.','The application operator processes plaintext.','NRAS result is trusted through authenticated HTTPS; its JWT chain is not locally validated.']
+    checks=[{'name':'Response bytes match','state':'passed'},{'name':'Model signature matched','state':'passed'},{'name':'Intel TDX preflight','state':'passed'},{'name':'NVIDIA GPU evidence','state':'passed'},{'name':'NRAS JWT signatures and claims','state':'passed'},{'name':'TLS connection binding','state':'not_checked'},{'name':'Source-image allowlist','state':'not_checked'}]
+    scope=['Integrity and matched attested signer do not establish answer accuracy.','The application operator processes plaintext.','NRAS JWT signatures, issuer, validity, nonce and GPU bindings are checked against NVIDIA HTTPS JWKS; TLS binding and source-image allowlisting remain unchecked.']
     return {'ok':True,'result':{'output':output,'checks':checks,'scope':scope,'model':MODEL},'artifacts':{'request_base64':payload['request_base64'],'response_base64':base64.b64encode(raw).decode(),'preflight':preflight,'verified_preflight':{'gateway':gateway,'models':models},'completion_started_at':completion_started,'signature':signature,'signer':signer,'usage':completion.get('usage')},'signature_kind':'provider_tee'}
 
 if __name__=='__main__':

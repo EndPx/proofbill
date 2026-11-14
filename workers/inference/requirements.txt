@@ -1,3 +1,4 @@
 dcap-qvl==0.7.1
 requests==2.34.2
 eth-account==0.14.0
+PyJWT[crypto]==2.15.1

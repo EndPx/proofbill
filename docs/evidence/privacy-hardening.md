@@ -1,0 +1,15 @@
+# Privacy hardening without a financial protocol change
+
+Checked 14 November 2026, Asia/Jakarta. These changes keep the NFT, payment methods, order IDs, encrypted artifact format and publisher policy identifier intact. They do not make the application operator blind to plaintext or move TEE verification onchain.
+
+## Authenticate NVIDIA results locally
+
+Previously, the worker decoded the overall NRAS JWT through authenticated HTTPS and checked its nonce/result without local JWT signature verification. The updated shared Python verification path uses pinned PyJWT and ES384, NVIDIA's [official fixed JWKS endpoint](https://docs.api.nvidia.com/attestation/reference/keys), required issuer/time/nonce checks and SHA-256 binding of all detached GPU tokens. Both overall and per-GPU JWT signatures must verify. Attacker-supplied key URLs are ignored; redirects, missing/ambiguous keys and invalid tokens fail closed with a fixed error code.
+
+The worker applies this check during preflight before requesting a completion. The buyer-run verifier applies it when independently checking a saved export. Historical encrypted exports and their commitment bytes are unchanged. New deliveries include an explicit NRAS JWT check; old saved check labels are not upgraded retroactively.
+
+Validation: fifteen Python tests with adversarial subcases passed locally, including signature forgery, HS256/none algorithm confusion, altered issuer/nonce, expiry/future timestamps, missing claims, substituted/removed GPU tokens, key-fetch failure and preflight refusal before inference. Mocked fixtures establish parser/cryptographic refusal behavior, not actual hardware execution.
+
+A separate non-billable network check resubmitted the already-public synthetic probe's NVIDIA hardware payload to NRAS, then verified the resulting overall and eight per-GPU JWTs against NVIDIA's live HTTPS JWKS. Signatures, issuer/time, nonce and detached-token digests passed. This ran no model completion, used no application/provider credential and signed no blockchain transaction. It is NRAS re-verification of recorded hardware evidence, not a fresh deployment attestation or a new paid private purchase.
+
+Remaining boundaries: HTTPS still supplies trust in NVIDIA's key distribution; gateway TLS certificate binding and source-image allowlisting are not implemented. Operator plaintext access and the trusted offchain publisher remain unchanged. See [buyer verification](../verify-private-result.md) for the current verification scope.
