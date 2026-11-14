@@ -56,9 +56,10 @@ test("cancelled connection can be retried and resumes the original destination",
   ).toBeVisible();
   await expect(page).toHaveURL(/\/app\/passes\/new$/);
   await expect(
-    page.getByRole("button", { name: "Unlock private session" }),
+    page.getByRole("button", { name: "Sign in for private access" }),
   ).toBeVisible();
-  expect(authRequests).toEqual([]);
+  await expect(page.getByText(/Your wallet is connected, but private sign-in was not completed/)).toBeVisible();
+  expect(authRequests.map(url => new URL(url).pathname)).toEqual(["/api/auth/challenge"]);
 });
 
 test("restored connection survives refresh and disconnect closes the workspace", async ({

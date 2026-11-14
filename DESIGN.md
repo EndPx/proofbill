@@ -38,6 +38,8 @@ Administrator trust uses one shared copy source in the public FAQ, /review#revie
 
 All `/app` routes first show a wallet entry screen using the existing charcoal frame, rounded white sheet, primary button and bordered panel. Restore an existing connection before deciding which screen to mount; do not flash the workspace while disconnected. Keep the requested route so connection resumes at the intended pass or receipt. Disconnect returns to the entry screen. Connection grants workspace access; a separate signed message still authorizes private reads. Loading, connection failure and wallet cancellation must leave a usable entry screen with a retry or return-home action.
 
+An explicit new connection continues directly to NEP-413 private sign-in, reusing a matching valid server session when available. Explain the message step before connecting and show a pending status inside the workspace. Cancelling or failing the message leaves the wallet connected, with a persistent explanation and Sign in for private access retry action. Restoring a connection on reload only checks the existing session; do not automatically prompt on reload or poll. In-flight sign-in and stale session reads cannot authenticate a disconnected or different account. Sign-in never submits a transaction or changes a payment policy.
+
 ## 8. Verification
 
 One desktop/mobile visual pass, keyboard focus and actual financial pending/error states. Match the approved shell; no redesign loop before the purchase journey works. Check production excludes development instrumentation.

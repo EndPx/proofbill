@@ -90,7 +90,7 @@ The service extracts **item, quantity and requester** from a brief using `Qwen/Q
 | --- | --- | --- |
 | **1 · Explore** | [Public review journey](https://proofbill-two.vercel.app/review) | Budget → both payment policies → handover/refund. No wallet required. |
 | **2 · Verify** | [Latest Manual receipt](https://proofbill-two.vercel.app/receipts/pass-14-order-1) · [seller transfer](https://testnet.nearblocks.io/txns/uYPUF6hYh58y6b5b39ZAh2abi7KAJxadqm1QzkLK6nj) | Receipt facts match the confirmed 0.010 testnet NEAR payment. |
-| **3 · Try** | [Create a pass](https://proofbill-two.vercel.app/app/passes/new) | Use your own funded testnet wallet; choose budget, limit, agent and policy. Sign a buyer session to open private results. |
+| **3 · Try** | [Create a pass](https://proofbill-two.vercel.app/app/passes/new) | Connect your funded testnet wallet, then sign the gas-free login message. Choose budget, limit, agent and policy. Cancelling login leaves a retry action; existing valid sessions are reused. |
 | **4 · Reproduce** | [Development guide](docs/development.md) · [own-agent setup](docs/agent-integration.md) | Local checks and the prerequisites for your own full purchase. |
 
 The [landing preview](https://proofbill-two.vercel.app) is a wallet-free simulation. Trying the real app requires funding and wallet transactions; operator inference credits are separate.

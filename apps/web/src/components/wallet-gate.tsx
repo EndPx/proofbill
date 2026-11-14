@@ -75,7 +75,7 @@ export function WalletGate({ children }: { children: ReactNode }) {
             <KeyRound size={28} />
           </span>
           <h2 id="wallet-entry-title">Connect to continue</h2>
-          <p>Choose your wallet to open your purchase workspace.</p>
+          <p>Choose your wallet, then sign a message to open your private session. Signing in costs no gas and grants no spending permission.</p>
           {message && (
             <p className="wallet-entry-error" role="alert">
               {message}

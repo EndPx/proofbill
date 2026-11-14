@@ -39,6 +39,8 @@ interface WalletState {
   ready: boolean;
   connectionError: string;
   authenticated: boolean;
+  authenticating: boolean;
+  authenticationError: string;
   config: Config;
   connect: () => Promise<void>;
   authenticate: () => Promise<void>;
@@ -52,10 +54,15 @@ interface WalletState {
 const Context = createContext<WalletState | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const connector = useRef<NearConnector | null>(null),
+    accountRef = useRef(""),
+    authRevision = useRef(0),
+    signing = useRef(false),
     [account, setAccount] = useState(""),
     [ready, setReady] = useState(false),
     [connectionError, setConnectionError] = useState(""),
     [authenticated, setAuthenticated] = useState(false),
+    [authenticating, setAuthenticating] = useState(false),
+    [authenticationError, setAuthenticationError] = useState(""),
     [config, setConfig] = useState<Config>({
       contractId: "",
       agentId: "",
@@ -63,6 +70,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       network: "testnet",
       loaded: false,
     });
+  function selectAccount(id: string) {
+    if (accountRef.current !== id) {
+      accountRef.current = id;
+      authRevision.current += 1;
+      signing.current = false;
+      setAuthenticated(false);
+      setAuthenticating(false);
+      setAuthenticationError("");
+    }
+    setAccount(id);
+  }
   useEffect(() => {
     let active = true;
     void api<Config>("config").then((c) => {
@@ -77,17 +95,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         });
         connector.current = c;
         c.on("wallet:signIn", (p) => {
-          if (active) setAccount(p.accounts[0]?.accountId ?? "");
+          if (active) selectAccount(p.accounts[0]?.accountId ?? "");
         });
         c.on("wallet:signOut", () => {
           if (active) {
-            setAccount("");
-            setAuthenticated(false);
+            selectAccount("");
           }
         });
         try {
           const connected = await c.getConnectedWallet();
-          if (active) setAccount(connected.accounts[0]?.accountId ?? "");
+          if (active) selectAccount(connected.accounts[0]?.accountId ?? "");
         } catch {
           /* Disconnected is the normal initial state. */
         }
@@ -103,38 +120,70 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       });
     return () => {
       active = false;
+      authRevision.current += 1;
     };
   }, []);
   useEffect(() => {
     let active = true;
-    setAuthenticated(false);
-    if (account)
+    const revision = authRevision.current;
+    if (account && !signing.current)
       void api<{ accountId: string | null }>("session")
         .then((s) => {
-          if (active) setAuthenticated(s.accountId === account);
+          if (active && revision === authRevision.current && !signing.current)
+            setAuthenticated(s.accountId === account);
         })
         .catch(() => {});
     return () => {
       active = false;
     };
   }, [account]);
-  async function authenticateFor(id: string) {
-    const w = await connector.current?.wallet();
-    if (!w) throw new Error("CONNECT_WALLET_FIRST");
-    const c = await api<{
-      id: string;
-      message: string;
-      recipient: string;
-      nonce: string;
-    }>("auth/challenge", { accountId: id });
-    const signed = await w.signMessage({
-      message: c.message,
-      recipient: c.recipient,
-      nonce: Uint8Array.from(atob(c.nonce), (c) => c.charCodeAt(0)),
-    });
-    if (signed.accountId !== id) throw new Error("ACCOUNT_CHANGED");
-    await api("auth/verify", { id: c.id, ...signed });
-    setAuthenticated(true);
+  async function authenticateFor(id: string, reuseSession = false) {
+    if (!id || id !== accountRef.current) throw new Error("CONNECT_WALLET_FIRST");
+    if (signing.current) return;
+    const revision = ++authRevision.current;
+    const stillCurrent = () => revision === authRevision.current && accountRef.current === id;
+    signing.current = true;
+    setAuthenticating(true);
+    setAuthenticationError("");
+    try {
+      if (reuseSession) {
+        const s = await api<{ accountId: string | null }>("session").catch(() => null);
+        if (!stillCurrent()) throw new Error("ACCOUNT_CHANGED");
+        if (s?.accountId === id) {
+          setAuthenticated(true);
+          return;
+        }
+      }
+      const w = await connector.current?.wallet();
+      if (!w) throw new Error("CONNECT_WALLET_FIRST");
+      const c = await api<{
+        id: string;
+        message: string;
+        recipient: string;
+        nonce: string;
+      }>("auth/challenge", { accountId: id });
+      if (!stillCurrent()) throw new Error("ACCOUNT_CHANGED");
+      const signed = await w.signMessage({
+        message: c.message,
+        recipient: c.recipient,
+        nonce: Uint8Array.from(atob(c.nonce), (c) => c.charCodeAt(0)),
+      });
+      if (!stillCurrent() || signed.accountId !== id) throw new Error("ACCOUNT_CHANGED");
+      await api("auth/verify", { id: c.id, ...signed });
+      if (!stillCurrent()) throw new Error("ACCOUNT_CHANGED");
+      setAuthenticated(true);
+    } catch (error) {
+      if (stillCurrent()) {
+        setAuthenticated(false);
+        setAuthenticationError("Your wallet is connected, but private sign-in was not completed. Try signing in again to access private tasks and results.");
+      }
+      throw error;
+    } finally {
+      if (stillCurrent()) {
+        signing.current = false;
+        setAuthenticating(false);
+      }
+    }
   }
   async function connect() {
     const c = connector.current;
@@ -143,13 +192,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const accounts = await w.getAccounts();
     const id = accounts[0]?.accountId;
     if (!id) throw new Error("NO_WALLET_ACCOUNT");
-    setAccount(id);
+    selectAccount(id);
+    // A cancelled message must not undo a successful wallet connection.
+    await authenticateFor(id, true).catch(() => {});
   }
   async function disconnect() {
+    selectAccount("");
     await connector.current?.disconnect();
     await api("auth/logout", {});
-    setAccount("");
-    setAuthenticated(false);
   }
   async function transact(
     method: string,
@@ -179,6 +229,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         ready,
         connectionError,
         authenticated,
+        authenticating,
+        authenticationError,
         config,
         connect,
         authenticate: () => authenticateFor(account),

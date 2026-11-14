@@ -796,11 +796,12 @@ export function Workspace() {
                     </button>
                     {!wallet.authenticated ? (
                       <Button
+                        disabled={wallet.authenticating}
                         onClick={() =>
                           void run("Unlocking", wallet.authenticate)
                         }
                       >
-                        Unlock private session <KeyRound size={16} />
+                        Sign in for private access <KeyRound size={16} />
                       </Button>
                     ) : (
                       <Button
@@ -988,6 +989,7 @@ export function Workspace() {
                       {wallet.account === o.buyer_id &&
                         !wallet.authenticated && (
                           <Button
+                            disabled={wallet.authenticating}
                             onClick={() =>
                               void run("Unlocking", wallet.authenticate)
                             }
@@ -1574,9 +1576,10 @@ export function Workspace() {
               {wallet.account && !wallet.authenticated && (
                 <button
                   className="text-button"
+                  disabled={wallet.authenticating}
                   onClick={() => void run("Unlocking", wallet.authenticate)}
                 >
-                  <KeyRound size={14} /> Unlock private session
+                  <KeyRound size={14} /> {wallet.authenticating ? "Signing in…" : "Sign in for private access"}
                 </button>
               )}
               <button
@@ -1589,6 +1592,18 @@ export function Workspace() {
             </div>
           </div>
           <main className="workspace-main">
+            {wallet.authenticating && (
+              <div className="banner" role="status">
+                <KeyRound size={18} />
+                <span>Sign the wallet message to open your private session. No gas fee or spending permission.</span>
+              </div>
+            )}
+            {!wallet.authenticating && wallet.authenticationError && (
+              <div className="banner" role="status">
+                <KeyRound size={18} />
+                <span>{wallet.authenticationError}</span>
+              </div>
+            )}
             {wallet.config.loaded && !wallet.config.configured && (
               <div className="banner">
                 <TriangleAlert size={18} />
