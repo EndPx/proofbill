@@ -4,6 +4,7 @@ import { db } from "@proofbill/server";
 import { view, call, contractId } from "@proofbill/server/chain";
 import { runOnce, type Inference } from "./runner.ts";
 import { runRetention } from "./retention.ts";
+import { inferenceEnvironment } from "./inference-env.ts";
 const pythonFile = fileURLToPath(
   new URL("../../inference/inference.py", import.meta.url),
 );
@@ -13,17 +14,8 @@ function infer(body: Buffer, signal: AbortSignal): Promise<Inference> {
       reject(new Error("WORKER_LEASE_LOST"));
       return;
     }
-    const env = { ...process.env };
-    for (const name of [
-      "NEAR_AGENT_KEY",
-      "NEAR_PUBLISHER_KEY",
-      "DATABASE_URL",
-      "ARTIFACT_ENCRYPTION_KEY",
-      "OWN_AGENT_KEY",
-    ])
-      delete env[name];
     const child = spawn(process.env.PYTHON_BIN ?? "python3", [pythonFile], {
-      env,
+      env: inferenceEnvironment(process.env),
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
     });

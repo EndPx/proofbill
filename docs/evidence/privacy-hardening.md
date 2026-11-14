@@ -13,3 +13,9 @@ Validation: fifteen Python tests with adversarial subcases passed locally, inclu
 A separate non-billable network check resubmitted the already-public synthetic probe's NVIDIA hardware payload to NRAS, then verified the resulting overall and eight per-GPU JWTs against NVIDIA's live HTTPS JWKS. Signatures, issuer/time, nonce and detached-token digests passed. This ran no model completion, used no application/provider credential and signed no blockchain transaction. It is NRAS re-verification of recorded hardware evidence, not a fresh deployment attestation or a new paid private purchase.
 
 Remaining boundaries: HTTPS still supplies trust in NVIDIA's key distribution; gateway TLS certificate binding and source-image allowlisting are not implemented. Operator plaintext access and the trusted offchain publisher remain unchanged. See [buyer verification](../verify-private-result.md) for the current verification scope.
+
+## Minimize inference-process credentials
+
+The worker now constructs a small allowlisted environment for Python rather than inheriting the entire worker environment and deleting five known secrets. The child receives the NEAR AI key, required OS/locale/cache settings and configured certificate paths. It receives no database credential, artifact-encryption key, agent/publisher/owner key, unrelated future secret, SSH agent socket or Python module-injection setting. User-site imports and bytecode writes are disabled. The parent environment is unchanged; the worker retains its normal database, signing and encrypted-persistence responsibilities.
+
+Two unit tests verify the exact inherited set, omission of synthetic secret markers and preservation of Windows variable casing. This limits unnecessary credential exposure to the subprocess; it is not an OS sandbox or protection against the application operator.
