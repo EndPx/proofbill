@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-// This injected wallet exercises connector events without keys, signatures or chain writes.
+// No real signing or chain writes. Restored fixtures have a matching session unless a test overrides /api/session.
 export async function prepareWallet(
   page: Page,
   restored = false,
@@ -20,7 +20,7 @@ export async function prepareWallet(
         : path === "/api/workspace"
           ? { passes: [], orders: [] }
           : path === "/api/session"
-            ? { accountId: null }
+            ? { accountId: restored ? "wallet-entry-test.testnet" : null }
             : path === "/api/auth/challenge"
               ? { id: "browser-fixture", message: "Sign in to ProofBill. Challenge: browser-fixture", recipient: "localhost:3215", nonce: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" }
             : {};

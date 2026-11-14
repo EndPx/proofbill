@@ -43,7 +43,7 @@ For developers and small teams running paid-API agents: fund one NFT budget, ass
 | **Reusable budget** | Custom total + optional maximum per purchase; multiple orders from one NFT, one active order at a time. | [Two purchases, handover and refund](docs/evidence/flexible-budget-hosted.md) |
 | **Your agent** | Use the ProofBill assistant or assign your own agent. The NFT stays with its owner. | [Agent SDK / CLI guide](docs/agent-integration.md) |
 | **Payment choice** | Manual review per order, or advance Automatic authorization within the remaining budget. | [All four agent/payment combinations](docs/evidence/agent-payment-hosted.md) |
-| **Private delivery** | Buyer-authenticated results, encrypted stored artifacts and a buyer-run evidence verifier. | [Verification guide](docs/verify-private-result.md) |
+| **Private delivery** | Sign in with a wallet message before entering the workspace; results stay buyer-authenticated, with encrypted artifacts and a buyer-run evidence verifier. | [Verification guide](docs/verify-private-result.md) |
 | **Public receipt** | Anyone can inspect payment facts without a wallet; plaintext briefs and results remain private. | [Open an actual receipt ↗](https://proofbill-two.vercel.app/receipts/pass-14-order-1) |
 
 **Scope:** hosted **NEAR testnet MVP**; project-owned accounts and synthetic briefs. One fixed service, seller and model today. No independent user pilot, audit or mainnet-readiness claim.

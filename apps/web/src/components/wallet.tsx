@@ -39,6 +39,7 @@ interface WalletState {
   ready: boolean;
   connectionError: string;
   authenticated: boolean;
+  sessionReady: boolean;
   authenticating: boolean;
   authenticationError: string;
   config: Config;
@@ -61,6 +62,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [ready, setReady] = useState(false),
     [connectionError, setConnectionError] = useState(""),
     [authenticated, setAuthenticated] = useState(false),
+    [sessionReady, setSessionReady] = useState(false),
     [authenticating, setAuthenticating] = useState(false),
     [authenticationError, setAuthenticationError] = useState(""),
     [config, setConfig] = useState<Config>({
@@ -76,6 +78,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       authRevision.current += 1;
       signing.current = false;
       setAuthenticated(false);
+      setSessionReady(false);
       setAuthenticating(false);
       setAuthenticationError("");
     }
@@ -125,16 +128,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     let active = true;
-    const revision = authRevision.current;
-    if (account && !signing.current)
-      void api<{ accountId: string | null }>("session")
-        .then((s) => {
-          if (active && revision === authRevision.current && !signing.current)
-            setAuthenticated(s.accountId === account);
-        })
-        .catch(() => {});
+    let pending = false;
+    async function checkSession() {
+      if (!account || signing.current || pending || document.hidden) return;
+      const revision = authRevision.current;
+      pending = true;
+      try {
+        const s = await api<{ accountId: string | null }>("session");
+        if (active && revision === authRevision.current && !signing.current) {
+          setAuthenticated(s.accountId === account);
+          setSessionReady(true);
+        }
+      } catch {
+        if (active && revision === authRevision.current && !signing.current) {
+          setAuthenticated(false);
+          setSessionReady(true);
+          setAuthenticationError("Your private session could not be verified. Sign in again to continue.");
+        }
+      } finally { pending = false; }
+    }
+    void checkSession();
+    const interval = setInterval(() => void checkSession(), 30_000);
+    const recheck = () => void checkSession();
+    window.addEventListener("focus", recheck);
+    document.addEventListener("visibilitychange", recheck);
     return () => {
       active = false;
+      clearInterval(interval);
+      window.removeEventListener("focus", recheck);
+      document.removeEventListener("visibilitychange", recheck);
     };
   }, [account]);
   async function authenticateFor(id: string, reuseSession = false) {
@@ -182,6 +204,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (stillCurrent()) {
         signing.current = false;
         setAuthenticating(false);
+        setSessionReady(true);
       }
     }
   }
@@ -229,6 +252,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         ready,
         connectionError,
         authenticated,
+        sessionReady,
         authenticating,
         authenticationError,
         config,

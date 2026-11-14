@@ -52,8 +52,9 @@ test("cancelled connection can be retried and resumes the original destination",
     .click();
   await page.getByText("ProofBill test wallet", { exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "New Purchase Pass" }),
+    page.getByRole("heading", { name: "Sign in to continue" }),
   ).toBeVisible();
+  await expect(page.locator(".app-shell")).toHaveCount(0);
   await expect(page).toHaveURL(/\/app\/passes\/new$/);
   await expect(
     page.getByRole("button", { name: "Sign in for private access" }),

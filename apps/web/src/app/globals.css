@@ -1309,6 +1309,16 @@ textarea {
   color: var(--error-ink);
   margin-top: 16px;
 }
+.wallet-entry-account {
+  padding: 12px;
+  border: 1px solid var(--funding-mint-line);
+  border-radius: 10px;
+  background: var(--funding-mint);
+  color: var(--success-ink);
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  margin-top: 16px;
+}
 @media (max-width: 900px) {
   .wallet-entry-sheet {
     grid-template-columns: minmax(0, 1fr);

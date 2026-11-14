@@ -16,7 +16,10 @@ export function WalletGate({ children }: { children: ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState("");
 
-  if (wallet.ready && wallet.account) return children;
+  if (wallet.ready && wallet.account && wallet.authenticated) return children;
+  const connected = !!wallet.account;
+  const checking = connected && !wallet.sessionReady && !wallet.authenticating;
+  const waiting = !wallet.ready || connecting || checking || wallet.authenticating;
 
   async function connect() {
     setConnecting(true);
@@ -32,7 +35,17 @@ export function WalletGate({ children }: { children: ReactNode }) {
     }
   }
 
-  const message = wallet.connectionError || error;
+  async function signIn() {
+    setError("");
+    try { await wallet.authenticate(); }
+    catch { /* The provider keeps the connected account and a retry explanation. */ }
+  }
+  async function disconnect() {
+    setError("");
+    try { await wallet.disconnect(); }
+    catch { setError("The wallet could not disconnect cleanly. Reload to check its state."); }
+  }
+  const message = wallet.connectionError || wallet.authenticationError || error;
   return (
     <div className="landing wallet-entry">
       <nav className="landing-nav" aria-label="Welcome navigation">
@@ -74,8 +87,11 @@ export function WalletGate({ children }: { children: ReactNode }) {
           <span className="wallet-entry-icon">
             <KeyRound size={28} />
           </span>
-          <h2 id="wallet-entry-title">Connect to continue</h2>
-          <p>Choose your wallet, then sign a message to open your private session. Signing in costs no gas and grants no spending permission.</p>
+          <h2 id="wallet-entry-title">{connected ? "Sign in to continue" : "Connect to continue"}</h2>
+          <p>{connected
+            ? "Your wallet is connected. Sign a message to verify ownership and open your private workspace."
+            : "Choose your wallet, then sign a message to open your private session. Signing in costs no gas and grants no spending permission."}</p>
+          {connected && <p className="wallet-entry-account">{wallet.account}</p>}
           {message && (
             <p className="wallet-entry-error" role="alert">
               {message}
@@ -91,25 +107,38 @@ export function WalletGate({ children }: { children: ReactNode }) {
           ) : (
             <button
               className="button primary"
-              onClick={() => void connect()}
-              disabled={!wallet.ready || connecting}
+              onClick={() => void (connected ? signIn() : connect())}
+              disabled={waiting}
             >
-              {(!wallet.ready || connecting) && (
+              {waiting && (
                 <LoaderCircle size={17} className="spin" />
               )}
               {!wallet.ready
                 ? "Restoring wallet…"
+                : wallet.authenticating
+                  ? "Signing in…"
+                : checking
+                  ? "Checking private session…"
+                : connected
+                  ? "Sign in for private access"
                 : connecting
                   ? "Connecting…"
                   : "Connect wallet"}
-              {wallet.ready && !connecting && <ArrowRight size={17} />}
+              {!waiting && <ArrowRight size={17} />}
             </button>
           )}
           <p className="fine" role="status">
             {!wallet.ready
               ? "Checking for an existing wallet connection."
-              : "NEAR testnet · Test funds only"}
+              : wallet.authenticating
+                ? "Sign the wallet message to open your private session. If no wallet window appears, check your browser's blocked pop-up indicator."
+              : checking
+                ? "Verifying your existing private session."
+              : connected
+                ? "No gas fee. No transfer or spending permission."
+                : "NEAR testnet · Test funds only"}
           </p>
+          {connected && <button type="button" className="button secondary" onClick={() => void disconnect()}>Disconnect wallet</button>}
         </section>
       </main>
     </div>

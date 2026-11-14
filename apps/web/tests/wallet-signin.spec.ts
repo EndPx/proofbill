@@ -21,7 +21,8 @@ async function sessionServer(page: Page, initialAccount: string | null = null, r
 async function connect(page: Page) {
   await page.getByRole("button", {name:"Connect wallet",exact:true}).click();
   await page.getByText("ProofBill test wallet", {exact:true}).click();
-  await expect(page.locator(".app-shell")).toBeVisible();
+  await expect(page.getByRole("button",{name:"Connect wallet",exact:true})).toHaveCount(0);
+  await expect(page.locator('.wallet-entry-account, .account-card strong').first()).toBeVisible();
 }
 
 async function messages(page: Page) {
@@ -35,6 +36,7 @@ test("new connection requests one private sign-in message without a transaction 
   await expect(page.getByText(/Signing in costs no gas and grants no spending permission/)).toBeVisible();
   await connect(page);
   await expect.poll(() => verified.length).toBe(1);
+  await expect(page.locator(".app-shell")).toBeVisible();
   await expect(retry(page)).toHaveCount(0);
   expect(await messages(page)).toHaveLength(1);
   expect(verified[0]).toMatchObject({id:"browser-fixture",accountId:owner,signature:"BrowserFixtureNotACryptographicSignature"});
@@ -68,7 +70,12 @@ test("a cancelled message leaves the wallet connected and can be retried once", 
   expect(await messages(page)).toHaveLength(1);
   expect(verified).toEqual([]);
   // No automatic retry loop after cancellation.
-  await page.getByRole("button",{name:"Refresh confirmed state"}).click();
+  await expect(page.getByRole('heading',{name:'Sign in to continue'})).toBeVisible();
+  await expect(page.locator('.app-shell')).toHaveCount(0);
+  await Promise.all([
+    page.waitForResponse(response=>new URL(response.url()).pathname==='/api/session'),
+    page.evaluate(()=>window.dispatchEvent(new Event('focus'))),
+  ]);
   expect(await messages(page)).toHaveLength(1);
   await retry(page).click();
   await expect.poll(() => verified.length).toBe(1);
@@ -107,8 +114,7 @@ test("disconnect while a signature is pending invalidates its completion", async
   await expect(page.getByRole("button",{name:"Signing in…",exact:true})).toBeDisabled();
   await expect.poll(() => messages(page).then(m => m.length)).toBe(1);
   await page.screenshot({path:test.info().outputPath("private-signin-pending-mobile.png")});
-  await page.getByRole("button",{name:`Account ${owner}; open options`}).click();
-  await page.getByRole("button",{name:"Sign out",exact:true}).click();
+  await page.getByRole("button",{name:"Disconnect wallet",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Connect to continue"})).toBeVisible();
   await page.evaluate(() => (window as unknown as {proofbillResolveMessage:()=>void}).proofbillResolveMessage());
   // Flush the resumed signature handler; it must not reach auth/verify.
@@ -121,8 +127,10 @@ test("a stale session lookup cannot undo successful explicit sign-in", async ({p
   await prepareWallet(page,true,false,false,"approve");
   const verified = await sessionServer(page);
   let held: Route | undefined;
-  await page.route("**/api/session", route => { held=route; });
   await page.goto("/app/purchases");
+  await expect(retry(page)).toBeEnabled();
+  await page.route("**/api/session", route => { held=route; });
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
   await expect.poll(() => !!held).toBe(true);
   expect(await messages(page)).toEqual([]);
   await retry(page).click();
@@ -142,19 +150,65 @@ test("the sign-in retry and cancellation explanation fit mobile, tablet and desk
   for (const width of [375,768,1440]) {
     await page.setViewportSize({width,height:900});
     await expect(retry(page)).toBeVisible();
-    const layout=await page.evaluate(()=>({
-      page:document.documentElement.scrollWidth,
-      inner:document.querySelector('.content-scroll')!.scrollWidth,
-      client:document.querySelector('.content-scroll')!.clientWidth,
-    }));
+    const layout=await page.evaluate(()=>({page:document.documentElement.scrollWidth}));
     expect(layout.page).toBe(width);
-    expect(layout.inner).toBeLessThanOrEqual(layout.client);
     await page.screenshot({path:test.info().outputPath(`private-signin-retry-${width}.png`)});
   }
   await page.addScriptTag({content:axe.source});
   const violations=await page.evaluate(async()=>{
-    const result=await (window as unknown as {axe:typeof axe}).axe.run({include:['.topbar','.workspace-main .banner']},{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}});
+    const result=await (window as unknown as {axe:typeof axe}).axe.run('.wallet-entry-card',{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}});
     return result.violations.map(v=>v.id);
   });
   expect(violations).toEqual([]);
+});
+
+test('a restored wallet without a private session gates every workspace route without fetching its contents',async({page})=>{
+  await prepareWallet(page,true);
+  await sessionServer(page);
+  const workspaceRequests:string[]=[];
+  page.on('request',r=>{if(/\/api\/(workspace|pass\/|order\/|private\/)/.test(r.url()))workspaceRequests.push(r.url())});
+  for(const route of ['/app/purchases','/app/passes','/app/passes/new','/app/orders/pass-2-order','/app/receipts']){
+    await page.goto(route);
+    await expect(page.getByRole('heading',{name:'Sign in to continue'})).toBeVisible();
+    await expect(retry(page)).toBeEnabled();
+    await expect(page.locator('.wallet-entry-account')).toHaveText(owner);
+    await expect(page.locator('.app-shell')).toHaveCount(0);
+    await expect(page.getByRole('button',{name:'Connect wallet',exact:true})).toHaveCount(0);
+  }
+  expect(workspaceRequests).toEqual([]);
+  expect(await messages(page)).toEqual([]);
+});
+
+test('session expiry on focus returns to sign-in and can recover without reconnecting',async({page})=>{
+  await prepareWallet(page,true,false,false,'approve');
+  let current:string|null=owner;
+  let verifications=0;
+  await page.route('**/api/session',r=>r.fulfill({json:{accountId:current}}));
+  await page.route('**/api/auth/verify',r=>{current=owner;verifications++;return r.fulfill({json:{accountId:owner}})});
+  await page.goto('/app/passes/new');
+  await expect(page.locator('.app-shell')).toBeVisible();
+  current=null;
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(page.getByRole('heading',{name:'Sign in to continue'})).toBeVisible();
+  await expect(page.locator('.app-shell')).toHaveCount(0);
+  await expect(page.locator('.wallet-entry-account')).toHaveText(owner);
+  expect(await messages(page)).toEqual([]);
+  await retry(page).click();
+  await expect(page.locator('.app-shell')).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/passes\/new$/);
+  expect(verifications).toBe(1);
+  expect(await messages(page)).toHaveLength(1);
+});
+
+test('a slow session restore shows a checking state rather than an empty workspace',async({page})=>{
+  await prepareWallet(page,true);
+  let held:Route|undefined;
+  await page.route('**/api/session',r=>{held=r});
+  await page.goto('/app/purchases');
+  await expect(page.getByRole('button',{name:'Checking private session…',exact:true})).toBeDisabled();
+  await expect(page.locator('.app-shell')).toHaveCount(0);
+  await expect.poll(()=>!!held).toBe(true);
+  await held!.fulfill({json:{accountId:owner}});
+  await expect(page.locator('.app-shell')).toBeVisible();
+  expect(await messages(page)).toEqual([]);
 });
