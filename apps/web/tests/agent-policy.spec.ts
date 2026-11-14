@@ -352,6 +352,13 @@ test("own agent instructions retain owner custody and can switch to ProofBill", 
 }) => {
   await setup(page, true);
   await page.goto("/app/passes/pass-99");
+  const facts=page.locator('dl.facts.panel').first();
+  for(const account of [owner,'seller.testnet','custom.testnet','proofbill.testnet']) {
+    const link=facts.getByRole('link',{name:account,exact:true});
+    await expect(link).toHaveAttribute('href',`https://testnet.nearblocks.io/address/${account}`);
+    await expect(link).toHaveAttribute('target','_blank');
+    await expect(link).toHaveAttribute('rel','noopener noreferrer');
+  }
   await expect(
     page.getByRole("button", { name: "Run agent", exact: true }),
   ).toHaveCount(0);

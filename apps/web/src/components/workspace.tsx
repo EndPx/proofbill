@@ -126,6 +126,12 @@ function Empty({
   );
 }
 const explorer = (hash: string) => `https://testnet.nearblocks.io/txns/${hash}`;
+function AccountLink({ id }: { id: string }) {
+  return <a className="account-explorer" href={`https://testnet.nearblocks.io/address/${encodeURIComponent(id)}`}
+    target="_blank" rel="noopener noreferrer" title="View account on NEAR testnet explorer">
+    {id}<ExternalLink size={12} aria-hidden="true" />
+  </a>;
+}
 function budgetRefundCopy(budget: PassBudget) {
   const amount = formatNear((BigInt(budget.available_yocto) + BigInt(budget.reserved_yocto)).toString());
   return `Refund returns ${amount} testnet NEAR and closes this budget pass. Prior payments and storage backing are excluded.`;
@@ -676,11 +682,11 @@ export function Workspace() {
             <dl className="facts panel">
               <div>
                 <dt>Current holder</dt>
-                <dd>{pass.owner_id}</dd>
+                <dd><AccountLink id={pass.owner_id} /></dd>
               </div>
               <div>
                 <dt>Seller</dt>
-                <dd>{pass.seller_id}</dd>
+                <dd><AccountLink id={pass.seller_id} /></dd>
               </div>
               <div>
                 <dt>Price per order</dt>
@@ -699,8 +705,9 @@ export function Workspace() {
               </div>
               <div>
                 <dt>Purchasing agent</dt>
-                <dd>{pass.agent_id ?? "Not assigned"}</dd>
+                <dd>{pass.agent_id ? <AccountLink id={pass.agent_id} /> : "Not assigned"}</dd>
               </div>
+              {wallet.config.contractId && <div><dt>NFT contract</dt><dd><AccountLink id={wallet.config.contractId} /></dd></div>}
               <div>
                 <dt>Payment approval</dt>
                 <dd>{pass.payment_mode ?? "Manual"}</dd>
@@ -1061,15 +1068,15 @@ export function Workspace() {
                   <dl className="facts">
                     <div>
                       <dt>Buyer</dt>
-                      <dd>{o.buyer_id}</dd>
+                      <dd><AccountLink id={o.buyer_id} /></dd>
                     </div>
                     <div>
                       <dt>Agent</dt>
-                      <dd>{o.agent_id}</dd>
+                      <dd><AccountLink id={o.agent_id} /></dd>
                     </div>
                     <div>
                       <dt>Seller</dt>
-                      <dd>{o.seller_id}</dd>
+                      <dd><AccountLink id={o.seller_id} /></dd>
                     </div>
                     <div>
                       <dt>Purchase Pass</dt>
@@ -1159,11 +1166,11 @@ export function Workspace() {
                 <dl className="facts">
                   <div>
                     <dt>Seller</dt>
-                    <dd>{o.seller_id}</dd>
+                    <dd><AccountLink id={o.seller_id} /></dd>
                   </div>
                   <div>
                     <dt>Agent</dt>
-                    <dd>{o.agent_id}</dd>
+                    <dd><AccountLink id={o.agent_id} /></dd>
                   </div>
                   <div><dt>Recorded per-purchase ceiling</dt><dd>{o.max_order_price_yocto?`${formatNear(o.max_order_price_yocto)} NEAR`:"No separate ceiling recorded"}</dd></div>
                 </dl>

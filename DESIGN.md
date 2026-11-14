@@ -36,6 +36,8 @@ Only 120ms color/border/opacity feedback. Pending uses text and a small indicato
 
 ## 7. Content
 
+On pass details and order terms, holder/buyer, seller, assigned agent and NFT contract accounts link to their exact NEAR testnet NearBlocks address in a new tab. Keep full wrapping IDs, a small external-link glyph and visible underline/focus; Not assigned stays plain text. A contract link inspects the NFT contract account, not a fabricated token-specific explorer route. These links do not submit transactions or change an unsaved agent/payment draft.
+
 Use Purchase Passes, New Purchase Pass, Run agent, Approve payment, Request refund. Distinguish wallet connected from authenticated. Show owner, recipient, amount and network before signing. Show chain-confirmed status and unavailable service configuration honestly.
 
 Administrator trust uses one shared copy source in the public FAQ, /review#review-admin and funding receipt. Explain that a contract-account FullAccess holder can move NEAR or replace code outside app approvals, separately from automation-key restrictions, publisher trust and plaintext handling. Use existing paragraph/fine-text/link primitives; no new consent gate. The funding link opens the public explanation in a new tab to preserve the unsubmitted draft.

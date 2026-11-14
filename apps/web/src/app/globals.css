@@ -1008,6 +1008,15 @@ textarea {
   overflow-wrap: anywhere;
   line-height: 1.5;
 }
+.account-explorer {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--funding-mint-line);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.account-explorer svg { display: inline; vertical-align: -2px; margin-left: 5px; }
+.account-explorer:hover { color: var(--success-ink); text-decoration-color: currentColor; }
 .facts a {
   text-decoration: underline;
 }
