@@ -38,4 +38,4 @@ The [delivery plan](DELIVERY-PLAN.md) preserves original milestone context. Curr
 - [NFT track guidance](https://github.com/nearai/near-hackathon-prompt-examples/blob/main/tracks/10-nfts.md): functional ownership/access rights; examples are guidance rather than mandatory architecture.
 - [NEP-171](https://github.com/near/NEPs/blob/master/neps/nep-0171.md), [NEAR Connect](https://docs.near.org/tools/near-connect), [NEAR AI response signatures](https://docs.near.ai/cloud/verification/cloud-api/response-signatures).
 
-Recheck submission rules at release. ProofBill replaces the Keyfolio entry; if ShowStake is also submitted, both READMEs disclose the other independent project. Product source and financial state are separate from ShowStake/Keyfolio.
+Recheck submission rules at release. The confirmed submission pair is **ProofBill + ShowStake**. ProofBill replaces the earlier Keyfolio entry; Keyfolio is not a third entry in this pair. Each project's README should disclose the other independent project and its distinct purpose. Contracts, financial state and budgets are separate.
