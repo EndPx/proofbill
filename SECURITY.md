@@ -13,7 +13,7 @@ This solo-maintained hackathon project does not offer a paid bug bounty or a gua
 ## Trust boundaries
 
 - The NEAR contract holds service allocations and enforces ownership, order terms, payment callbacks and refund state.
-- Manual payment requires holder approval separately from agent reservation. Automatic payment requires an explicit per-pass owner policy and matching publisher delivery. Both modes fix the seller/amount and require a successful transfer callback. Hosted operational keys remain method-restricted; external agent keys stay in their own runtime.
+- Under the deployed code, Manual payment requires holder approval separately from agent reservation. Automatic payment requires an explicit per-pass owner policy and matching publisher delivery. Both modes fix the seller/amount and require a successful transfer callback. Hosted automation uses method-restricted keys; external agent keys stay in their own runtime. Contract-account administrator authority is described separately below.
 - The contract trusts the offchain publisher's evidence statement. It does not verify Intel or NVIDIA attestation evidence onchain. In Automatic mode, publisher compromise can trigger the preauthorized fixed payment without a final owner approval.
 - The application operator processes plaintext during execution. Encrypted storage and private inference do not make the application operator-blind.
 - Response signatures do not guarantee answer accuracy. The current Python verifier authenticates overall and per-GPU NRAS JWT signatures, issuer, validity, nonce and detached-token bindings using NVIDIA's HTTPS JWKS. HTTPS key distribution remains a trust dependency.

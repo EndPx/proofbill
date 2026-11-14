@@ -36,7 +36,7 @@ The current service uses one seller, one service version, `Qwen/Qwen3.8-27B` and
 | Who holds the service budget? | One ProofBill contract, with isolated per-pass liabilities. The NFT carries the right to use/refund its allocation. |
 | What follows transfer between orders? | The unspent service allocation and refund right follow the new owner. Prior payments stay recorded and prior buyers keep their private history. |
 | Can payment settle automatically? | Manual is the default. The owner can explicitly authorize Automatic settlement for one pass after matching publisher delivery; the agent cannot enable this policy or change the seller/amount. |
-| What is immutable in a pass? | Service version, seller, quoted amount, model policy and absolute expiry, snapshotted at mint. |
+| What terms does the deployed code preserve in a pass? | Service version, seller, quoted amount, model policy and absolute expiry, snapshotted at mint. These application-level rules remain subject to the contract account's [FullAccess administrator authority](../../SECURITY.md#contract-administration). |
 | When can it transfer? | Available/unexpired between orders, or terminal with zero financial claim. Active orders, native payouts/refunds and unresolved transfer-calls lock transfer. |
 | What changes on transfer? | Current holder and authorization revision. Between orders, prior agent/task delegations, Automatic permission and the prior holder's per-purchase ceiling are cleared. Earlier order snapshots remain unchanged. |
 | What happens after payment? | A budget pass with remaining funds returns to Available; an exhausted pass becomes Completed. Each numbered order keeps its receipt and recorded policy. Successful settlement increments authorization revision. |

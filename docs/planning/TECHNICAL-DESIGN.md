@@ -53,7 +53,7 @@ All native amounts use canonical decimal integer strings externally and checked 
 | Native attempt | pass/order, kind (seller/refund), unique attempt nonce, exact beneficiary/amount, in-flight/succeeded/failed state |
 | Storage accounting | paid backing, available storage credit and reserved transfer/rollback backing, separate from service allocations |
 
-The initial service catalog is initialized with one version; already-minted snapshots cannot change. No runtime admin method may redirect existing pass funds or rewrite approved order terms. The initialized verifier publisher identity is disclosed; upgrades are an operator trust boundary, not a hidden production guarantee.
+The initial service catalog is initialized with one version; current application methods preserve already-minted snapshots and provide no admin method for redirecting existing pass funds or rewriting approved order terms. Separately, the contract account retains FullAccess authority at the protocol level: its key holder can transfer account-held NEAR, manage keys and replace the code without using those methods. See [contract administration](../../SECURITY.md#contract-administration). The initialized verifier publisher identity is disclosed; its delivery authority and the operator's plaintext access are separate trust boundaries.
 
 ## 4. Pass and order states
 
@@ -154,7 +154,7 @@ Model unavailability is checked again at implementation. Failure does not silent
 
 New inference requires same-socket gateway TLS SPKI/quote binding before credentials, authenticated NRAS JWT signatures/claims, and a fixed allowlist for measured bootstrap plus authenticated recorded Qwen deployment sources. The [TLS/image release](../evidence/tls-image-policy.md) describes the policy ID/hash and source/build approvals. Full model-image build provenance, current execution and weight identity are not established. Historical exports retain their original scope; recorded TLS metadata cannot let a buyer re-observe an old socket. These offchain checks do not change the contract's publisher trust or financial policy identifier. Required-check success does not become a blanket 'fully verified/secure AI' label. Semantic accuracy is a buyer review decision.
 
-The contract trusts its initialized publisher to assert that this offchain policy passed. Manual mode additionally requires owner approval; Automatic mode uses the owner's advance per-pass authorization. This is a disclosed application-verifier bridge, not onchain Intel/NVIDIA verification, a decentralized oracle or a TEE-signed NEAR payment. Publisher compromise is a trust risk; it cannot redirect an existing order's seller/amount; in Automatic mode, a compromised publisher can trigger the preauthorized payment without another owner approval.
+The deployed code trusts its initialized publisher to assert that this offchain policy passed. Manual mode additionally requires owner approval; Automatic mode uses the owner's advance per-pass authorization. This is a disclosed application-verifier bridge, not onchain Intel/NVIDIA verification, a decentralized oracle or a TEE-signed NEAR payment. Under these methods, a compromised publisher cannot redirect an existing order's seller/amount; in Automatic mode it can trigger the preauthorized payment without another owner approval. The contract account's separate FullAccess administrator authority is described above.
 
 ## 9. Private state and API boundaries
 
