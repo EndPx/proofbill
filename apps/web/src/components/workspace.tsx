@@ -516,12 +516,10 @@ export function Workspace() {
             {wallet.config.budgetPasses && (
               <label className="field funding-budget">
                 Service budget (testnet NEAR)
-                <input aria-describedby="budget-help" aria-invalid={!!budgetError} inputMode="decimal"
+                <input aria-describedby={budgetError ? "budget-help" : undefined} aria-invalid={!!budgetError} inputMode="decimal"
                   value={serviceBudget} disabled={!!busy}
                   onChange={(e) => { setServiceBudget(e.target.value); setAutomaticConsent(false); }} />
-                <small id="budget-help" className={budgetError?"field-error":undefined} aria-live="polite">
-                  {budgetError||"Current service price: 0.010 NEAR per purchase."}
-                </small>
+                {budgetError && <small id="budget-help" className="field-error" aria-live="polite">{budgetError}</small>}
               </label>
             )}
             {wallet.config.flexibleBudgets&&<>

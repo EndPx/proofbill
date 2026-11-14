@@ -75,7 +75,7 @@ test("budget funding uses exact amounts and a changed cap requires renewed autom
   const input=page.getByRole("textbox",{name:"Service budget (testnet NEAR)"});
   const mint=page.getByRole("button",{name:"Confirm and mint pass"});
   await expect(input).toHaveValue("0.050");
-  await expect(page.getByText("Current service price: 0.010 NEAR per purchase.")).toBeVisible();
+  await expect(page.locator('#budget-help')).toHaveCount(0);
   await input.fill("0.015");
   await expect(input).toHaveAttribute("aria-invalid","true");
   await expect(mint).toBeDisabled();
@@ -125,6 +125,7 @@ test("owner inputs a custom total and optional ceiling independently of the serv
 test("an omitted ceiling stays null and does not require a price-step budget",async({page})=>{
   await setup(page,false,true,true);await page.goto("/app/passes/new");
   await page.getByRole("textbox",{name:"Service budget (testnet NEAR)"}).fill("2.015");
+  await expect(page.getByRole('checkbox',{name:'Set a per-purchase limit'})).not.toBeChecked();
   await expect(page.getByRole("textbox",{name:"Maximum per purchase (testnet NEAR)"})).toHaveCount(0);
   await expect(page.locator(".amount")).toContainText("2.045");
   await page.getByRole("button",{name:"Confirm and mint pass"}).click();
@@ -210,7 +211,8 @@ test("service budget errors replace purchase estimates and overflow cannot mint"
   }
   await expect(page.locator('#budget-help')).toContainText('exceed the supported total');
   await budget.fill('0.5');
-  await expect(page.locator('#budget-help')).toHaveText('Current service price: 0.010 NEAR per purchase.');
+  await expect(page.locator('#budget-help')).toHaveCount(0);
+  await expect(budget).not.toHaveAttribute('aria-describedby');
   await expect(page.getByText(/Up to \d+ purchases/)).toHaveCount(0);
   await expect(mint).toBeEnabled();
   expect(await transactions(page)).toEqual([]);
@@ -227,7 +229,7 @@ test("invalid storage is attributed to storage while a valid service budget stay
     await storage.fill(value);
     await expect(storage).toHaveAttribute('aria-invalid','true');
     await expect(budget).toHaveAttribute('aria-invalid','false');
-    await expect(page.locator('#budget-help')).toHaveText('Current service price: 0.010 NEAR per purchase.');
+    await expect(page.locator('#budget-help')).toHaveCount(0);
     await expect(mint).toBeDisabled();
   }
   await expect(page.locator('#storage-help')).toContainText('at least 0.030 NEAR');
