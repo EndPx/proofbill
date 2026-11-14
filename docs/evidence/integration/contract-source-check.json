@@ -1,0 +1,27 @@
+{
+  "checked_at": "2026-11-14T22:40:18.961Z",
+  "network": "testnet",
+  "contract_id": "proofbill-endpx-2026.testnet",
+  "block_height": 277719860,
+  "block_hash": "A5y4RpScHzuqDYCMeo9kmTUcCGkaETcg5vRtQF5pmuhA",
+  "code_hash_base58": "5dq5tk4wJ3LYQipvHLxtMVKqN9S16ZiVVZqPy3KR2poZ",
+  "wasm_bytes": 295956,
+  "wasm_sha256": "44de06a662ad2ca973a7888f62c636b8abf7e94f59578451d8c533d1ded57b90",
+  "source_commit": "a1964b083d6855ce6dffac940f9e69be162dc2a8",
+  "ci_run": "https://github.com/EndPx/proofbill/actions/runs/43503658521",
+  "ci_artifact": "contract-wasm-and-abi/proofbill.wasm",
+  "exact_ci_artifact_match": true,
+  "contract_source_metadata": {
+    "version": "0.1.0",
+    "link": "https://github.com/EndPx/proofbill",
+    "standards": [
+      {
+        "standard": "nep330",
+        "version": "1.3.0"
+      }
+    ],
+    "build_info": null
+  },
+  "scope": "Exact equality between finalized deployed bytes and the saved official cargo-near CI build artifact. Not an independent reproducible rebuild, SourceScan verification badge, security audit, or evidence of current private-key custody. No deployment, key change, or value transfer was performed.",
+  "explorer_source_verification_established": false
+}
