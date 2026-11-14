@@ -52,6 +52,20 @@ An explicit new connection continues directly to NEP-413 private sign-in, reusin
 
 One desktop/mobile visual pass, keyboard focus and actual financial pending/error states. Match the approved shell; no redesign loop before the purchase journey works. Check production excludes development instrumentation.
 
+### Task-first application refinement
+
+This is an implementation-led heuristic review, not independent user research. A local production-render baseline with synthetic fixtures found Run agent below the first viewport (about 1,053px on desktop and 2,063px on mobile), after NFT artwork, metadata and already-saved settings. Keep the approved charcoal/white/mint identity and existing contract, signature, consent and callback rules.
+
+- User jobs: fund a reusable budget; assign an agent once; give it a brief; inspect delivery; approve Manual payment or follow Automatic settlement; reuse, transfer or refund the remainder.
+- Pass details lead with the available/reserved/spent/refunded balance and the current task. Run/assignment comes before metadata in DOM and mobile order. Replace oversized token artwork with a compact identity. Keep contract/address facts and storage in clearly named disclosures.
+- Once assigned, agent/payment settings are collapsed under Agent and payment settings. An unassigned pass shows them immediately. The brief and Run agent stay visible. Transfer and refund remain findable under Transfer or refund, with full refund consequences before submitting.
+- Creation shows essential decisions and the exact funding total. Default storage stays 0.030 NEAR; custom backing remains available under Advanced storage. Service metadata is secondary. Retain explicit Automatic consent, seller, amount, expiry, configured ceiling, storage separation and answer-quality boundary. A concise visible administrator warning still states FullAccess can move funds or replace code and funding requires admin trust.
+- The sign-in card is the first mobile content, with a clear two-step wallet/message sequence. Keep the connected account, cancellation/retry, checking, no-gas explanation and explicit disconnect action. Avoid a marketing introduction above the action on mobile.
+- Order results are primary; metadata belongs in Details and cryptographic checks/scopes in Evidence checks. Render actual per-result scope instead of outdated hardcoded assurance text. Exact seller/amount, payment mode and pending/failure states remain visible before payment. Cancellation/refund is secondary and explicit about closing the pass. A paid order links to its public receipt and remaining-budget management.
+- Empty screens explain one next step; do not show decorative receipt explainers beside them. No-match filters differ from first-use emptiness. Receipts list paid orders only and do not offer a Needs review filter. Automatic deliveries never request Manual review.
+- Loading shows a loading state, not a fabricated empty list or zero pass budget. Preserve drafts on polling, and reject stale route responses before replacing displayed financial state.
+- Verify with isolated headless local browser fixtures; never operate the user's browser/wallet. Capture desktop/mobile together, inspect once, make one consolidated correction pass if needed, and confirm. Keep screenshots, private operations and critique notes local. Do not claim measured user conversion or real-wallet execution from fixture checks.
+
 ## 9. Public landing page: permission before payment
 
 The user's Assay screenshots and live frontend replace the earlier near.com-inspired marketing direction. The workspace and wallet gate keep their own existing design. Only marketing uses the new dark material system.
