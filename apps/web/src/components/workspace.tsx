@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { adminTrust } from "@/data/admin-trust";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -582,6 +583,12 @@ export function Workspace() {
             <p className="fine">
               Storage remains reserved while the NFT and its history exist. It
               is separate from the refundable service allocation.
+            </p>
+            <p className="fine" id="funding-admin-trust">
+              {adminTrust.summary}{" "}
+              <Link className="text-button" href="/review#review-admin" target="_blank" rel="noopener noreferrer" prefetch={false}>
+                Read administrator trust
+              </Link>
             </p>
             {wallet.account ? (
               <Button

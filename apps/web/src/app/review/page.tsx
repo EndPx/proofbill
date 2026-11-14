@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ReceiptFrame } from "../receipts/[orderId]/frame";
 import { landing } from "@/data/landing";
+import { adminTrust } from "@/data/admin-trust";
 import styles from "./review.module.css";
 
 export const metadata: Metadata = {
@@ -65,6 +66,13 @@ export default function ReviewPage() {
         <p>The contract holds the funds under the token ID. An available NFT carries ownership of the remaining spending and refund rights; transfer is locked during an active order. Giving an agent permission does not give it the NFT. The original buyer keeps access to earlier private results after handover.</p>
         <p>A transferable budget record could implement the core rules. NEP-171 provides a standard ownership/transfer representation. The demo proves those rights move; customer demand for handover and external NFT interoperability have not been established.</p>
         <a href={`${source}/docs/agent-integration.md`}>Use your own agent through the SDK</a>
+      </section>
+
+      <section className={styles.section} id="review-admin" aria-labelledby="review-admin-title">
+        <h2 id="review-admin-title">{adminTrust.title}</h2>
+        <p>{adminTrust.summary}</p>
+        <p>{adminTrust.detail}</p>
+        <a href={`${source}/SECURITY.md#contract-administration`}>Read the contract administration policy</a>
       </section>
 
       <section className={styles.section} aria-labelledby="review-private">

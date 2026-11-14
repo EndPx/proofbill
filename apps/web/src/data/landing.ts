@@ -1,3 +1,5 @@
+import { adminTrust } from "./admin-trust";
+
 // Original generated materials and fallback pass artwork; product image is a recorded testnet receipt.
 // Extraction and handover illustrations explain behavior without claiming a new inference or transfer.
 export const landing = {
@@ -52,6 +54,10 @@ export const landing = {
       question: "What does the Purchase Pass pay for?",
       answer:
         "The current service quote is 0.010 testnet NEAR. Choose a total covering that quote, with no price-step or 1 NEAR ceiling, and optionally cap each purchase. Starting storage backing is separate, at least 0.030 NEAR regardless of your total. A 1 NEAR service budget therefore starts at 1.030 NEAR plus gas. Retained history can need an owner-approved storage top-up later. Refunds return unspent service funds; earlier payments and storage are excluded.",
+    },
+    {
+      question: adminTrust.title,
+      answer: `${adminTrust.summary} ${adminTrust.detail}`,
     },
     {
       question: "Does verified evidence mean the AI answer is correct?",

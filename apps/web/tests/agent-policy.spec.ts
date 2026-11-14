@@ -46,6 +46,27 @@ async function setup(page: Page, custom = false, budgetPasses = false, flexibleB
     });
   });
 }
+test("reading administrator trust preserves an unfunded draft and requests no transaction", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 844 });
+  await setup(page, false, true, true);
+  await page.goto("/app/passes/new");
+  const budget = page.getByRole("textbox", { name: "Service budget (testnet NEAR)" });
+  await budget.fill("1.2345");
+  const disclosure = page.locator("#funding-admin-trust");
+  await expect(disclosure).toContainText("FullAccess administrator key");
+  const [explanation] = await Promise.all([
+    page.waitForEvent("popup"),
+    disclosure.getByRole("link", { name: "Read administrator trust" }).click(),
+  ]);
+  await expect(explanation).toHaveURL(/\/review#review-admin$/);
+  await expect(explanation.getByRole("heading", { name: "Who controls the contract account?" })).toBeVisible();
+  await expect(explanation.locator("#review-admin")).toContainText("without using the app's approval flow");
+  await expect(budget).toHaveValue("1.2345");
+  await expect(page.getByRole("button", { name: "Confirm and mint pass" })).toBeEnabled();
+  expect(await page.evaluate(() => (window as unknown as { proofbillTransactions?: unknown[] }).proofbillTransactions ?? [])).toEqual([]);
+  await explanation.close();
+});
+
 test("budget funding uses exact amounts and a changed cap requires renewed automatic consent", async ({ page }) => {
   await page.setViewportSize({width:360,height:800});
   await setup(page,false,true);
