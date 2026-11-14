@@ -32,4 +32,18 @@ Twenty-seven Python tests pass, including authenticated-but-unapproved manifests
 
 When NEAR changes a deployment, obtain fresh evidence, review the new measured manifest and runtime source references, verify available build attestations, update the versioned policy and rerun refusal/compatibility tests before rollout. Never approve an observed hash just to make a failing check green. This release does not change the contract policy identifier or rewrite old artifacts; the stronger offchain policy identity is recorded separately.
 
+Keep the original policy/verifier revision for historical exports when approving a later policy version. The current verifier rejects an unknown policy ID/hash rather than importing a policy supplied by the artifact or silently claiming that old evidence passed a different policy.
+
 The application operator still processes plaintext and the contract trusts its publisher. Neither image pins nor TLS binding establishes answer quality, operator-blind E2EE or model-weight provenance.
+
+## Hosted rollout and actual private order
+
+Source `23b62e4` was first staged in a separate server directory. All 27 Python tests and a fresh, non-billable, same-socket gateway/model/NRAS/Compose Manager/allowlist probe passed under the service user and isolated environment before the live checkout changed. CI [43571186591](https://github.com/EndPx/proofbill/actions/runs/43571186591) passed all four jobs, including build-approval/source-pin checks and Rust/Wasm Sandbox. The worker was updated and restarted only after checking the queue was idle; it returned active with no automatic restarts.
+
+One actual synthetic [Manual purchase](integration/pass-14-order-1.json) then completed through the hosted API, worker, provider and NEAR testnet. It funded 0.025 service budget with a 0.100 ceiling and separate storage, reserved `pass-14-order-1`, recorded verified delivery and paid 0.010 after the project-owned buyer's SDK approval. Wrong-owner authorization/payment and duplicate payment were refused. The correct buyer read/export returned 200; another authenticated account returned 404. Private request/response bytes, salt and export remain local and encrypted in persistence, not in the public report.
+
+The current buyer verifier returned `verified: true`, including onchain commitments, exact signed bytes, recorded gateway SPKI/quote binding and the locally approved deployment pins/recorded sources. A copy with altered TLS metadata failed with `ARTIFACT_SERIALIZATION_MISMATCH`. The remaining 0.015 was refunded to the original buyer, preserving 0.025 funded = 0.010 spent + 0.015 refunded. See the [sanitized verification/refund summary](integration/tls-image-policy-pass-14.json) and [public receipt](https://proofbill-two.vercel.app/receipts/pass-14-order-1).
+
+The first local runner had an empty explicit order-ID parameter. Its polling was stopped and the existing funded order was resumed with its exact ID; no second purchase or completion was requested. These are scripted project-owned test accounts and a synthetic brief, not independent customer validation or a human browser-wallet recording. The public report's step list begins at the explicit resume; initial funding/assignment references are included in the summary.
+
+Compatibility was checked against the real legacy export for `pass-13-order-2`: the current verifier returned true for its original byte/signature/TEE checks and did not add a TLS or image-policy check. All 47 production-build browser regressions also passed after the website scope text was updated, including both payment modes and existing wallet/public/private paths.

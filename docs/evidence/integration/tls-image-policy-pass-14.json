@@ -1,0 +1,41 @@
+{
+  "checked_on": "2026-11-14",
+  "network": "testnet",
+  "worker_source": "23b62e4de23b8bfa421a0ded7a16b40668a5f1c2",
+  "order_id": "pass-14-order-1",
+  "sdk_integration_passed": true,
+  "buyer_export_verification": {
+    "verified": true,
+    "recorded_gateway_spki_quote_binding": true,
+    "approved_deployment_pins_and_recorded_sources": true,
+    "tampered_tls_record_error": "ARTIFACT_SERIALIZATION_MISMATCH"
+  },
+  "refund": {
+    "passed": true,
+    "token_id": "pass-14",
+    "refund_tx": "ft6RjZ8F2gmopjJ45ciub7rmZ3wb9RLMQrRm7dF7j6V",
+    "budget": {
+      "funded_yocto": "25000000000000000000000",
+      "available_yocto": "0",
+      "reserved_yocto": "0",
+      "spent_yocto": "10000000000000000000000",
+      "refunded_yocto": "15000000000000000000000",
+      "orders_created": 1
+    }
+  },
+  "limits": [
+    "Project-owned scripted testnet accounts and a synthetic brief; not user validation.",
+    "Human browser-wallet signing was not recorded.",
+    "Recorded gateway binding does not let a buyer re-observe the historical socket.",
+    "Model image build provenance, current execution and weights are not established."
+  ],
+  "funding_tx": "CNvuWqo5DGh5CcZEhv1acPX3h5fBTjrbDgD3Qg5ey7LJ",
+  "assignment_tx": "F1fWXmFz3H2sLZ7zeWaMjdWc8jRXhvXWM4tkESEmWj7U",
+  "payment_tx": "uYPUF6hYh58y6b5b39ZAh2abi7KAJxadqm1QzkLK6nj",
+  "legacy_export_verification": {
+    "order_id": "pass-13-order-2",
+    "verified": true,
+    "tls_check_added": false,
+    "image_policy_check_added": false
+  }
+}
