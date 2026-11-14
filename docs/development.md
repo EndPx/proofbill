@@ -78,4 +78,3 @@ These cover receiver keep/return/failure, transferred refund rights, failed nati
 - **Private persistence:** a dedicated Neon database; database/artifact credentials are server-only Vercel variables.
 - **Worker:** a separate non-login Linux user with the [systemd service](../infra/systemd/proofbill-worker.service) and [deployment script](../infra/deploy-worker.sh). Operational keys stay in the worker's private environment; full-access CLI keys are not copied there.
 - **Contract:** `proofbill-endpx-2026.testnet`. [Inspect the contract](https://testnet.nearblocks.io/address/proofbill-endpx-2026.testnet) and [deployment record](../infra/near/testnet-deployment.json).
-
