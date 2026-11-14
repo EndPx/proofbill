@@ -22,7 +22,7 @@ import {
   requireOrigin,
   COOKIE,
 } from "@/lib/server";
-import { view, contractId, rpcUrl } from "@/lib/server";
+import { view, contractId, rpcUrl, provider } from "@/lib/server";
 import {
   validAccountId,
   type PurchasePass,
@@ -81,6 +81,23 @@ export async function GET(req: NextRequest, ctx: Context) {
         : json({ error: "RECEIPT_NOT_FOUND" }, 404);
     }
     if (route === "session") return json({ accountId: await session(req) });
+    if (route === "wallet-balance") {
+      const account = req.nextUrl.searchParams.get("account");
+      if (!account || !validAccountId(account))
+        return json({ error: "INVALID_ACCOUNT" }, 400);
+      try {
+        const balance = await provider().viewAccount({ accountId: account, blockQuery: { finality: "final" } });
+        return json({
+          accountId: account,
+          network: "testnet",
+          totalYocto: (balance.amount + balance.locked).toString(),
+          blockHeight: balance.block_height,
+          blockHash: balance.block_hash,
+        });
+      } catch {
+        return json({ error: "WALLET_BALANCE_UNAVAILABLE" }, 503);
+      }
+    }
     if (route === "workspace") {
       const account = req.nextUrl.searchParams.get("account");
       if (!account || !validAccountId(account))

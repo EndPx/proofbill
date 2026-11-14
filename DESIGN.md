@@ -26,6 +26,8 @@ Inter or system sans; weights 400/500/600/700. Page title 32–36px, section 21p
 
 Button: black primary, outlined secondary, disabled, pending, focus, destructive. Field: persistent label, hint, inline error. Status: Available/In use/Completed/Refund pending/Refunded, evidence Pass/Fail/Unavailable/Not checked. Card: quiet border, receipt variant for payment summary. Table: collapses to labelled cards on mobile. Empty state: clear next action, never sample success. Primitive harness lives at /visual-qa.
 
+Wallet balance uses the existing charcoal budget card, mint native-NEAR amount and compact refresh control. Read a finalized account view: total native balance is liquid amount plus staked/locked amount, including any storage-backed portion. It is not a spendable quote. Label it Wallet balance / NEAR testnet and distinguish Available pass budget below a divider. Never invent a dollar price. Compact values truncate at four decimal places with an approximation marker, with full atomic precision available in the accessible description. Loading and RPC errors show a dash and explicit status, never a fabricated zero. Read on account change, focus/visibility, manual refresh and a 30-second visible-page interval; ignore old-account responses.
+
 ## 6. Motion
 
 Only 120ms color/border/opacity feedback. Pending uses text and a small indicator. Reduced motion disables transitions. No autonomous hero motion or timed transaction success.

@@ -53,6 +53,7 @@ import {
   type PassBudget,
 } from "@proofbill/shared";
 import { api, useWallet } from "./wallet";
+import { WalletBalance, useWalletBalance } from "./wallet-balance";
 type Job = { order_id: string; state: string; error_code: string | null };
 type OrderDetail = {
   order: PurchaseOrder | null;
@@ -305,6 +306,7 @@ export function Workspace() {
   const wallet = useWallet(),
     router = useRouter(),
     pathname = usePathname();
+  const walletFunds = useWalletBalance(wallet.account);
   const route = pathname.split("/").filter(Boolean),
     section = route[1] ?? "purchases",
     id = route[2] ?? "";
@@ -386,6 +388,7 @@ export function Workspace() {
     try {
       await fn();
       await refresh();
+      walletFunds.refresh();
     } catch (e) {
       setError(niceError(e));
     } finally {
@@ -1488,8 +1491,10 @@ export function Workspace() {
           <span>Your purchase workspace</span>
         </div>
         <div className="budget">
-          <span>Available budget</span>
-          <strong>
+          <WalletBalance {...walletFunds} />
+          <div className="budget-divider" />
+          <span>Available pass budget</span>
+          <strong className="pass-budget-value">
             {wallet.account ? formatNear(available.toString()) : "—"}
           </strong>
           <small>testnet NEAR</small>
@@ -1585,7 +1590,7 @@ export function Workspace() {
               <button
                 aria-label="Refresh confirmed state"
                 className="icon-button"
-                onClick={() => void refresh()}
+                onClick={() => { void refresh(); walletFunds.refresh(); }}
               >
                 <RefreshCw size={16} />
               </button>

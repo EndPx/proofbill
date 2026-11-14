@@ -15,6 +15,11 @@ const server=http.createServer(async(req,res)=>{
  try{
  const request=JSON.parse(raw);let result;
  if(request.method==='block')result={header:{hash,height:100,timestamp_nanosec:'1794528000000000000'}};
+ else if(request.method==='query'&&request.params?.request_type==='view_account'){
+  if(request.params.account_id==='unavailable.testnet')throw new Error('FIXTURE_CHAIN_UNAVAILABLE');
+  if(request.params.finality!=='final')throw new Error('FIXTURE_EXPECTED_FINAL_BALANCE');
+  result={amount:'1234567890123456789012345',locked:'2000000000000000000000000',storage_usage:182,code_hash:hash,block_height:100,block_hash:hash};
+ }
  else if(request.method==='query'&&request.params?.request_type==='call_function'){
   const args=JSON.parse(Buffer.from(request.params.args_base64,'base64').toString());
   if(request.params.method_name==='get_order'&&args.order_id==='pass-503-order')throw new Error('FIXTURE_CHAIN_UNAVAILABLE');

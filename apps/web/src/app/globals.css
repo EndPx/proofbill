@@ -300,6 +300,38 @@ textarea {
   align-self: flex-start;
   font-size: 12px;
 }
+.wallet-balance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #bcbcbc;
+  font-size: 13px;
+}
+.wallet-balance-refresh {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: #bcbcbc;
+  background: transparent;
+}
+.wallet-balance-refresh:hover { background: var(--shell-border); color: var(--mint); }
+.wallet-balance > strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  color: var(--mint);
+  margin: 4px 0 6px;
+}
+.wallet-balance strong small { font-size: 12px; font-weight: 500; }
+.wallet-balance > small { color: #bcbcbc; font-size: 11px; }
+.budget-divider { height: 1px; background: var(--shell-border); margin: 10px 0 6px; }
+.budget > .pass-budget-value { font-size: 23px; }
 .sidebar nav {
   display: flex;
   flex-direction: column;
