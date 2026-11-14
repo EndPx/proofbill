@@ -5,8 +5,8 @@
 <h1 align="center">ProofBill</h1>
 
 <p align="center">
-  A funded NFT Purchase Pass for an AI service.<br />
-  A private result to inspect. You choose when payment is authorized.
+  Built with <strong>NEAR Protocol (testnet)</strong>, <strong>NEAR AI Cloud</strong> and <strong>NEP-171 NFTs</strong>.<br />
+  Reusable agent budgets, buyer-private AI results and confirmed onchain payment receipts.
 </p>
 
 <p align="center">
