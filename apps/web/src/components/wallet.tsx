@@ -197,7 +197,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (stillCurrent()) {
         setAuthenticated(false);
-        setAuthenticationError("Your wallet is connected, but private sign-in was not completed. Try signing in again to access private tasks and results.");
+        setAuthenticationError("Your private sign-in was not completed. Try again; your wallet is still connected.");
       }
       throw error;
     } finally {

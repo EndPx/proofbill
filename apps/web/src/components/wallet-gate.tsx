@@ -8,6 +8,7 @@ import {
   KeyRound,
   LoaderCircle,
   ShieldCheck,
+  Check,
 } from "lucide-react";
 import { useWallet } from "./wallet";
 
@@ -62,21 +63,18 @@ export function WalletGate({ children }: { children: ReactNode }) {
           <span className="badge neutral">
             <span className="network-dot" /> NEAR testnet
           </span>
-          <h1>
+          <h2>
             Your agent's purchases.
             <br />
             Your wallet in control.
-          </h1>
+          </h2>
           <p>
-            Connect your NEAR wallet to manage Purchase Passes, review private
-            results, and choose how payment is authorized.
+            Fund a pass, give your agent a task, and keep every receipt.
           </p>
           <div className="wallet-entry-note">
             <ShieldCheck size={20} />
             <p>
-              Connecting does not move funds. Manual payment needs your
-              approval; Automatic payment uses the permission you give in
-              advance.
+              Choose Manual review or authorize Automatic payments within your budget.
             </p>
           </div>
         </section>
@@ -84,13 +82,14 @@ export function WalletGate({ children }: { children: ReactNode }) {
           className="panel wallet-entry-card"
           aria-labelledby="wallet-entry-title"
         >
-          <span className="wallet-entry-icon">
-            <KeyRound size={28} />
-          </span>
-          <h2 id="wallet-entry-title">{connected ? "Sign in to continue" : "Connect to continue"}</h2>
+          <ol className="wallet-entry-steps" aria-label="Sign-in steps">
+            <li className={connected ? "complete" : "current"}>{connected ? <Check size={16}/> : <span>1</span>} Connect wallet</li>
+            <li className={connected ? "current" : ""}><KeyRound size={16}/> Sign message</li>
+          </ol>
+          <h1 id="wallet-entry-title">{connected ? "Sign in to continue" : "Connect to continue"}</h1>
           <p>{connected
-            ? "Your wallet is connected. Sign a message to verify ownership and open your private workspace."
-            : "Choose your wallet, then sign a message to open your private session. Signing in costs no gas and grants no spending permission."}</p>
+            ? "Sign a wallet message to open your private workspace. Your wallet stays connected."
+            : "Connect your NEAR wallet, then sign a message to verify ownership."}</p>
           {connected && <p className="wallet-entry-account">{wallet.account}</p>}
           {message && (
             <p className="wallet-entry-error" role="alert">
@@ -131,12 +130,12 @@ export function WalletGate({ children }: { children: ReactNode }) {
             {!wallet.ready
               ? "Checking for an existing wallet connection."
               : wallet.authenticating
-                ? "Sign the wallet message to open your private session. If no wallet window appears, check your browser's blocked pop-up indicator."
+                ? "Sign the wallet message. If no window opens, check blocked pop-ups in your browser."
               : checking
                 ? "Verifying your existing private session."
               : connected
                 ? "No gas fee. No transfer or spending permission."
-                : "NEAR testnet · Test funds only"}
+                : "Sign-in costs no gas and grants no spending permission."}
           </p>
           {connected && <button type="button" className="button secondary" onClick={() => void disconnect()}>Disconnect wallet</button>}
         </section>

@@ -88,7 +88,7 @@ test("legacy receipt link redirects publicly while private workspace stays gated
   ).toBeVisible();
   await expect(
     page.getByText(
-      /Manual payment needs your approval; Automatic payment uses/,
+      /Choose Manual review or authorize Automatic payments/,
     ),
   ).toBeVisible();
 });

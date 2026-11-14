@@ -50,7 +50,7 @@ export function walletBalanceText(balance: Balance, exact = false) {
   return `${amount % (10n ** 20n) ? "≈ " : ""}${formatNear(balance.totalYocto, 4)}`;
 }
 
-export function WalletBalance({ balance, refresh }: ReturnType<typeof useWalletBalance>) {
+export function WalletBalance({ balance, refresh, exact = false }: ReturnType<typeof useWalletBalance> & {exact?:boolean}) {
   return <section className="wallet-balance" aria-label="Connected wallet balance">
     <div className="wallet-balance-heading">
       <span>Wallet balance</span>
@@ -59,7 +59,7 @@ export function WalletBalance({ balance, refresh }: ReturnType<typeof useWalletB
       </button>
     </div>
     <strong title={balance.status === "ready" ? `${walletBalanceText(balance, true)} NEAR total, including storage-backed and staked NEAR. Purchase Pass budgets are separate.` : undefined}>
-      {walletBalanceText(balance)} <small>NEAR</small>
+      {walletBalanceText(balance, exact)} <small>NEAR</small>
     </strong>
     <small role="status">{balance.status === "loading" ? "Loading wallet balance…" : balance.status === "unavailable" ? "Balance unavailable · retry" : "Total native NEAR · testnet"}</small>
   </section>;

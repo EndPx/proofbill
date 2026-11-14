@@ -63,7 +63,7 @@ test("reading administrator trust preserves an unfunded draft and requests no tr
   await expect(explanation.getByRole("heading", { name: "Who controls the contract account?" })).toBeVisible();
   await expect(explanation.locator("#review-admin")).toContainText("without using the app's approval flow");
   await expect(budget).toHaveValue("1.2345");
-  await expect(page.getByRole("button", { name: "Confirm and mint pass" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Create and fund pass" })).toBeEnabled();
   expect(await page.evaluate(() => (window as unknown as { proofbillTransactions?: unknown[] }).proofbillTransactions ?? [])).toEqual([]);
   await explanation.close();
 });
@@ -73,7 +73,7 @@ test("budget funding uses exact amounts and a changed cap requires renewed autom
   await setup(page,false,true);
   await page.goto("/app/passes/new");
   const input=page.getByRole("textbox",{name:"Service budget (testnet NEAR)"});
-  const mint=page.getByRole("button",{name:"Confirm and mint pass"});
+  const mint=page.getByRole("button",{name:"Create and fund pass"});
   await expect(input).toHaveValue("0.050");
   await expect(page.locator('#budget-help')).toHaveCount(0);
   await input.fill("0.015");
@@ -104,7 +104,9 @@ test("remaining budget refund explains closure and prior public receipts stay re
     reserved_yocto:"0",spent_yocto:"20000000000000000000000",refunded_yocto:"0",orders_created:2,
   }}}));
   await page.goto("/app/passes/pass-99");
+  await page.locator('.pass-manage > summary').click();
   await expect(page.getByText(/Refund returns 0.010 testnet NEAR and closes this budget pass/)).toBeVisible();
+  await page.getByText('Purchase history',{exact:true}).click();
   await expect(page.getByRole("link",{name:"Order 1 receipt"})).toHaveAttribute("href","/receipts/pass-99-order-1");
   await expect(page.getByRole("link",{name:"Order 2 receipt"})).toHaveAttribute("href","/receipts/pass-99-order-2");
 });
@@ -118,7 +120,7 @@ test("owner inputs a custom total and optional ceiling independently of the serv
   await page.getByRole("combobox",{name:"Payment approval"}).selectOption("Automatic");
   const consent=page.getByRole("checkbox",{name:"Authorize Automatic payments"});await consent.check();
   await limit.fill("0.2");await expect(consent).not.toBeChecked();await consent.check();
-  await page.getByRole("button",{name:"Confirm and mint pass"}).click();
+  await page.getByRole("button",{name:"Create and fund pass"}).click();
   await expect.poll(async()=>(await transactions(page)).length).toBe(1);
   expect((await transactions(page))[0].actions[0].params).toMatchObject({methodName:"create_flexible_budget_pass",args:{budget_yocto:"1234500000000000000000000",max_order_price_yocto:"200000000000000000000000"},deposit:"1264500000000000000000000"});
 });
@@ -128,7 +130,7 @@ test("an omitted ceiling stays null and does not require a price-step budget",as
   await expect(page.getByRole('checkbox',{name:'Set a per-purchase limit'})).not.toBeChecked();
   await expect(page.getByRole("textbox",{name:"Maximum per purchase (testnet NEAR)"})).toHaveCount(0);
   await expect(page.locator(".amount")).toContainText("2.045");
-  await page.getByRole("button",{name:"Confirm and mint pass"}).click();
+  await page.getByRole("button",{name:"Create and fund pass"}).click();
   await expect.poll(async()=>(await transactions(page)).length).toBe(1);
   expect((await transactions(page))[0].actions[0].params.args).toMatchObject({budget_yocto:"2015000000000000000000000",max_order_price_yocto:null});
 });
@@ -146,7 +148,7 @@ test("pass expiry supports ten minutes and preserves the existing durations",asy
   ]){
     await page.goto('/app/passes/new');
     await expiry.selectOption(value);
-    await page.getByRole('button',{name:'Confirm and mint pass'}).click();
+    await page.getByRole('button',{name:'Create and fund pass'}).click();
     await expect.poll(async()=>(await transactions(page)).at(-1)?.actions[0].params.args.expires_at_ns).toBe(expected);
     await expect(page).toHaveURL(/\/app\/passes$/);
   }
@@ -155,7 +157,7 @@ test("pass expiry supports ten minutes and preserves the existing durations",asy
 test("a new pass explains a ceiling above its budget and revalidates after budget edits",async({page})=>{
   await setup(page,false,true,true);await page.goto('/app/passes/new');
   const budget=page.getByRole('textbox',{name:'Service budget (testnet NEAR)'});
-  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  const mint=page.getByRole('button',{name:'Create and fund pass'});
   await page.getByRole('checkbox',{name:'Set a per-purchase limit'}).check();
   const limit=page.getByRole('textbox',{name:'Maximum per purchase (testnet NEAR)'});
   await expect(limit).toHaveValue('0.010');
@@ -185,7 +187,7 @@ test("invalid, zero and below-price purchase limits have actionable field errors
   await setup(page,false,true,true);await page.goto('/app/passes/new');
   await page.getByRole('checkbox',{name:'Set a per-purchase limit'}).check();
   const limit=page.getByRole('textbox',{name:'Maximum per purchase (testnet NEAR)'});
-  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  const mint=page.getByRole('button',{name:'Create and fund pass'});
   for(const value of ['', '0','-0.1','1e2','0.0100000000000000000000001','0.005']){
     await limit.fill(value);
     await expect(limit).toHaveAttribute('aria-invalid','true');
@@ -202,7 +204,7 @@ test("invalid, zero and below-price purchase limits have actionable field errors
 test("service budget errors replace purchase estimates and overflow cannot mint",async({page})=>{
   await setup(page,false,true,true);await page.goto('/app/passes/new');
   const budget=page.getByRole('textbox',{name:'Service budget (testnet NEAR)'});
-  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  const mint=page.getByRole('button',{name:'Create and fund pass'});
   for(const value of ['', '0', '0.009','-1','1e2','0.0100000000000000000000001','340282366920938.463463374607431768211455']){
     await budget.fill(value);
     await expect(budget).toHaveAttribute('aria-invalid','true');
@@ -224,7 +226,7 @@ test("invalid storage is attributed to storage while a valid service budget stay
   await page.locator('.funding-storage summary').click();
   const storage=page.getByRole('textbox',{name:'Storage backing (testnet NEAR)'});
   const budget=page.getByRole('textbox',{name:'Service budget (testnet NEAR)'});
-  const mint=page.getByRole('button',{name:'Confirm and mint pass'});
+  const mint=page.getByRole('button',{name:'Create and fund pass'});
   for(const value of ['', 'invalid','0.029']){
     await storage.fill(value);
     await expect(storage).toHaveAttribute('aria-invalid','true');
@@ -257,6 +259,7 @@ test("flexible agent settings can explicitly remove a prior per-purchase ceiling
   await setup(page,false,true,true);
   await page.route("**/api/pass/**",r=>r.fulfill({json:{...pass,agent_id:"agent.testnet",flexible_budget:true,max_order_price_yocto:"100000000000000000000000",storage_required_for_order_yocto:"0",budget:{funded_yocto:"1000000000000000000000000",available_yocto:"1000000000000000000000000",spent_yocto:"0",reserved_yocto:"0",refunded_yocto:"0",orders_created:0}}}));
   await page.goto("/app/passes/pass-99");
+  await page.locator('details.agent-settings > summary').click();
   await page.getByRole("checkbox",{name:"Set a per-purchase limit"}).uncheck();
   await page.getByRole("button",{name:"Save agent and payment settings"}).click();
   await expect.poll(async()=>(await transactions(page)).length).toBe(1);
@@ -305,6 +308,9 @@ test("order copy identifies the actual agent and follows payment mode and outcom
   await expect(page.getByText(/buyer can approve a retry or request a service refund/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry failed payment" })).toBeVisible();
   phase = "Delivered";
+  await visit();
+  await expect(page.getByRole("button", {name:"Approve payment"})).toHaveCount(0);
+  await expect(page.getByText("Awaiting settlement", {exact:true}).first()).toBeVisible();
   mode = "Manual";
   await visit();
   await expect(page.getByText("Buyer payment approval", { exact: true })).toBeVisible();
@@ -312,6 +318,7 @@ test("order copy identifies the actual agent and follows payment mode and outcom
   phase = "Refunded";
   await visit();
   await expect(page.getByText(/confirmed the service refund to the buyer/)).toBeVisible();
+  await page.locator(".order-activity > summary").click();
   await expect(page.getByText("Result delivered", { exact: true }).locator("..")).not.toHaveClass(/done/);
   await expect(page.getByRole("button", { name: "Approve payment" })).toHaveCount(0);
 });
@@ -345,6 +352,7 @@ test("owner selects own agent and explicitly consents to automatic payment", asy
     payment_mode: "Automatic",
     expected_revision: 0,
   });
+  await page.locator('.pass-details > summary').click();
   await expect(page.getByText("Current holder", { exact: true })).toBeVisible();
 });
 test("own agent instructions retain owner custody and can switch to ProofBill", async ({
@@ -352,7 +360,8 @@ test("own agent instructions retain owner custody and can switch to ProofBill", 
 }) => {
   await setup(page, true);
   await page.goto("/app/passes/pass-99");
-  const facts=page.locator('dl.facts.panel').first();
+  await page.locator('.pass-details > summary').click();
+  const facts=page.locator('.pass-details dl.facts');
   for(const account of [owner,'seller.testnet','custom.testnet','proofbill.testnet']) {
     const link=facts.getByRole('link',{name:account,exact:true});
     await expect(link).toHaveAttribute('href',`https://testnet.nearblocks.io/address/${account}`);
@@ -365,6 +374,7 @@ test("own agent instructions retain owner custody and can switch to ProofBill", 
   await expect(
     page.getByRole("link", { name: "Own-agent SDK and setup guide" }),
   ).toBeVisible();
+  await page.locator('details.agent-settings > summary').click();
   await page
     .getByRole("combobox", { name: "Purchasing agent" })
     .selectOption("proofbill");
@@ -388,7 +398,7 @@ test("new pass defaults manual and automatic creation requires explicit consent"
   await page
     .getByRole("combobox", { name: "Payment approval" })
     .selectOption("Automatic");
-  const mint = page.getByRole("button", { name: "Confirm and mint pass" });
+  const mint = page.getByRole("button", { name: "Create and fund pass" });
   await expect(mint).toBeDisabled();
   await page.getByRole("checkbox").check();
   await mint.click();

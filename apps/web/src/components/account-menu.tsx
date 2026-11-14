@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { Check, ChevronDown, Copy, ExternalLink, LogOut, UserRound, X } from "lucide-react";
 import { useWallet } from "./wallet";
-import { WalletBalance, walletBalanceText, type useWalletBalance } from "./wallet-balance";
+import { WalletBalance, type useWalletBalance } from "./wallet-balance";
 
 export function AccountMenu({ funds, disabled, onDisconnect }: {
   funds: ReturnType<typeof useWalletBalance>;
@@ -46,9 +46,8 @@ export function AccountMenu({ funds, disabled, onDisconnect }: {
         {wallet.authenticated ? "Private session active" : "Wallet connected · private sign-in needed"}
       </div>
       <div className="account-balance-summary">
-        <WalletBalance {...funds} />
-        {funds.balance.status === "ready" && <p className="account-exact-balance">{walletBalanceText(funds.balance,true)} NEAR</p>}
-        <p className="account-balance-note">Includes storage-backed and staked NEAR. Purchase Pass budgets are held separately.</p>
+        <WalletBalance {...funds} exact />
+        <p className="account-balance-note">Wallet total includes storage and staking. Pass budgets are separate.</p>
       </div>
       <div className="account-actions">
         <button type="button" onClick={() => void copyAddress()}>

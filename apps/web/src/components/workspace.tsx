@@ -2,6 +2,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -93,7 +94,7 @@ function niceError(e: unknown) {
       : "The request could not be completed. Please check the current order state before retrying.")
   );
 }
-function Status({ value }: { value: string }) {
+function Status({ value, label }: { value: string; label?: string }) {
   const good = ["Completed", "Paid", "passed", "Available"].includes(value),
     bad = ["failed", "TransferFailed", "RefundFailed"].includes(value);
   return (
@@ -101,7 +102,7 @@ function Status({ value }: { value: string }) {
       className={`badge ${good ? "success" : bad ? "error" : ["Delivered", "InUse", "queued", "running"].includes(value) ? "warning" : "neutral"}`}
     >
       {good && <Check size={13} />}{" "}
-      {value === "Delivered" ? "Needs review" : humanPhase(value)}
+      {label ?? (value === "Delivered" ? "Needs review" : humanPhase(value))}
     </span>
   );
 }
@@ -140,7 +141,7 @@ function OrderLimitField({enabled,value,onToggle,onChange,disabled=false,validat
   let error=validationError??"";
   try{if(enabled)parseOrderPriceLimit(value)}catch{error="Enter a positive NEAR amount using up to 24 decimal places."}
   return <>
-    <div className="info"><label><input type="checkbox" aria-label="Set a per-purchase limit" checked={enabled} disabled={disabled} onChange={e=>onToggle(e.target.checked)}/> Set a maximum service price per purchase (optional)</label></div>
+    <div className="info"><label><input type="checkbox" aria-label="Set a per-purchase limit" checked={enabled} disabled={disabled} onChange={e=>onToggle(e.target.checked)}/> Set a purchase limit (optional)</label></div>
     {enabled&&<label className="field">Maximum per purchase (testnet NEAR)
       <input aria-label="Maximum per purchase (testnet NEAR)" inputMode="decimal" value={value} disabled={disabled} aria-invalid={!!error} aria-describedby="order-limit-help" onChange={e=>onChange(e.target.value)}/>
       <small id="order-limit-help" className={error?"field-error":undefined} aria-live="polite">{error||"Each purchase must fit this limit and your remaining budget."}</small>
@@ -312,6 +313,10 @@ export function Workspace() {
     router = useRouter(),
     pathname = usePathname();
   const walletFunds = useWalletBalance(wallet.account);
+  const refreshVersion = useRef(0);
+  const [loadedView, setLoadedView] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const loading = loadedView !== pathname;
   const route = pathname.split("/").filter(Boolean),
     section = route[1] ?? "purchases",
     id = route[2] ?? "";
@@ -338,35 +343,44 @@ export function Workspace() {
     [tab, setTab] = useState("Result");
   const refresh = useCallback(async () => {
     if (!wallet.config.configured) return;
+    const version = refreshVersion.current;
+    const current = () => version === refreshVersion.current;
     try {
       if (wallet.account) {
         const data = await api<{
           passes: PurchasePass[];
           orders: PurchaseOrder[];
         }>(`workspace?account=${encodeURIComponent(wallet.account)}`);
+        if (!current()) return;
         setPasses(data.passes);
         setOrders(data.orders);
       } else {
         setPasses([]);
         setOrders([]);
       }
-      if (section === "passes" && id && id !== "new")
-        setPass(await api<PurchasePass>(`pass/${encodeURIComponent(id)}`));
+      if (section === "passes" && id && id !== "new") {
+        const nextPass = await api<PurchasePass>(`pass/${encodeURIComponent(id)}`);
+        if (!current()) return;
+        setPass(nextPass);
+      }
       if ((section === "orders" || section === "receipts") && id) {
-        setDetail(await api<OrderDetail>(`order/${encodeURIComponent(id)}`));
+        const nextDetail = await api<OrderDetail>(`order/${encodeURIComponent(id)}`);
+        if (!current()) return;
+        setDetail(nextDetail);
         if (wallet.authenticated) {
           try {
             const r = await api<{ result: PrivateResult | null }>(
               `private/${encodeURIComponent(id)}`,
             );
-            setResult(r.result);
+            if (current()) setResult(r.result);
           } catch {
-            setResult(null);
+            if (current()) setResult(null);
           }
         } else setResult(null);
       }
+      if (current()) { setLoadedView(pathname); setLoadError(""); }
     } catch (e) {
-      setError(niceError(e));
+      if (current()) setLoadError(niceError(e));
     }
   }, [
     wallet.account,
@@ -374,8 +388,12 @@ export function Workspace() {
     wallet.config.configured,
     section,
     id,
+    pathname,
   ]);
   useEffect(() => {
+    refreshVersion.current += 1;
+    setLoadedView("");
+    setLoadError("");
     setPass(null);
     setDetail(null);
     setResult(null);
@@ -384,7 +402,7 @@ export function Workspace() {
     const t = setInterval(() => {
       if (!document.hidden) void refresh();
     }, 8000);
-    return () => clearInterval(t);
+    return () => { refreshVersion.current += 1; clearInterval(t); };
   }, [refresh]);
   async function run(label: string, fn: () => Promise<void>) {
     setBusy(label);
@@ -456,7 +474,7 @@ export function Workspace() {
     <button
       className={`button ${secondary ? "secondary" : "primary"}`}
       onClick={onClick}
-      disabled={!!busy || disabled}
+      disabled={!!busy || !!loadError || disabled}
     >
       {busy && <LoaderCircle size={16} className="spin" />}
       {children}
@@ -495,7 +513,7 @@ export function Workspace() {
     `/app/passes/${encodeURIComponent(token)}`;
   const orderLink = (order: string) =>
     `/app/orders/${encodeURIComponent(order)}`;
-  const activeOrder = orders.find((o) => o.phase === "Delivered");
+  const activeOrder = orders.find((o) => o.phase === "Delivered" && o.payment_mode !== "Automatic");
   let content: ReactNode;
   if (section === "passes" && id === "new")
     content = (
@@ -506,7 +524,7 @@ export function Workspace() {
         )}
         <div className="detail-grid purchase-funding">
           <section className="panel form-panel">
-            <h2>Service and budget</h2>
+            <h2>Your budget</h2>
             <div className="service-option">
               <span className="service-icon">
                 <FileText />
@@ -514,7 +532,7 @@ export function Workspace() {
               <div>
                 <strong>Private brief extraction</strong>
                 <p>
-                  Extract item, quantity and requester from a purchase brief.
+                  Turn a brief into an item, quantity and requester.
                 </p>
               </div>
               <CheckCircle2 size={20} />
@@ -531,12 +549,7 @@ export function Workspace() {
             {wallet.config.flexibleBudgets&&<>
               <OrderLimitField enabled={limitEnabled} value={limitInput} disabled={!!busy} validationError={limitError}
                 onToggle={v=>{setLimitEnabled(v);setAutomaticConsent(false)}} onChange={v=>{setLimitInput(v);setAutomaticConsent(false)}}/>
-              <details className="panel funding-storage"><summary>Initial storage backing{storageError&&<span className="field-error"> · Needs attention</span>}</summary>
-                <label className="field">Storage backing (testnet NEAR)
-                  <input aria-label="Storage backing (testnet NEAR)" aria-invalid={!!storageError} aria-describedby="storage-help" inputMode="decimal" value={initialStorage} disabled={!!busy} onChange={e=>{setInitialStorage(e.target.value);setAutomaticConsent(false)}}/>
-                  <small id="storage-help" className={storageError?"field-error":undefined} aria-live="polite">{storageError||"At least 0.030 NEAR, independent of your service budget. Actual history growth uses this backing. You can add more separately later."}</small>
-                </label>
-              </details>
+
             </>}
             <label className="field">
               Pass expires after
@@ -560,13 +573,13 @@ export function Workspace() {
                 disabled={!!busy}
               />
             )}
-            <div className="info">
-              <ShieldCheck size={18} />
-              <p>
-                You choose the agent and payment policy. Between orders, an available
-                pass can transfer its remaining service and refund rights.
-              </p>
-            </div>
+            {wallet.config.flexibleBudgets && <details className="panel funding-storage"><summary>Advanced storage{storageError&&<span className="field-error"> · Needs attention</span>}</summary>
+                <label className="field">Storage backing (testnet NEAR)
+                  <input aria-label="Storage backing (testnet NEAR)" aria-invalid={!!storageError} aria-describedby="storage-help" inputMode="decimal" value={initialStorage} disabled={!!busy} onChange={e=>{setInitialStorage(e.target.value);setAutomaticConsent(false)}}/>
+                  <small id="storage-help" className={storageError?"field-error":undefined} aria-live="polite">{storageError||"At least 0.030 NEAR, independent of your service budget. Actual history growth uses this backing. You can add more separately later."}</small>
+                </label>
+            </details>}
+            <details className="service-details"><summary>Service details</summary>
             <dl className="facts">
               <div>
                 <dt>Network</dt>
@@ -581,12 +594,13 @@ export function Workspace() {
                 <dd>{wallet.config.budgetPasses ? "Multiple fixed-price orders · one active at a time" : "One fixed-price order"}</dd>
               </div>
             </dl>
+            </details>
           </section>
           <aside className="receipt">
             <h2>Fund your pass</h2>
             <p>
               {wallet.config.budgetPasses
-                ? "Each order reserves 0.010 NEAR from your budget. Unspent service funds stay available for another purchase or refund."
+                ? "The current service costs 0.010 NEAR. Unspent budget is refundable."
                 : "The service allocation stays in the contract until the selected payment policy settles the order or a refund is confirmed."}
             </p>
             <div className="receipt-rule" />
@@ -607,11 +621,10 @@ export function Workspace() {
               <small>testnet NEAR + wallet gas</small>
             </div>
             <p className="fine">
-              Storage remains reserved while the NFT and its history exist. It
-              is separate from the refundable service allocation.
+              Storage backs retained NFT and order history and is excluded from service refunds. More may be needed as history grows.
             </p>
             <p className="fine" id="funding-admin-trust">
-              {adminTrust.summary}{" "}
+              {adminTrust.fundingSummary}{" "}
               <Link className="text-button" href="/review#review-admin" target="_blank" rel="noopener noreferrer" prefetch={false}>
                 Read administrator trust
               </Link>
@@ -646,7 +659,7 @@ export function Workspace() {
                   })
                 }
               >
-                Confirm and mint pass <Plus size={16} />
+                Create and fund pass <Plus size={16} />
               </Button>
             ) : (
               connectButton
@@ -663,93 +676,19 @@ export function Workspace() {
         </Link>
         {pageHeader(
           `Purchase Pass #${pass.token_id.replace("pass-", "")}`,
-          "Your right to one bounded AI service purchase.",
+          "A reusable budget for your agent’s purchases.",
           <Status value={pass.phase} />,
         )}
-        <div className="detail-grid">
-          <section>
-            <div className="pass-large">
-              <div className="pass-art">
-                <img src="/brand/icon.png" alt="ProofBill Purchase Pass" />
-                <span>Purchase Pass</span>
-                <strong>{pass.token_id}</strong>
-              </div>
-              <div className="pass-caption">
-                <span>Private brief extraction</span>
-                <Status value={pass.phase} />
-              </div>
-            </div>
-            <dl className="facts panel">
-              <div>
-                <dt>Current holder</dt>
-                <dd><AccountLink id={pass.owner_id} /></dd>
-              </div>
-              <div>
-                <dt>Seller</dt>
-                <dd><AccountLink id={pass.seller_id} /></dd>
-              </div>
-              {!pass.budget && <div>
-                <dt>Service allocation</dt>
-                <dd>{formatNear(pass.price_yocto)} testnet NEAR</dd>
-              </div>}
-              {pass.budget && Object.entries({Funded:pass.budget.funded_yocto, Available:pass.budget.available_yocto, Reserved:pass.budget.reserved_yocto, Spent:pass.budget.spent_yocto, Refunded:pass.budget.refunded_yocto}).map(([label, amount]) => (
-                <div key={label}><dt>{label} service budget</dt><dd>{formatNear(amount)} testnet NEAR</dd></div>
-              ))}
-              <div>
-                <dt>Expiry</dt>
-                <dd>
-                  {new Date(
-                    Number(BigInt(pass.expires_at_ns) / 1000000n),
-                  ).toLocaleString()}
-                </dd>
-              </div>
-              <div>
-                <dt>Purchasing agent</dt>
-                <dd>{pass.agent_id ? <AccountLink id={pass.agent_id} /> : "Not assigned"}</dd>
-              </div>
-              {wallet.config.contractId && <div><dt>NFT contract</dt><dd><AccountLink id={wallet.config.contractId} /></dd></div>}
-              <div>
-                <dt>Payment approval</dt>
-                <dd>{pass.payment_mode ?? "Manual"}</dd>
-              </div>
-              {pass.flexible_budget&&<div><dt>Maximum service price per purchase</dt><dd>{pass.max_order_price_yocto?`${formatNear(pass.max_order_price_yocto)} testnet NEAR`:"No separate ceiling"}</dd></div>}
-            </dl>
-            {pass.budget && pass.budget.orders_created > 0 && (
-              <section className="panel section-gap">
-                <h3>Public purchase history</h3>
-                {pass.budget.orders_created>20&&<p className="fine">Showing the latest 20 of {pass.budget.orders_created} orders.</p>}
-                {Array.from({length:Math.min(pass.budget.orders_created,20)},(_,i)=>pass.budget!.orders_created-Math.min(pass.budget!.orders_created,20)+i+1).map(number=>(
-                  <Link className="chain-link" key={number} href={`/receipts/${pass.token_id}-order-${number}`}>
-                    Order {number} receipt <ExternalLink size={14}/>
-                  </Link>
-                ))}
-                <p className="fine">Financial records are public. Private results stay with each order's historical buyer.</p>
-              </section>
-            )}
-            {isOwner&&pass.budget&&wallet.config.flexibleBudgets&&<details className="panel section-gap" open={BigInt(pass.storage_required_for_order_yocto??"0")>0n}>
-              <summary>Storage backing</summary>
-              <p className="fine">Remaining storage credit: {formatNear(pass.storage_credit_yocto)} NEAR. This is separate from your service budget and backs retained NFT/order records.</p>
-              {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<p className="fine">Add at least {formatNear(pass.storage_required_for_order_yocto!)} NEAR before another order. No service funds will be converted to storage.</p>}
-              <label className="field">Additional storage backing (testnet NEAR)
-                <input aria-label="Additional storage backing (testnet NEAR)" inputMode="decimal" value={storageTopUp} aria-invalid={!topUpAmount} disabled={!!busy} onChange={e=>setStorageTopUp(e.target.value)}/>
-              </label>
-              {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<Button secondary onClick={()=>setStorageTopUp(formatNear(pass.storage_required_for_order_yocto!))}>Use required amount</Button>}
-              <Button secondary disabled={!topUpAmount||pass.transfer_pending} onClick={()=>action("top_up_storage",{token_id:pass.token_id},topUpAmount!)}>Add storage backing</Button>
-              <p className="fine">Adding backing between orders refreshes authorization. Resubmit any unreserved task afterward; an active order keeps its existing authorization.</p>
-            </details>}
-            {pass.order_id && (
-              <Link
-                className="button secondary"
-                href={orderLink(pass.order_id)}
-              >
-                Open linked order <ArrowRight size={16} />
-              </Link>
-            )}
-          </section>
-          <aside className="panel form-panel">
+        {pass.budget && <dl className="pass-balances" aria-label="Pass budget summary">
+          {Object.entries({Available:pass.budget.available_yocto,Reserved:pass.budget.reserved_yocto,Spent:pass.budget.spent_yocto,Refunded:pass.budget.refunded_yocto}).map(([label,value])=>(
+            <div key={label}><dt>{label}</dt><dd>{formatNear(value)} <small>NEAR</small></dd></div>
+          ))}
+        </dl>}
+        <div className="detail-grid pass-workspace">
+          <aside className="panel form-panel pass-actions">
             <h2>
               {pass.phase === "Available"
-                ? "Put your pass to work"
+                ? !pass.agent_id ? "Choose your agent" : pass.agent_id === wallet.config.agentId ? "Give your agent a task" : "Use your own agent"
                 : "Pass activity"}
             </h2>
             {!isOwner ? (
@@ -758,12 +697,13 @@ export function Workspace() {
               </p>
             ) : pass.phase === "Available" ? (
               <>
+                {!pass.agent_id && (
                 <AgentSettings
                   key={`${pass.token_id}:${pass.authorization_revision}`}
                   pass={pass}
                   hostedAgent={wallet.config.agentId}
                   advanced={!!wallet.config.advancedModes}
-                  busy={!!busy||pass.transfer_pending}
+                  busy={!!busy||!!loadError||pass.transfer_pending}
                   onSave={(agent, mode, limit) =>
                     void action(pass.flexible_budget?"configure_budget_agent":"assign_agent", {
                       token_id: pass.token_id,
@@ -774,6 +714,7 @@ export function Workspace() {
                     })
                   }
                 />
+                )}
                 {pass.max_order_price_yocto&&BigInt(pass.price_yocto)>BigInt(pass.max_order_price_yocto)&&<p className="fine">The current service quote exceeds your limit. Update the per-purchase maximum before ordering.</p>}
                 {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<p className="fine">Add storage backing in the panel on this pass before starting another order.</p>}
                 {pass.budget&&BigInt(pass.budget.available_yocto)<BigInt(pass.price_yocto)&&<p className="fine">The remaining balance is below the current service quote. You can refund or transfer the remaining service funds.</p>}
@@ -799,8 +740,9 @@ export function Workspace() {
                 ) : pass.agent_id ? (
                   <>
                     <div className="trust-line">
-                      <Bot size={17} /> ProofBill assistant is assigned
+                      <Bot size={17} /> ProofBill assistant · {pass.payment_mode === "Automatic" ? "Automatic payment" : "Manual approval"}
                     </div>
+                    {pass.payment_mode === "Automatic" && <p className="fine">Payments use this pass’s budget{pass.max_order_price_yocto ? ` and ${formatNear(pass.max_order_price_yocto)} NEAR purchase limit` : ""}. No final wallet approval is requested.</p>}
                     <label className="field">
                       Your private purchase brief
                       <textarea
@@ -808,7 +750,7 @@ export function Workspace() {
                         rows={5}
                         value={brief}
                         onChange={(e) => setBrief(e.target.value)}
-                        placeholder="What items do you need, how many, and who requested them?"
+                        placeholder="Describe the item, quantity and requester."
                       />
                     </label>
                     <button
@@ -847,13 +789,29 @@ export function Workspace() {
                       </Button>
                     )}
                     <p className="fine">
-                      Your brief and result stay private to this buyer.
-                      Inference is processed by the service operator and NEAR
-                      AI.
+                      Buyer-only workspace access. The operator and NEAR AI process your brief.
                     </p>
                   </>
                 ) : null}
-                <hr />
+                {pass.agent_id && <details className="agent-settings"><summary>Agent and payment settings</summary>
+                <AgentSettings
+                  key={`${pass.token_id}:${pass.authorization_revision}`}
+                  pass={pass}
+                  hostedAgent={wallet.config.agentId}
+                  advanced={!!wallet.config.advancedModes}
+                  busy={!!busy||!!loadError||pass.transfer_pending}
+                  onSave={(agent, mode, limit) =>
+                    void action(pass.flexible_budget?"configure_budget_agent":"assign_agent", {
+                      token_id: pass.token_id,
+                      expected_revision: pass.authorization_revision,
+                      agent_id: agent,
+                      payment_mode: mode,
+                      ...(pass.flexible_budget?{max_order_price_yocto:limit}:{}),
+                    })
+                  }
+                />
+                </details>}
+                <details className="pass-manage" id="manage-pass"><summary>Transfer or refund</summary><div className="form-panel pass-manage-body">
                 <h3>{pass.budget ? "Transfer remaining budget" : "Transfer unused pass"}</h3>
                 <p className="fine">
                   The receiver gets the remaining service allocation and refund right. The
@@ -899,6 +857,7 @@ export function Workspace() {
                 >
                   Request service refund
                 </Button>
+                </div></details>
               </>
             ) : (
               <>
@@ -906,7 +865,7 @@ export function Workspace() {
                   {pass.phase === "Completed"
                     ? "This purchase is complete. The pass keeps its public receipt history and has no remaining service value."
                     : pass.phase === "Refunded"
-                      ? "The service allocation was refunded. This pass has no remaining purchase value."
+                      ? "The remaining service budget was refunded. Your purchase history is kept."
                       : "Transfer is locked while this pass has an active order or unresolved payment."}
                 </p>
                 {pass.phase === "RefundFailed" && (
@@ -933,6 +892,77 @@ export function Workspace() {
               </>
             )}
           </aside>
+          <section className="pass-overview">
+            <div className="pass-identity"><img src="/brand/icon.png" alt="" /><div><strong>Private brief extraction</strong><span>{pass.token_id}</span></div></div>
+            <details className="panel pass-details"><summary>Pass details</summary>
+            <dl className="facts">
+              <div>
+                <dt>Current holder</dt>
+                <dd><AccountLink id={pass.owner_id} /></dd>
+              </div>
+              <div>
+                <dt>Seller</dt>
+                <dd><AccountLink id={pass.seller_id} /></dd>
+              </div>
+              {!pass.budget && <div>
+                <dt>Service allocation</dt>
+                <dd>{formatNear(pass.price_yocto)} testnet NEAR</dd>
+              </div>}
+              {pass.budget && Object.entries({Funded:pass.budget.funded_yocto, Available:pass.budget.available_yocto, Reserved:pass.budget.reserved_yocto, Spent:pass.budget.spent_yocto, Refunded:pass.budget.refunded_yocto}).map(([label, amount]) => (
+                <div key={label}><dt>{label} service budget</dt><dd>{formatNear(amount)} testnet NEAR</dd></div>
+              ))}
+              <div>
+                <dt>Expiry</dt>
+                <dd>
+                  {new Date(
+                    Number(BigInt(pass.expires_at_ns) / 1000000n),
+                  ).toLocaleString()}
+                </dd>
+              </div>
+              <div>
+                <dt>Purchasing agent</dt>
+                <dd>{pass.agent_id ? <AccountLink id={pass.agent_id} /> : "Not assigned"}</dd>
+              </div>
+              {wallet.config.contractId && <div><dt>NFT contract</dt><dd><AccountLink id={wallet.config.contractId} /></dd></div>}
+              <div>
+                <dt>Payment approval</dt>
+                <dd>{pass.payment_mode ?? "Manual"}</dd>
+              </div>
+              {pass.flexible_budget&&<div><dt>Maximum service price per purchase</dt><dd>{pass.max_order_price_yocto?`${formatNear(pass.max_order_price_yocto)} testnet NEAR`:"No separate ceiling"}</dd></div>}
+            </dl>
+            </details>
+            {pass.budget && pass.budget.orders_created > 0 && (
+              <details className="panel section-gap"><summary>Purchase history</summary>
+                {pass.budget.orders_created>20&&<p className="fine">Showing the latest 20 of {pass.budget.orders_created} orders.</p>}
+                {Array.from({length:Math.min(pass.budget.orders_created,20)},(_,i)=>pass.budget!.orders_created-Math.min(pass.budget!.orders_created,20)+i+1).map(number=>(
+                  <Link className="chain-link" key={number} href={`/receipts/${pass.token_id}-order-${number}`}>
+                    Order {number} receipt <ExternalLink size={14}/>
+                  </Link>
+                ))}
+                <p className="fine">Financial records are public. Private results stay with each order's historical buyer.</p>
+              </details>
+            )}
+            {isOwner&&pass.budget&&wallet.config.flexibleBudgets&&<details className="panel section-gap" open={BigInt(pass.storage_required_for_order_yocto??"0")>0n}>
+              <summary>Storage backing</summary>
+              <p className="fine">Remaining storage credit: {formatNear(pass.storage_credit_yocto)} NEAR. This is separate from your service budget and backs retained NFT/order records.</p>
+              {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<p className="fine">Add at least {formatNear(pass.storage_required_for_order_yocto!)} NEAR before another order. No service funds will be converted to storage.</p>}
+              <label className="field">Additional storage backing (testnet NEAR)
+                <input aria-label="Additional storage backing (testnet NEAR)" inputMode="decimal" value={storageTopUp} aria-invalid={!topUpAmount} disabled={!!busy} onChange={e=>setStorageTopUp(e.target.value)}/>
+              </label>
+              {BigInt(pass.storage_required_for_order_yocto??"0")>0n&&<Button secondary onClick={()=>setStorageTopUp(formatNear(pass.storage_required_for_order_yocto!))}>Use required amount</Button>}
+              <Button secondary disabled={!topUpAmount||pass.transfer_pending} onClick={()=>action("top_up_storage",{token_id:pass.token_id},topUpAmount!)}>Add storage backing</Button>
+              <p className="fine">Adding backing between orders refreshes authorization. Resubmit any unreserved task afterward; an active order keeps its existing authorization.</p>
+            </details>}
+            {pass.order_id && (
+              <Link
+                className="button secondary"
+                href={orderLink(pass.order_id)}
+              >
+                Open linked order <ArrowRight size={16} />
+              </Link>
+            )}
+          </section>
+
         </div>
       </>
     ) : (
@@ -942,13 +972,16 @@ export function Workspace() {
     );
   } else if ((section === "orders" || section === "receipts") && id) {
     const o = detail?.order;
+    const orderMode = o?.payment_mode ?? detail?.payment_mode;
     const receiptMode = section === "receipts";
     const paymentSummary = {
       Reserved:
-        detail?.payment_mode === "Automatic"
+        orderMode === "Automatic"
           ? "Waiting for matching publisher delivery. Your advance authorization starts the initial seller payment."
           : "Waiting for delivery. You can review the result before authorizing payment.",
-      Delivered: "Review the result before approving this exact order and seller payment.",
+      Delivered: orderMode === "Automatic"
+        ? "Delivery is recorded. Automatic settlement is awaiting confirmation; no final approval is needed."
+        : "Review the result before approving this exact order and seller payment.",
       PaymentPending: "The seller transfer is pending. Paid appears only after the contract confirms success.",
       Paid: "The contract confirmed the seller transfer for this order. Open the Purchase Pass to check any remaining budget.",
       TransferFailed: "The seller transfer failed. The buyer can approve a retry or request a service refund.",
@@ -966,13 +999,13 @@ export function Workspace() {
           o
             ? `${o.order_id} · Agent: ${o.agent_id === wallet.config.agentId ? "ProofBill assistant" : o.agent_id}`
             : id,
-          o && <Status value={o.phase} />,
+          o && <Status value={o.phase} label={o.phase === "Delivered" && orderMode === "Automatic" ? "Awaiting settlement" : undefined} />,
         )}
         {o ? (
           <div className="detail-grid">
             <section>
               <div className="tabs">
-                {["Result", "Request", "Evidence"].map((t) => (
+                {["Result", "Details", "Evidence"].map((t) => (
                   <button
                     key={t}
                     className={tab === t ? "selected" : ""}
@@ -1091,8 +1124,7 @@ export function Workspace() {
                   </p>
                 </section>
               )}
-              <section className="section-gap">
-                <h2>Evidence checks</h2>
+              {tab === "Evidence" && <section className="section-gap verification-details"><h2>Evidence checks</h2>
                 <div className="check-list">
                   {result?.checks?.length ? (
                     result.checks.map((c) => (
@@ -1122,12 +1154,8 @@ export function Workspace() {
                     </p>
                   )}
                 </div>
-                <p className="fine scope-note">
-                  <ShieldCheck size={16} /> Signature integrity does not
-                  guarantee answer accuracy. TLS binding and source-image
-                  allowlisting are not checked.
-                </p>
-              </section>
+                <div className="evidence-scope">{(result?.scope ?? ["Delivery evidence does not guarantee answer quality. The contract trusts its publisher."]).map(scope=><p className="fine" key={scope}>{scope}</p>)}</div>
+              </section>}
               {detail.observations.length > 0 && (
                 <section className="section-gap">
                   <h2>Onchain references</h2>
@@ -1153,37 +1181,35 @@ export function Workspace() {
                 <h2>
                   {o.phase === "Paid"
                     ? "Payment receipt"
-                    : detail?.payment_mode === "Automatic"
+                    : orderMode === "Automatic"
                       ? "Automatic payment"
                       : "Payment status"}
                 </h2>
                 <p>{o.order_id}</p>
                 <p className="fine">
-                  {detail?.payment_mode === "Automatic"
-                    ? "This order uses the owner's advance authorization after matching publisher delivery."
-                    : "The buyer authorizes payment in the wallet after delivery."}
+                  {orderMode === "Automatic"
+                    ? o.phase === "Paid" ? "Paid using the owner's advance authorization." : "Uses the owner's advance authorization after matching publisher delivery."
+                    : o.phase === "Paid" ? "Manual payment approved by the buyer." : "Manual approval · review before paying."}
                 </p>
                 <dl className="facts">
                   <div>
                     <dt>Seller</dt>
                     <dd><AccountLink id={o.seller_id} /></dd>
                   </div>
-                  <div>
-                    <dt>Agent</dt>
-                    <dd><AccountLink id={o.agent_id} /></dd>
-                  </div>
-                  <div><dt>Recorded per-purchase ceiling</dt><dd>{o.max_order_price_yocto?`${formatNear(o.max_order_price_yocto)} NEAR`:"No separate ceiling recorded"}</dd></div>
+
+                  {o.max_order_price_yocto && <div><dt>Recorded per-purchase ceiling</dt><dd>{o.max_order_price_yocto?`${formatNear(o.max_order_price_yocto)} NEAR`:"No separate ceiling recorded"}</dd></div>}
                 </dl>
                 <div className="receipt-rule" />
                 <div className="amount">
                   {formatNear(o.price_yocto)}
                   <small>testnet NEAR</small>
                 </div>
-                <Status value={o.phase} />
+                <Status value={o.phase} label={o.phase === "Delivered" && orderMode === "Automatic" ? "Awaiting settlement" : undefined} />
                 <p className="fine">{paymentSummary[o.phase]}</p>
+                {o.phase === "Delivered" && <p className="fine">Evidence checks do not guarantee answer quality.</p>}
                 {wallet.account === o.buyer_id && (
                   <>
-                    {o.phase === "Delivered" && (
+                    {o.phase === "Delivered" && orderMode !== "Automatic" && (
                       <Button
                         onClick={() =>
                           action("approve_and_pay", {
@@ -1210,7 +1236,7 @@ export function Workspace() {
                     {["Reserved", "Delivered", "TransferFailed"].includes(
                       o.phase,
                     ) && (
-                      <>
+                      <details className="order-refund-details"><summary>Cancel order and refund</summary>
                       {detail?.pass_budget && <p className="fine">{budgetRefundCopy(detail.pass_budget)}</p>}
                       <Button
                         secondary
@@ -1223,7 +1249,7 @@ export function Workspace() {
                       >
                         Request service refund
                       </Button>
-                      </>
+                      </details>
                     )}
                   </>
                 )}
@@ -1236,17 +1262,17 @@ export function Workspace() {
                   </Link>
                 )}
               </div>
-              <section className="timeline">
-                <h2>Order timeline</h2>
+              {o.phase === "Paid" && detail?.pass_budget && BigInt(detail.pass_budget.available_yocto) > 0n && <Link className="button secondary remaining-budget-link" href={`${passLink(o.token_id)}#manage-pass`}>Manage remaining budget <ArrowRight size={16}/></Link>}
+              <details className="timeline order-activity" open={!["Paid","Refunded"].includes(o.phase)}><summary>Order activity</summary>
                 {[
                   { label: "Order reserved", done: true },
                   { label: "Result delivered", done: !!o.response_commitment },
                   {
                     label:
-                      detail?.payment_mode === "Automatic"
+                      orderMode === "Automatic"
                         ? "Automatic payment authorized in advance"
                         : "Buyer payment approval",
-                    done: detail?.payment_mode === "Automatic" || o.attempt > 0,
+                    done: orderMode === "Automatic" || o.attempt > 0,
                   },
                   { label: "Payment confirmed", done: o.phase === "Paid" },
                 ].map((s, i) => (
@@ -1269,7 +1295,7 @@ export function Workspace() {
                     )}
                   </div>
                 ))}
-              </section>
+              </details>
             </aside>
           </div>
         ) : (
@@ -1292,7 +1318,7 @@ export function Workspace() {
       <>
         {pageHeader(
           "Purchase Passes",
-          "A funded right to one AI service purchase.",
+          "Manage your agents’ funded budgets.",
           <Link className="button primary" href="/app/passes/new">
             <Plus size={17} /> New Purchase Pass
           </Link>,
@@ -1336,13 +1362,15 @@ export function Workspace() {
       </>
     );
   else {
+    const hasOrders = orders.some((o) => section !== "receipts" || o.phase === "Paid");
     const visible = orders.filter(
       (o) =>
+        (section !== "receipts" || o.phase === "Paid") &&
         (filter === "All" ||
           (filter === "Needs review"
-            ? o.phase === "Delivered"
+            ? o.phase === "Delivered" && o.payment_mode !== "Automatic"
             : o.phase === "Paid")) &&
-        `${o.order_id} ${o.seller_id}`.includes(query),
+        `${o.order_id} ${o.seller_id}`.toLowerCase().includes(query.trim().toLowerCase()),
     );
     content = (
       <>
@@ -1370,12 +1398,13 @@ export function Workspace() {
             </div>
           ))}
         </div>
-        <div className="purchase-grid">
+        <div className={`purchase-grid${activeOrder && section !== "receipts" ? "" : " purchase-grid-full"}`}>
           <section>
             <h2>
               {section === "receipts" ? "Payment receipts" : "Recent orders"}
             </h2>
             <div className="table-tools">
+              {section !== "receipts" && (
               <div className="tabs">
                 {["All", "Needs review", "Paid"].map((t) => (
                   <button
@@ -1387,6 +1416,7 @@ export function Workspace() {
                   </button>
                 ))}
               </div>
+              )}
               <label className="search">
                 <Search size={16} />
                 <input
@@ -1405,9 +1435,7 @@ export function Workspace() {
                   <span>Amount</span>
                   <span>Status</span>
                 </div>
-                {visible
-                  .filter((o) => section !== "receipts" || o.phase === "Paid")
-                  .map((o) => (
+                {visible.map((o) => (
                     <Link
                       className="order-row"
                       href={
@@ -1434,71 +1462,37 @@ export function Workspace() {
                         <strong>{formatNear(o.price_yocto)}</strong>
                         <small>testnet NEAR</small>
                       </span>
-                      <Status value={o.phase} />
+                      <Status value={o.phase} label={o.phase === "Delivered" && (o.payment_mode ?? detail?.payment_mode) === "Automatic" ? "Awaiting settlement" : undefined} />
                     </Link>
                   ))}
               </div>
             ) : (
               <Empty
                 title={
-                  wallet.account
-                    ? "No purchases yet"
-                    : "Your agent's purchases, in one place"
+                  hasOrders ? section === "receipts" ? "No matching receipts" : "No matching purchases" : section === "receipts" ? "No payment receipts yet" : "Your first purchase starts here"
                 }
               >
-                {wallet.account
-                  ? "Create a Purchase Pass and give your agent its first task."
-                  : "Connect a testnet wallet to manage passes and payment policies. Sign a separate message to unlock private results."}
+                {hasOrders ? "Try another search or status filter." : section === "receipts" ? "Confirmed service payments will appear here." : "Fund a Purchase Pass, then give your agent a task."}
                 {!wallet.account && (
                   <div className="empty-action">{connectButton}</div>
                 )}
               </Empty>
             )}
           </section>
-          <aside className="receipt review-card">
+          {activeOrder && section !== "receipts" && <aside className="receipt review-card">
             <ReceiptText size={27} />
-            <h2>
-              {activeOrder
-                ? "Ready for review"
-                : "A receipt for every purchase"}
-            </h2>
-            {activeOrder ? (
-              <>
-                <p>{activeOrder.order_id}</p>
-                <div className="receipt-rule" />
-                <div className="amount">
-                  {formatNear(activeOrder.price_yocto)}
-                  <small>testnet NEAR</small>
-                </div>
-                <p>Inspect the result and its evidence before paying.</p>
-                <Link
-                  className="button primary"
-                  href={orderLink(activeOrder.order_id)}
-                >
-                  Review order <ArrowRight size={16} />
-                </Link>
-              </>
-            ) : (
-              <>
-                <p>
-                  Follow what was requested, what arrived, and what was paid.
-                </p>
-                <div className="receipt-rule" />
-                <div className="mini-step">
-                  <KeyRound size={17} /> A bounded Purchase Pass
-                </div>
-                <div className="mini-step">
-                  <ShieldCheck size={17} /> Inspectable response evidence
-                </div>
-                <div className="mini-step">
-                  <ReceiptText size={17} /> A confirmed payment record
-                </div>
-                <Link className="button secondary" href="/app/passes">
-                  View Purchase Passes
-                </Link>
-              </>
-            )}
-          </aside>
+            <h2>Ready for review</h2>
+            <p>{activeOrder.order_id}</p>
+            <div className="receipt-rule" />
+            <div className="amount">
+              {formatNear(activeOrder.price_yocto)}
+              <small>testnet NEAR</small>
+            </div>
+            <p>Inspect the result and its evidence before paying.</p>
+            <Link className="button primary" href={orderLink(activeOrder.order_id)}>
+              Review order <ArrowRight size={16} />
+            </Link>
+          </aside>}
         </div>
       </>
     );
@@ -1510,16 +1504,12 @@ export function Workspace() {
           <img src="/brand/icon.png" alt="" />
           ProofBill
         </Link>
-        <div className="sidebar-search">
-          <Search size={16} />
-          <span>Your purchase workspace</span>
-        </div>
         <div className="budget">
           <WalletBalance {...walletFunds} />
           <div className="budget-divider" />
           <span>Available pass budget</span>
           <strong className="pass-budget-value">
-            {wallet.account ? formatNear(available.toString()) : "—"}
+            {wallet.account && !loading && !loadError ? formatNear(available.toString()) : "—"}
           </strong>
           <small>testnet NEAR</small>
           <Link className="button light" href="/app/passes/new">
@@ -1630,7 +1620,23 @@ export function Workspace() {
                 {notice}
               </div>
             )}
-            {content}
+            {loadError && (
+              <div className="banner error-banner" role="alert">
+                <TriangleAlert size={18} />
+                <span>Could not refresh your workspace. {loadError}</span>
+                <button className="text-button" onClick={() => void refresh()}>Retry loading</button>
+              </div>
+            )}
+            {loading && (wallet.config.configured || !wallet.config.loaded) ? (
+              loadError ? <Empty title="Workspace unavailable">Retry loading to see your confirmed balances and purchases.</Empty> : (
+                <section className="workspace-loading" role="status" aria-label="Loading workspace">
+                  <span className="skeleton skeleton-heading" />
+                  <span className="skeleton skeleton-line" />
+                  <div className="skeleton skeleton-panel" />
+                  <span className="sr-only">Loading your confirmed balances and purchases…</span>
+                </section>
+              )
+            ) : content}
           </main>
           <footer className="app-footer">
             <span>ProofBill · Know what your agent bought.</span>

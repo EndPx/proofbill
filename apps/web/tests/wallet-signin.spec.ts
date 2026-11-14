@@ -33,7 +33,7 @@ test("new connection requests one private sign-in message without a transaction 
   await prepareWallet(page,false,false,false,"approve");
   const verified = await sessionServer(page);
   await page.goto("/app/passes/new");
-  await expect(page.getByText(/Signing in costs no gas and grants no spending permission/)).toBeVisible();
+  await expect(page.getByText(/Sign-in costs no gas and grants no spending permission/)).toBeVisible();
   await connect(page);
   await expect.poll(() => verified.length).toBe(1);
   await expect(page.locator(".app-shell")).toBeVisible();
@@ -65,7 +65,7 @@ test("a cancelled message leaves the wallet connected and can be retried once", 
   const verified = await sessionServer(page);
   await page.goto("/app/passes/new");
   await connect(page);
-  await expect(page.getByText(/Your wallet is connected, but private sign-in was not completed/)).toBeVisible();
+  await expect(page.getByText(/Your private sign-in was not completed/)).toBeVisible();
   await expect(retry(page)).toBeEnabled();
   expect(await messages(page)).toHaveLength(1);
   expect(verified).toEqual([]);
@@ -110,7 +110,7 @@ test("disconnect while a signature is pending invalidates its completion", async
   const verified = await sessionServer(page);
   await page.goto("/app/purchases");
   await connect(page);
-  await expect(page.getByText(/Sign the wallet message to open your private session/)).toBeVisible();
+  await expect(page.getByText(/Sign the wallet message/)).toBeVisible();
   await expect(page.getByRole("button",{name:"Signing in…",exact:true})).toBeDisabled();
   await expect.poll(() => messages(page).then(m => m.length)).toBe(1);
   await page.screenshot({path:test.info().outputPath("private-signin-pending-mobile.png")});

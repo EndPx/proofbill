@@ -1,5 +1,6 @@
 export const adminTrust = {
   title: "Who controls the contract account?",
+  fundingSummary: "The testnet contract has a FullAccess administrator key. Its holder can move funds or replace code. Funding requires trusting this admin.",
   summary:
     "The testnet contract retains a FullAccess administrator key. Its holder can transfer contract-held NEAR or replace the code without using the app's approval flow. Funding a pass requires trusting that administrator.",
   detail:

@@ -54,7 +54,7 @@ test('account popover exposes wallet balance on mobile and remains readable acro
     const panel=page.locator('.wallet-account-popover');
     await expect(panel).toBeVisible();
     await expect(panel).toContainText('Private session active');
-    await expect(panel).toContainText('2.750');
+    await expect(panel).toContainText('2.750 NEAR');
     const bounds=await panel.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.y).toBeGreaterThanOrEqual(0);

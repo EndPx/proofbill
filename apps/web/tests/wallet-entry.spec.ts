@@ -59,7 +59,7 @@ test("cancelled connection can be retried and resumes the original destination",
   await expect(
     page.getByRole("button", { name: "Sign in for private access" }),
   ).toBeVisible();
-  await expect(page.getByText(/Your wallet is connected, but private sign-in was not completed/)).toBeVisible();
+  await expect(page.getByText(/Your private sign-in was not completed/)).toBeVisible();
   expect(authRequests.map(url => new URL(url).pathname)).toEqual(["/api/auth/challenge"]);
 });
 
