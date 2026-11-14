@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/proofbill-brand-v1/proofbill-logo-on-dark.png" alt="ProofBill logo" width="900" />
+  <img src="design/proofbill-brand-v1/proofbill-logo-on-dark.png" alt="ProofBill logo" width="280" />
 </p>
 
 <h1 align="center">ProofBill</h1>
@@ -22,6 +22,14 @@
   <a href="#local-development"><img src=".github/assets/badges/run-locally.svg" alt="Run locally" height="34" /></a>
 </p>
 
+<p align="center">
+  <a href="https://proofbill-two.vercel.app/receipts/pass-14-order-1">
+    <img src=".github/assets/product-receipt-desktop.png" alt="Actual ProofBill public receipt: pass-14-order-1 has a confirmed 0.010 testnet NEAR seller payment with Manual approval; the NFT's remaining budget was refunded separately." width="1200" />
+  </a>
+</p>
+
+Actual NEAR testnet payment, captured 14 November 2026: **0.010 NEAR paid**, with the pass's separate **0.015 unused service budget refunded**. [Open the public receipt](https://proofbill-two.vercel.app/receipts/pass-14-order-1) or [inspect the recorded run](docs/evidence/tls-image-policy.md#hosted-rollout-and-actual-private-order). The buyer's private result is not pictured.
+
 ## Why ProofBill
 
 When an agent uses a paid AI service, its owner needs to connect three things: **what was permitted, what came back, and what was actually paid**. Separate spending rules, response logs and transaction records make that review harder.
@@ -40,20 +48,18 @@ Version 3 adds [reusable NFT budgets](docs/evidence/budget-pass-hosted.md) and [
 
 Version 4 is [hosted and exercised with a custom 1.2345 budget](docs/evidence/flexible-budget-hosted.md), optional/removed per-purchase ceilings, two real payments and exact residual refund to a new NFT holder. A ceiling bounds an individual seller payment; it does not choose the merchant price. [Contract checks](docs/evidence/flexible-budget-contract.md), [application checks](docs/evidence/flexible-budget-application.md) and deployment records identify the exact scope and tested artifact.
 
-<p align="center">
-  <img src=".github/assets/landing-desktop.webp" alt="The live ProofBill landing page with its Purchase Pass illustration, wallet entry action and testnet product preview." width="1200" />
-</p>
-
 <details>
-<summary>View the mobile landing and application receipt</summary>
+<summary>More product views: current desktop and mobile landing</summary>
+
+<p align="center">
+  <img src=".github/assets/landing-current-desktop.png" alt="Current ProofBill desktop landing: choose Manual review or authorize Automatic payment, with links to the app and a real public receipt." width="1200" />
+</p>
 
 <p>
-  <img src=".github/assets/landing-mobile.webp" alt="ProofBill's mobile landing page." width="260" />
+  <img src=".github/assets/landing-current-mobile.png" alt="Current ProofBill mobile landing with wallet entry, workflow explanation and a real-public-receipt link." width="260" />
 </p>
 
-![Recorded application receipt on NEAR testnet](docs/evidence/ui/production-receipt-desktop.png)
-
-The receipt image is a recorded testnet snapshot. The [public receipt](https://proofbill-two.vercel.app/receipts/pass-2-order) shows finalized financial facts without a wallet. Workspace access requires a wallet connection; private output additionally requires the historical buyer's signed session.
+These are current public landing screenshots in reduced-motion mode. The lifecycle artwork is illustrative and the interactive workspace preview uses labelled local sample data. The first screenshot above shows actual public payment facts; workspace access and private results require their respective wallet/session checks.
 
 </details>
 
