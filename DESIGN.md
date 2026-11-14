@@ -12,6 +12,8 @@ A calm purchasing workspace: charcoal chassis/sidebar enclosing one rounded whit
 
 Tokens: shell #252525; shell-card #303030; shell-border #414141; surface #ffffff; subtle #f5f5f5; ink #171717; muted #666666; line #e7e7e7; mint #51e79c; success-ink #08623c; success-surface #e2f9ec; warning-ink #704500; warning-surface #fff0cc; error-ink #a62424; error-surface #fff0f0. Focus uses a visible dark outline on white and mint on charcoal. State text/icons accompany colors.
 
+Funding accents: funding-mint #effbf4, funding-mint-line #b9e4cc, funding-paper #fffcf5, funding-paper-line #e8dfca, funding-amber #fff6e2, funding-amber-line #ead8ad. On New Purchase Pass only, use mint for the selected service and budget field, success-surface/ink for the numerical funding summary, and warm paper for its receipt. Storage details and the Automatic consent notice use amber with existing ink; this marks separate backing and advance authorization, not an error. Keep labels, explanations and checkboxes so color never carries meaning alone. Keep the form surface white, the primary action black, visible focus outlines and existing mobile stacking. These are scoped variants of Field, Card/receipt and info; they do not alter validation, consent, balances or other screens.
+
 ## 3. Typography
 
 Inter or system sans; weights 400/500/600/700. Page title 32–36px, section 21px, body 15px, compact metadata 13px. Financial amounts use tabular numerals and explicit testnet NEAR units. Long account IDs wrap; no clipped critical payment information.

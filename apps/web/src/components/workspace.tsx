@@ -180,7 +180,7 @@ function PaymentChoice({
         </select>
       </label>
       {mode === "Automatic" ? (
-        <div className="info">
+        <div className="info automatic-consent">
           <ShieldCheck size={18} />
           <label>
             <input
@@ -476,7 +476,7 @@ export function Workspace() {
           "New Purchase Pass",
           wallet.config.budgetPasses ? "One NFT. Multiple purchases within your budget." : "One service purchase. A clear spending limit.",
         )}
-        <div className="detail-grid">
+        <div className="detail-grid purchase-funding">
           <section className="panel form-panel">
             <h2>Service and budget</h2>
             <div className="service-option">
@@ -492,7 +492,7 @@ export function Workspace() {
               <CheckCircle2 size={20} />
             </div>
             {wallet.config.budgetPasses && (
-              <label className="field">
+              <label className="field funding-budget">
                 Service budget (testnet NEAR)
                 <input aria-describedby="budget-help" aria-invalid={!budgetQuote} inputMode="decimal"
                   value={serviceBudget} disabled={!!busy}
@@ -506,7 +506,7 @@ export function Workspace() {
               <OrderLimitField enabled={limitEnabled} value={limitInput} disabled={!!busy}
                 onToggle={v=>{setLimitEnabled(v);setAutomaticConsent(false)}} onChange={v=>{setLimitInput(v);setAutomaticConsent(false)}}/>
               {limitAmount&&BigInt(limitAmount)<BigInt(SERVICE_PRICE)&&<p className="fine">The current 0.010 NEAR service quote exceeds this limit. Increase it before buying this service.</p>}
-              <details className="panel"><summary>Initial storage backing</summary>
+              <details className="panel funding-storage"><summary>Initial storage backing</summary>
                 <label className="field">Storage backing (testnet NEAR)
                   <input aria-label="Storage backing (testnet NEAR)" inputMode="decimal" value={initialStorage} disabled={!!busy} onChange={e=>{setInitialStorage(e.target.value);setAutomaticConsent(false)}}/>
                   <small>At least 0.030 NEAR, independent of your service budget. Actual history growth uses this backing. You can add more separately later.</small>

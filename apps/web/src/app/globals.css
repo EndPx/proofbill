@@ -14,6 +14,12 @@
   --warning-surface: #fff0cc;
   --error-ink: #a62424;
   --error-surface: #fff0f0;
+  --funding-mint: #effbf4;
+  --funding-mint-line: #b9e4cc;
+  --funding-paper: #fffcf5;
+  --funding-paper-line: #e8dfca;
+  --funding-amber: #fff6e2;
+  --funding-amber-line: #ead8ad;
   --r: 14px;
   --gap: 24px;
   color-scheme: light;
@@ -826,6 +832,46 @@ textarea {
 }
 .info p {
   font-size: 12px;
+}
+.purchase-funding .service-option,
+.purchase-funding .funding-budget input {
+  background: var(--funding-mint);
+  border-color: var(--funding-mint-line);
+}
+.purchase-funding .service-icon {
+  background: var(--success-surface);
+  border-color: var(--funding-mint-line);
+  color: var(--success-ink);
+}
+.purchase-funding .service-option > svg {
+  color: var(--success-ink);
+}
+.purchase-funding .info {
+  background: var(--funding-mint);
+}
+.purchase-funding .funding-storage,
+.purchase-funding .automatic-consent {
+  background: var(--funding-amber);
+  border: 1px solid var(--funding-amber-line);
+}
+.purchase-funding .funding-storage summary {
+  color: var(--warning-ink);
+}
+.purchase-funding input[type="checkbox"] {
+  accent-color: var(--success-ink);
+}
+.purchase-funding .receipt {
+  background: var(--funding-paper);
+  border-color: var(--funding-paper-line);
+}
+.purchase-funding .receipt .amount {
+  padding: 16px 10px;
+  border-radius: 10px;
+  background: var(--success-surface);
+  color: var(--success-ink);
+}
+.purchase-funding .receipt .amount small {
+  color: var(--muted);
 }
 .facts {
   margin: 0;
