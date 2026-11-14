@@ -8,6 +8,7 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 from nras import verify_nras_response
 from tls_binding import GatewayConnection, report_identity
+from image_policy import load_policy, policy_identity, verify_deployment
 
 MODEL='Qwen/Qwen3.8-27B'
 def stamp(): return datetime.now(timezone.utc).isoformat()
@@ -61,11 +62,13 @@ async def execute(payload):
 async def execute_connected(payload,body,key,connection):
     headers={'Accept':'application/json','Accept-Encoding':'identity','x-no-aliasing':'true','Authorization':'Bearer '+key}
     preflight={}
+    policy=load_policy()
     nonce=secrets.token_hex(32)
     path='/v1/attestation/report?'+urlencode({'nonce':nonce,'signing_algo':'ecdsa','include_tls_fingerprint':'true'})
     response=json.loads(connection.request('GET',path,headers={'Accept':'application/json','Accept-Encoding':'identity'}))
     preflight['gateway']={'nonce':nonce,'observed_at':stamp(),'response':response,'transport':connection.evidence()}
     gateway=await verify_report(response['gateway_attestation'],nonce,False,peer_spki_sha256=connection.fingerprint)
+    approved_gateway=await verify_deployment(response['gateway_attestation'],nonce,'gateway',policy)
     connection.authorize(gateway)
     nonce=secrets.token_hex(32)
     path='/v1/attestation/report?'+urlencode({'model':MODEL,'provider':'near','nonce':nonce,'signing_algo':'ecdsa'})
@@ -73,10 +76,11 @@ async def execute_connected(payload,body,key,connection):
     preflight['model']={'nonce':nonce,'observed_at':stamp(),'response':response}
     reports=preflight['model']['response'].get('model_attestations',[])
     if not reports: raise ValueError('MODEL_EVIDENCE_UNAVAILABLE')
-    models=[]
+    models=[];approved_models=[]
     for report in reports:
         if report.get('model_name')!=MODEL: raise ValueError('MODEL_EVIDENCE_MISMATCH')
         models.append(await verify_report(report,preflight['model']['nonce'],True))
+        approved_models.append(await verify_deployment(report,preflight['model']['nonce'],'model',policy))
     completion_started=stamp()
     authenticated={**headers,'Authorization':'Bearer '+key,'Content-Type':'application/json'}
     # One attempt only: a timeout may still have incurred provider usage.
@@ -93,9 +97,9 @@ async def execute_connected(payload,body,key,connection):
     if text.startswith('```'): text=text.split('\n',1)[1].rsplit('```',1)[0].strip()
     output=json.loads(text)
     if not isinstance(output,dict) or not all(k in output for k in ('item','quantity','requested_by')): raise ValueError('RESULT_FORMAT_INVALID')
-    checks=[{'name':'Response bytes match','state':'passed'},{'name':'Model signature matched','state':'passed'},{'name':'Intel TDX preflight','state':'passed'},{'name':'NVIDIA GPU evidence','state':'passed'},{'name':'NRAS JWT signatures and claims','state':'passed'},{'name':'TLS connection binding','state':'passed'},{'name':'Source-image allowlist','state':'not_checked'}]
-    scope=['Integrity and matched attested signer do not establish answer accuracy.','The application operator processes plaintext.','Gateway TLS SPKI/quote binding is checked on the socket used for inference; it does not bind the upstream model TLS connection. Source-image allowlisting remains unchecked.']
-    return {'ok':True,'result':{'output':output,'checks':checks,'scope':scope,'model':MODEL},'artifacts':{'request_base64':payload['request_base64'],'response_base64':base64.b64encode(raw).decode(),'preflight':preflight,'verified_preflight':{'gateway':gateway,'models':models},'completion_started_at':completion_started,'signature':signature,'signer':signer,'usage':completion.get('usage')},'signature_kind':'provider_tee'}
+    checks=[{'name':'Response bytes match','state':'passed'},{'name':'Model signature matched','state':'passed'},{'name':'Intel TDX preflight','state':'passed'},{'name':'NVIDIA GPU evidence','state':'passed'},{'name':'NRAS JWT signatures and claims','state':'passed'},{'name':'TLS connection binding','state':'passed'},{'name':'Deployment image allowlist','state':'passed'},{'name':'All model image build provenance','state':'not_checked'}]
+    scope=['Integrity and matched attested signer do not establish answer accuracy.','The application operator processes plaintext.','Gateway TLS binding covers the inference socket, not the upstream model TLS hop.','Image pins cover measured bootstrap and authenticated recorded Qwen deployment intent, not current execution or weights. Gateway/manager build provenance was verified at policy approval; full model image build provenance is not verified.']
+    return {'ok':True,'result':{'output':output,'checks':checks,'scope':scope,'model':MODEL},'artifacts':{'request_base64':payload['request_base64'],'response_base64':base64.b64encode(raw).decode(),'preflight':preflight,'verified_preflight':{'gateway':gateway,'models':models},'deployment_policy':{**policy_identity(policy),'gateway':approved_gateway,'models':approved_models},'completion_started_at':completion_started,'signature':signature,'signer':signer,'usage':completion.get('usage')},'signature_kind':'provider_tee'}
 
 if __name__=='__main__':
     try:

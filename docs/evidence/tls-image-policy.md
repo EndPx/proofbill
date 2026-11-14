@@ -16,6 +16,20 @@ A separate live, non-billable check obtained a fresh gateway report without an A
 
 New exports record the observed public peer certificate and its SPKI. The buyer verifier recomputes that SPKI and checks its binding in the signed quote. A buyer cannot re-observe the worker's historical socket, so that conclusion is labelled recorded binding rather than live connection verification. Legacy exports without the TLS record remain supported with no TLS check added. Their original bytes, commitments and scope are not rewritten.
 
-## Remaining scope
+## Deployment image allowlist
 
-Source/image approval is separate from TLS binding and hardware attestation. An observed digest or an HTTP 200 is not provenance verification. Until a reviewed policy is accepted and exercised, source-image allowlisting remains unchecked. The application operator still processes plaintext and the contract trusts its publisher.
+New requests enforce [a fixed application-owned policy](../../workers/inference/deployment-policy.json), not an automatically learned list. It accepts the measured gateway and Qwen bootstrap manifests only by exact SHA-256 and service-image inventory. For the dynamically managed Qwen stack it additionally verifies a fresh Compose Manager quote, nonce, configuration, replayed event log, instance identity and canonical action-log hash. The manager image and the latest recorded up/down actions for the selected Qwen proxy, engine and nginx must match approved source revisions/file hashes. A new unapproved manifest, image, source revision, down action or unknown policy fails before a completion request; gateway rejection happens before sending the API key.
+
+The source/file hashes were cross-checked with immutable revisions in `nearai/cvm-compose-files`. `python tools/verify-runtime-source-pins.py` repeats that check against the exact file bytes and selected immutable service images; CI runs it as a policy-review gate. This authenticates and allowlists **recorded deployment intent**, not successful/current execution or model weights. Bootstrap dependency image digests are pinned too. A configured environment-variable default for the manager is not treated as proof of its actual image: the signed manager-start action must name the approved digest.
+
+Three build approvals (cloud-api, cvm-ingress and compose-manager) were cryptographically verified using GitHub/Sigstore attestations. The exact OCI manifests and original bundles are retained in [image-approvals](image-approvals/). Run `node tools/verify-image-approvals.mjs` to re-verify signature/log trust and enforce the exact subject digest, repository, workflow identity, issuer and source revision. CI runs that command; merely finding a record is not approval. Build verification is performed when approving/reviewing the policy, while each inference compares its authenticated measurements against those approved pins.
+
+Full model-image build provenance was **not** independently verified from the public lookups available. The runtime source/digest pins must not be presented as a verified build chain for every model/dependency image. New result checklists therefore distinguish `Deployment image allowlist: passed` from `All model image build provenance: not_checked`.
+
+## Compatibility and policy updates
+
+Twenty-seven Python tests pass, including authenticated-but-unapproved manifests, manager/source changes, forged quote/action/nonce/instance data, terminal down actions, and refusal before completion. The policy also passed against the fresh public gateway and model evidence obtained during the non-billable probe. No policy is imported from an export or caller-provided URL. New exports bind the local policy ID/hash in their committed artifact; the buyer rechecks the locally installed policy. Legacy exports without that field gain no allowlist check.
+
+When NEAR changes a deployment, obtain fresh evidence, review the new measured manifest and runtime source references, verify available build attestations, update the versioned policy and rerun refusal/compatibility tests before rollout. Never approve an observed hash just to make a failing check green. This release does not change the contract policy identifier or rewrite old artifacts; the stronger offchain policy identity is recorded separately.
+
+The application operator still processes plaintext and the contract trusts its publisher. Neither image pins nor TLS binding establishes answer quality, operator-blind E2EE or model-weight provenance.

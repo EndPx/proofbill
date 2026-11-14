@@ -1,0 +1,82 @@
+{
+  "id": "proofbill-deployment-2026-11-14",
+  "scope": "gateway bootstrap plus Qwen bootstrap and authenticated recorded deployment intent; not current execution or weight provenance",
+  "approvals": [
+    {
+      "name": "cloud-api",
+      "repository": "nearai/cloud-api",
+      "source_revision": "b26eb029e28537661fba7f7510d536e3f7325e2c",
+      "workflow_identity": "https://github.com/nearai/cloud-api/.github/workflows/build.yml@refs/heads/main",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "image_digest": "4cde8bc2e09b78452a2b7c6706a4072c7a46417d56eef8e75ccd6b6d91640ffb"
+    },
+    {
+      "name": "cvm-ingress",
+      "repository": "nearai/cvm-ingress",
+      "source_revision": "077f295fbac955f9d3b1cfa18161718ad39108ae",
+      "workflow_identity": "https://github.com/nearai/cvm-ingress/.github/workflows/build-push.yml@refs/heads/main",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "image_digest": "83c456476bc88c4f7b59fdc1afc8760606d736268038d3439cf1a37e707d7dc7"
+    },
+    {
+      "name": "compose-manager",
+      "repository": "nearai/compose-manager",
+      "source_revision": "bf97be3eb430e78898622c765a37e22fd40b2d22",
+      "workflow_identity": "https://github.com/nearai/compose-manager/.github/workflows/build.yml@refs/heads/master",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "image_digest": "a0c073085684e12e19f31bb279fc8da663a374199bfecc47b04167ae79eaa766"
+    }
+  ],
+  "gateway": {
+    "app_compose_sha256": "2643bc7ae47ecf4cf84509a647d2c2cc3bcacad95a87b8a73d543e6c48ad3b22",
+    "images": {
+      "otelcol-contrib": "otel/opentelemetry-collector-contrib@sha256:85ac41c2db88d0df9bd6145e608a3cb023f5d8443868adbfbbf66efb51087917",
+      "api-init": "alpine@sha256:4b7ce07002c69e8f3d704a9c5d6fd3053be500b7f1c69fc0d80990c2ad8dd412",
+      "cloud-api": "nearaidev/cloud-api@sha256:4cde8bc2e09b78452a2b7c6706a4072c7a46417d56eef8e75ccd6b6d91640ffb",
+      "ingress": "nearaidev/cvm-ingress@sha256:83c456476bc88c4f7b59fdc1afc8760606d736268038d3439cf1a37e707d7dc7"
+    }
+  },
+  "model": {
+    "app_compose_sha256": "e8416a02d6f7ce47baaa52e3925b934fd30834b04fc9086b363db9b1d12c729d",
+    "images": {
+      "otelcol-management": "otel/opentelemetry-collector-contrib@sha256:85ac41c2db88d0df9bd6145e608a3cb023f5d8443868adbfbbf66efb51087917",
+      "certbot": "certbot/dns-cloudflare@sha256:742dbd2e61c8709b930712c38958386c3cb3928e09eeb1f1e490600c127e2edb",
+      "certbot-init": "certbot/dns-cloudflare@sha256:742dbd2e61c8709b930712c38958386c3cb3928e09eeb1f1e490600c127e2edb",
+      "compose-manager": "${COMPOSE_MANAGER_IMAGE:-nearaidev/compose-manager@sha256:a0c073085684e12e19f31bb279fc8da663a374199bfecc47b04167ae79eaa766}",
+      "compose-manager-launcher": "nearaidev/compose-manager-launcher@sha256:079a14b41deb11e0e27f9b69648e8b3d89bd6fb9ccf6071643b8f447fa415085"
+    },
+    "manager_image": "nearaidev/compose-manager@sha256:a0c073085684e12e19f31bb279fc8da663a374199bfecc47b04167ae79eaa766",
+    "runtime_services": {
+      "proxy-qwen38-27b": [
+        {
+          "commit": "7d62ec6762bb1288ea5d5cf40b05e8a7c5305df9",
+          "file": "prod/pack-small-models.yaml",
+          "file_sha256": "4f4c6c18ad2b9f877dc5144c67a61a403314a219b10b357db81fb7688cd61140",
+          "repository": "nearai/cvm-compose-files",
+          "image": "nearaidev/vllm-proxy-rs@sha256:c57cd9ea8374fa9134b9b79ede199f21d134dd710826ac94dead4bbf381f57df",
+          "build_provenance": "not_verified"
+        }
+      ],
+      "model-sg-qwen38-27b-fp8-tp1-coloc": [
+        {
+          "commit": "777750741778f149fdb3932bebfe30ff4318cf1d",
+          "file": "prod/small-models.yaml",
+          "file_sha256": "c9bcfb9f090a984ec722aed2769f02c26eac54890388b16c784d3282c047d320",
+          "repository": "nearai/cvm-compose-files",
+          "image": "docker.io/nearaidev/sglang@sha256:6de632a5e9422be4b6e84e32cf475679c0f29c4bb6d58984d873ff9f7ba92a65",
+          "build_provenance": "not_verified"
+        }
+      ],
+      "nginx-qwen38": [
+        {
+          "commit": "fe7493ee3a0b3d36c1079c095de554e7b218da5c",
+          "file": "prod/small-models.yaml",
+          "file_sha256": "5cd125c74f2316ec2028691cf561df7f18fa4e9726b98d7133113ccef071ebdd",
+          "repository": "nearai/cvm-compose-files",
+          "image": "nginx@sha256:1d13701a5f9f3fb01aaa88cef2344d65b6b5bf6b7d9fa4cf0dca557a8d7702ba",
+          "build_provenance": "not_verified"
+        }
+      ]
+    }
+  }
+}

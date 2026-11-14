@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  "config": {
+    "mediaType": "application/vnd.oci.image.config.v1+json",
+    "digest": "sha256:26bebad7ecb94be6674f9aedc225d00370761e7cff9c2d8e40d59e860afee3b8",
+    "size": 3814
+  },
+  "layers": [
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:abe1fea375429ba91b23776f15f53da4ed790fa2b779b40d20f21e69bd66de5a",
+      "size": 28228321
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:7fe904da64b57e0afa826590662b68b38f4914cc000d0189f3058f801834e318",
+      "size": 5727766,
+      "annotations": {
+        "buildkit/rewritten-timestamp": "0"
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:303287e9783f5a568236707c042a8719f621debbb22f0de086b7d1d9514dc6c5",
+      "size": 3271,
+      "annotations": {
+        "buildkit/rewritten-timestamp": "0"
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:b67246d5d21a1e5208d87db10a035e60592ce32fc1bd322536cd6248ad3f3ea1",
+      "size": 79,
+      "annotations": {
+        "buildkit/rewritten-timestamp": "0"
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:613f8fad3907e63f4195c341b676328e31e9919942332aeb17e5cdceaf46e0e7",
+      "size": 20606730,
+      "annotations": {
+        "buildkit/rewritten-timestamp": "0"
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:b77c94550d5d127abe1d1ddcca5d1245d8b4fc37371f2db03cbf2beaf9829c0b",
+      "size": 3550,
+      "annotations": {
+        "buildkit/rewritten-timestamp": "0"
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "digest": "sha256:800c5e4e4fca388d47fefef6d2377c21dc7c1a3befdda570bc203ac09406b208",
+      "size": 20610972,
+      "annotations": {
+        "buildkit/rewritten-timestamp": "0"
+      }
+    }
+  ]
+}

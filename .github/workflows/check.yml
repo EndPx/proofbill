@@ -68,6 +68,12 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r workers/inference/requirements.txt
       - run: python -m unittest discover -s workers/inference -p 'test_*.py'
+      - name: Verify the approved image build identities and source revisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/verify-image-approvals.mjs
+          python tools/verify-runtime-source-pins.py
   web:
     name: Typecheck, unit tests and production build
     runs-on: ubuntu-latest

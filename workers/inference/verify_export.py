@@ -10,6 +10,7 @@ from pathlib import Path
 import requests
 from inference import MODEL, verify_report, verify_signature
 from tls_binding import HOST, certificate_spki
+from image_policy import load_policy, policy_identity, verify_deployment
 
 CONTRACT = "proofbill-endpx-2026.testnet"
 
@@ -86,11 +87,21 @@ async def verify_export(bundle):
         if tls.get("peer_spki_sha256") != peer:
             raise ValueError("TLS_RECORD_INVALID")
     await verify_report(report, gateway["nonce"], False, peer_spki_sha256=peer)
+    recorded_policy = artifacts.get("deployment_policy")
+    policy = None
+    if recorded_policy is not None:
+        policy = load_policy()
+        if not isinstance(recorded_policy, dict) or any(recorded_policy.get(k) != v for k, v in policy_identity(policy).items()):
+            raise ValueError("UNKNOWN_DEPLOYMENT_POLICY")
+        await verify_deployment(report, gateway["nonce"], "gateway", policy)
     model = preflight["model"]
     reports = model["response"].get("model_attestations", [])
     if not reports or any(r.get("model_name") != MODEL for r in reports):
         raise ValueError("MODEL_EVIDENCE_MISMATCH")
     checked = [await verify_report(r, model["nonce"], True) for r in reports]
+    if policy is not None:
+        for candidate in reports:
+            await verify_deployment(candidate, model["nonce"], "model", policy)
     signer = verify_signature(artifacts["signature"], body, response, checked)
     return {
         "verified": True, "network": "testnet", "contract_id": CONTRACT,
@@ -98,11 +109,13 @@ async def verify_export(bundle):
         "finalized_block_hash": block_hash, "signer": signer,
         "checks": ["onchain commitments", "signed order context", "displayed result bytes",
                    "response signature", "Intel TDX preflight", "NVIDIA NRAS JWT signatures and claims"]
-                  + (["recorded gateway SPKI/quote binding"] if peer else []),
+                  + (["recorded gateway SPKI/quote binding"] if peer else [])
+                  + (["approved deployment image pins and recorded model source intent"] if policy else []),
         "scope": ["Historical response evidence, not a new inference or current deployment attestation.",
                   "Answer quality is not established. The application operator processes plaintext.",
                   "A buyer cannot re-observe the worker's historical socket. Legacy exports without a TLS record do not gain a TLS check.",
-                  "Source-image allowlisting is not checked; NVIDIA signing keys are obtained over HTTPS."],
+                  "Legacy exports without a deployment policy gain no image-allowlist check. Recorded intent does not establish current execution or weight provenance.",
+                  "Full model image build provenance is not verified; NVIDIA signing keys are obtained over HTTPS."],
     }
 
 

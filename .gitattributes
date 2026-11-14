@@ -3,3 +3,4 @@
 
 # Exact-byte provider and attestation evidence must survive checkout unchanged.
 docs/evidence/near-ai-response-probe/*.json -text whitespace=cr-at-eol
+docs/evidence/image-approvals/* -text whitespace=cr-at-eol

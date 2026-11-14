@@ -188,6 +188,7 @@ class NrasVerificationTests(unittest.TestCase):
             context = Mock(); context.__enter__ = Mock(return_value=connection); context.__exit__ = Mock(return_value=False)
             with (patch.dict("os.environ", {"NEAR_AI_CLOUD_API_KEY": "fixture-not-a-real-key"}),
                   patch("inference.GatewayConnection", return_value=context),
+                  patch("inference.verify_deployment", new=AsyncMock(return_value={})),
                   patch("inference.verify_report", new=AsyncMock(side_effect=[{}, ValueError("GPU_TOKEN_INVALID")])),
                   patch("inference.requests.post") as completion):
                 with self.assertRaisesRegex(ValueError, "^GPU_TOKEN_INVALID$"):
